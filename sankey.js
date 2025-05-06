@@ -128,10 +128,10 @@ function updateSankey(dimension) {
     }
 
     // Création du layout Sankey
-    const nodeBaseWidth = 100;
+    const stackbarWidth = 80;
     const extraBlockWidth = 30;
     const sankey = d3.sankey()
-        .nodeWidth(nodeBaseWidth + extraBlockWidth)
+        .nodeWidth(stackbarWidth + extraBlockWidth)
         .nodePadding(10)
         .extent([[0, 0], [width, height]]);
 
@@ -160,12 +160,12 @@ function updateSankey(dimension) {
         .join('path')
         .attr('class', 'link')
         .attr('d', function(d) {
-            // Décaler la sortie et l'entrée des liens après le bloc neutre
+            // Path entrant : entrée au début du nœud (target.x0)
+            // Path sortant : sortie après le bloc (source.x1 + extraBlockWidth)
             const linkGen = d3.sankeyLinkHorizontal();
-            // On modifie temporairement x1 et x0 pour la sortie et l'entrée
             const dCopy = { ...d, source: { ...d.source }, target: { ...d.target } };
             dCopy.source.x1 = d.source.x1;
-            dCopy.target.x0 = d.target.x0 + extraBlockWidth;
+            dCopy.target.x0 = d.target.x0;
             return linkGen(dCopy);
         })
         .attr('stroke-width', d => Math.max(1, d.width))
@@ -209,12 +209,13 @@ function updateSankey(dimension) {
     node.each(function(d) {
         const nodeGroup = d3.select(this);
         const nodeHeight = d.y1 - d.y0;
-        const nodeWidth = d.x1 - d.x0 - extraBlockWidth;
+        const nodeWidth = d.x1 - d.x0;
 
-        // Rectangle de fond (d'abord !)
+        // Stackbar (à gauche du nœud)
         nodeGroup.append('rect')
+            .attr('x', 0)
             .attr('height', nodeHeight)
-            .attr('width', nodeWidth)
+            .attr('width', stackbarWidth)
             .style('fill', '#e0e0e0')
             .style('opacity', 0.8);
 
@@ -238,9 +239,10 @@ function updateSankey(dimension) {
         sortedEntries.forEach(([key, value], idx) => {
             const height = sum > 0 ? (value / sum) * nodeHeight : 0;
             nodeGroup.append('rect')
+                .attr('x', 0)
                 .attr('y', yOffset)
                 .attr('height', height)
-                .attr('width', nodeWidth)
+                .attr('width', stackbarWidth)
                 .style('fill', colorAccessor(key, idx))
                 .style('opacity', 0.8)
                 .on('mouseover', function(event) {
@@ -261,9 +263,9 @@ function updateSankey(dimension) {
             yOffset += height;
         });
 
-        // Bloc neutre à droite du nœud
+        // Bloc à droite de la stackbar
         nodeGroup.append('rect')
-            .attr('x', nodeWidth)
+            .attr('x', stackbarWidth)
             .attr('y', 0)
             .attr('width', extraBlockWidth)
             .attr('height', nodeHeight)
