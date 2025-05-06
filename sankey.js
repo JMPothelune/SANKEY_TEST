@@ -63,9 +63,75 @@ function updateSankey(dimension) {
     // Nettoyage du SVG
     svg.selectAll('*').remove();
 
+    // Gestion spéciale pour les sous-catégories
+    let isFormatType = false;
+    let isMatiereFibres = false;
+    let stackValues = null;
+    let typeKeys = null;
+    let palette = null;
+    let colorAccessor = null;
+    if (dimension === 'format_type') {
+        isFormatType = true;
+        // On va afficher la distribution des types de format, tous formats confondus
+        // On additionne les types de tous les formats pondérés par leur pourcentage
+        const typeTotals = {};
+        let total = 0;
+        Object.values(formats_types).forEach(formatObj => {
+            const parentPct = formatObj.pourcentage;
+            Object.entries(formatObj.types).forEach(([type, pct]) => {
+                const val = parentPct * pct / 100;
+                typeTotals[type] = (typeTotals[type] || 0) + val;
+                total += val;
+            });
+        });
+        // On normalise pour que la somme fasse 1000kg
+        const factor = 1000 / total;
+        Object.keys(typeTotals).forEach(type => {
+            typeTotals[type] = Math.round(typeTotals[type] * factor);
+        });
+        stackValues = typeTotals;
+        typeKeys = Object.keys(typeTotals);
+        // Palette dynamique pour les types
+        const nTypes = typeKeys.length;
+        palette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
+        colorAccessor = (key, idx) => palette[idx % palette.length];
+    } else if (dimension === 'matiere_fibres') {
+        isMatiereFibres = true;
+        // On va afficher la distribution des fibres, tous types de matières confondus, pondérée par leur pourcentage
+        const fibreTotals = {};
+        let total = 0;
+        Object.values(matieres_fibres).forEach(matiereObj => {
+            const parentPct = matiereObj.pourcentage;
+            Object.entries(matiereObj.fibres).forEach(([fibre, pct]) => {
+                const val = parentPct * pct / 100;
+                fibreTotals[fibre] = (fibreTotals[fibre] || 0) + val;
+                total += val;
+            });
+        });
+        // On normalise pour que la somme fasse 1000kg
+        const factor = 1000 / total;
+        Object.keys(fibreTotals).forEach(fibre => {
+            fibreTotals[fibre] = Math.round(fibreTotals[fibre] * factor);
+        });
+        stackValues = fibreTotals;
+        typeKeys = Object.keys(fibreTotals);
+        // Palette dynamique pour les fibres
+        const nFibres = typeKeys.length;
+        palette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
+        colorAccessor = (key, idx) => palette[idx % palette.length];
+    } else if (data.dimensions[dimension]) {
+        // Palette classique
+        colorAccessor = (key) => colorScales[dimension](key);
+    } else {
+        // fallback : couleur grise
+        colorAccessor = () => '#bbb';
+    }
+
     // Création du layout Sankey
+    const nodeBaseWidth = 100;
+    const extraBlockWidth = 30;
     const sankey = d3.sankey()
-        .nodeWidth(100)
+        .nodeWidth(nodeBaseWidth + extraBlockWidth)
         .nodePadding(10)
         .extent([[0, 0], [width, height]]);
 
@@ -79,7 +145,7 @@ function updateSankey(dimension) {
                 source: sourceNode,
                 target: targetNode,
                 value: link.value,
-                dimensionData: link.dimensions[dimension]
+                dimensionData: (isFormatType || isMatiereFibres) ? stackValues : (link.dimensions[dimension] || {})
             };
         })
     };
@@ -93,29 +159,35 @@ function updateSankey(dimension) {
         .data(links)
         .join('path')
         .attr('class', 'link')
-        .attr('d', d3.sankeyLinkHorizontal())
+        .attr('d', function(d) {
+            // Décaler la sortie et l'entrée des liens après le bloc neutre
+            const linkGen = d3.sankeyLinkHorizontal();
+            // On modifie temporairement x1 et x0 pour la sortie et l'entrée
+            const dCopy = { ...d, source: { ...d.source }, target: { ...d.target } };
+            dCopy.source.x1 = d.source.x1;
+            dCopy.target.x0 = d.target.x0 + extraBlockWidth;
+            return linkGen(dCopy);
+        })
         .attr('stroke-width', d => Math.max(1, d.width))
         .style('stroke', '#000')
         .on('mouseover', function(event, d) {
             tooltip.transition()
                 .duration(200)
                 .style('opacity', .9);
-            
-            // Création du contenu du tooltip avec les détails de la dimension
             let tooltipContent = `
                 <strong>${d.source.name} → ${d.target.name}</strong><br/>
-                Quantité totale: ${d.value} kg<br/>
+                Quantité: ${d.value} kg<br/>
                 Pourcentage: ${(d.value / 1000 * 100).toFixed(1)}%<br/>
-                <br/>
-                <strong>Détails ${data.dimensions[dimension].name}:</strong><br/>
             `;
-            
-            // Ajout des détails de la dimension sélectionnée
-            Object.entries(d.dimensionData).forEach(([key, value]) => {
-                const percentage = (value / d.value * 100).toFixed(1);
-                tooltipContent += `${key}: ${value} kg (${percentage}%)<br/>`;
-            });
-
+            if (data.dimensions[dimension]) {
+                tooltipContent += `<br/><strong>Détails ${data.dimensions[dimension].name}:</strong><br/>`;
+                if (d.dimensionData) {
+                    Object.entries(d.dimensionData).forEach(([key, value]) => {
+                        const percentage = (value / d.value * 100).toFixed(1);
+                        tooltipContent += `${key}: ${value} kg (${percentage}%)<br/>`;
+                    });
+                }
+            }
             tooltip.html(tooltipContent)
                 .style('left', (event.pageX + 10) + 'px')
                 .style('top', (event.pageY - 28) + 'px');
@@ -137,7 +209,7 @@ function updateSankey(dimension) {
     node.each(function(d) {
         const nodeGroup = d3.select(this);
         const nodeHeight = d.y1 - d.y0;
-        const nodeWidth = d.x1 - d.x0;
+        const nodeWidth = d.x1 - d.x0 - extraBlockWidth;
 
         // Rectangle de fond (d'abord !)
         nodeGroup.append('rect')
@@ -148,38 +220,36 @@ function updateSankey(dimension) {
 
         // Stackbars pour la dimension sélectionnée
         let yOffset = 0;
-        const totalValue = d.value;
-        // Calcul des valeurs pour ce nœud
-        const dimensionValues = {};
-        links.forEach(link => {
-            if (link.source === d || link.target === d) {
-                Object.entries(link.dimensionData).forEach(([key, value]) => {
-                    dimensionValues[key] = (dimensionValues[key] || 0) + value;
-                });
-            }
-        });
-        // Somme totale pour normaliser
+        let dimensionValues = {};
+        if (isFormatType || isMatiereFibres) {
+            dimensionValues = stackValues;
+        } else {
+            links.forEach(link => {
+                if (link.source === d || link.target === d) {
+                    Object.entries(link.dimensionData).forEach(([key, value]) => {
+                        dimensionValues[key] = (dimensionValues[key] || 0) + value;
+                    });
+                }
+            });
+        }
         const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
-        // Création des stackbars
-        Object.entries(dimensionValues).forEach(([key, value]) => {
-            // On normalise pour éviter les débordements
+        // Création des stackbars triées
+        const sortedEntries = Object.entries(dimensionValues).sort((a, b) => b[1] - a[1]);
+        sortedEntries.forEach(([key, value], idx) => {
             const height = sum > 0 ? (value / sum) * nodeHeight : 0;
             nodeGroup.append('rect')
                 .attr('y', yOffset)
                 .attr('height', height)
                 .attr('width', nodeWidth)
-                .style('fill', colorScales[dimension](key))
+                .style('fill', colorAccessor(key, idx))
                 .style('opacity', 0.8)
                 .on('mouseover', function(event) {
                     const percent = sum > 0 ? (value / sum * 100).toFixed(1) : 0;
+                    let tooltipContent = `<strong>${key}</strong><br/>Quantité : ${value} kg<br/>Pourcentage : ${percent}%`;
                     tooltip.transition()
                         .duration(200)
                         .style('opacity', .9);
-                    tooltip.html(`
-                        <strong>${key}</strong><br/>
-                        Quantité : ${value} kg<br/>
-                        Pourcentage : ${percent}%
-                    `)
+                    tooltip.html(tooltipContent)
                         .style('left', (event.pageX + 10) + 'px')
                         .style('top', (event.pageY - 28) + 'px');
                 })
@@ -190,6 +260,15 @@ function updateSankey(dimension) {
                 });
             yOffset += height;
         });
+
+        // Bloc neutre à droite du nœud
+        nodeGroup.append('rect')
+            .attr('x', nodeWidth)
+            .attr('y', 0)
+            .attr('width', extraBlockWidth)
+            .attr('height', nodeHeight)
+            .style('fill', '#cccccc')
+            .style('opacity', 0.7);
     });
 
     // Ajout des labels
