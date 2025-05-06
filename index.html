@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisation Sankey - Valorisation Textile</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <select id="dimension-selector">
+                <option value="matiere">Matière</option>
+                <option value="format">Format</option>
+                <option value="couleur">Couleur</option>
+            </select>
+        </div>
+        <div id="sankey-container"></div>
+    </div>
+    <script src="data.js"></script>
+    <script src="sankey.js"></script>
+</body>
+</html> 
