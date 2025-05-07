@@ -31,6 +31,10 @@ const couleurPalette = [
     '#fd79a8'   // Multicolore
 ];
 
+const qualiteValues = data.dimensions.qualite.values;
+const nQualite = qualiteValues.length;
+const qualitePalette = Array.from({length: nQualite}, (_, i) => d3.interpolateOranges(0.2 + 0.6 * (i / (nQualite - 1))));
+
 // Palette de couleurs pour les dimensions
 const colorScales = {
     matiere: d3.scaleOrdinal()
@@ -41,7 +45,10 @@ const colorScales = {
         .range(formatPalette),
     couleur: d3.scaleOrdinal()
         .domain(couleurValues)
-        .range(couleurPalette)
+        .range(couleurPalette),
+    qualite: d3.scaleOrdinal()
+        .domain(qualiteValues)
+        .range(qualitePalette)
 };
 
 // Création du SVG
@@ -159,15 +166,7 @@ function updateSankey(dimension) {
         .data(links)
         .join('path')
         .attr('class', 'link')
-        .attr('d', function(d) {
-            // Path entrant : entrée au début du nœud (target.x0)
-            // Path sortant : sortie après le bloc (source.x1 + extraBlockWidth)
-            const linkGen = d3.sankeyLinkHorizontal();
-            const dCopy = { ...d, source: { ...d.source }, target: { ...d.target } };
-            dCopy.source.x1 = d.source.x1;
-            dCopy.target.x0 = d.target.x0;
-            return linkGen(dCopy);
-        })
+        .attr('d', d3.sankeyLinkHorizontal())
         .attr('stroke-width', d => Math.max(1, d.width))
         .style('stroke', '#000')
         .on('mouseover', function(event, d) {
@@ -270,7 +269,23 @@ function updateSankey(dimension) {
             .attr('width', extraBlockWidth)
             .attr('height', nodeHeight)
             .style('fill', '#cccccc')
-            .style('opacity', 0.7);
+            .style('opacity', 0.7)
+            .on('mouseover', function(event) {
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                tooltip.html(`
+                    <strong>${d.name}</strong><br/>
+                    Quantité totale : ${d.value} kg
+                `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            })
+            .on('mouseout', function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
     });
 
     // Ajout des labels

@@ -86,3 +86,49 @@ Pour modifier ou étendre le projet :
 - Version prototype avec fonctionnalités de base
 - Optimisé pour les petits à moyens volumes de données
 - Nécessite une structure de données spécifique 
+
+## Système de transformations dynamiques (scénario Sankey)
+
+### Principe
+Le Sankey peut être généré dynamiquement à partir d'un lot de départ (distribution initiale sur 1000 kg) et d'une suite de transformations appliquées à ce lot. Chaque transformation modifie la répartition d'une dimension (format, matière, couleur, qualité, etc.) et génère un nouveau lot. Le Sankey affiche tous les lots intermédiaires, chaque transformation créant un nouveau nœud et un lien dans le diagramme.
+
+### Structure d'un lot
+Un lot est un objet contenant la répartition de chaque dimension sur un volume total :
+```js
+const lot = {
+  total: 1000,
+  format: { "Vêtements": 724, "Chaussures et bottes": 94, ... },
+  matiere: { ... },
+  couleur: { ... },
+  qualite: { ... }
+};
+```
+
+### Transformations
+- **Une transformation ne modifie qu'une seule dimension à la fois.**
+- Après chaque transformation, les pourcentages de la dimension concernée sont recalculés pour que la somme fasse 100%.
+- Les sous-dimensions (ex : fibres dans matière) ne sont pas recalculées automatiquement pour l'instant.
+- Exemple de transformation de base : `selectFirstLevel(lot, dimension, selectedKeys)`
+  - Garde uniquement les valeurs sélectionnées dans la dimension, recalcule les pourcentages et le total du lot.
+
+### Scénario/arbre de transformations
+- Un scénario est une suite (ou un arbre) de transformations appliquées à un lot.
+- Chaque transformation est définie par :
+  - un identifiant unique (`id`)
+  - le parent (`from`) : l'id du lot d'origine (ou `null` pour le lot initial)
+  - la transformation à appliquer (`transform`)
+- Exemple de scénario (arbre à 2 branches par nœud) :
+```js
+const scenario = [
+  { id: '1', from: null, transform: { type: 'selectFirstLevel', dimension: 'format', keys: ['Vêtements'] } },
+  { id: '2', from: null, transform: { type: 'selectFirstLevel', dimension: 'format', keys: ['Chaussures et bottes'] } },
+  { id: '3', from: '1', transform: { type: 'selectFirstLevel', dimension: 'qualite', keys: ['Bon état (usure légère)', 'Usé (usure moyenne)'] } },
+  // etc.
+];
+```
+- Le Sankey généré affichera tous les lots intermédiaires (chaque étape comme un nœud), et les liens représenteront les transformations.
+
+### Extension future
+- Possibilité d'ajouter d'autres types de transformations (filtrage par seuil, fusion de catégories, etc.).
+- Possibilité d'avoir plus de 2 branches à chaque nœud.
+- Possibilité de recalculer les sous-dimensions si besoin.

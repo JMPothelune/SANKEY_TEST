@@ -192,6 +192,15 @@ Object.values(matieres_fibres).forEach(obj => {
 });
 console.log("Somme des pourcentages top-level des matières :", totalPourcentage);
 
+const qualiteDistrib = {
+    "Neuf étiqueté (Aucune usure)": 5,
+    "Parfait état (usure minime)": 15,
+    "Bon état (usure légère)": 15,
+    "Usé (usure moyenne)": 25,
+    "Abîmé (usure forte)": 32,
+    "Inutilisable (usure extrême)": 8
+};
+
 const data = {
     "nodes": [
         { "id": "collecte", "name": "Collecte", "type": "etape" },
@@ -211,7 +220,8 @@ const data = {
             "dimensions": {
                 "matiere": getMatiereObj(),
                 "format": formatDistrib,
-                "couleur": couleurDistrib
+                "couleur": couleurDistrib,
+                "qualite": qualiteDistrib
             }
         },
         {
@@ -222,7 +232,8 @@ const data = {
             "dimensions": {
                 "matiere": getMatiereObj(),
                 "format": formatDistrib,
-                "couleur": couleurDistrib
+                "couleur": couleurDistrib,
+                "qualite": qualiteDistrib
             }
         },
         // Craquage vers Tri Crème et Tri Matière
@@ -234,7 +245,8 @@ const data = {
             "dimensions": {
                 "matiere": getMatiereObj(),
                 "format": formatDistrib,
-                "couleur": couleurDistrib
+                "couleur": couleurDistrib,
+                "qualite": qualiteDistrib
             }
         },
         {
@@ -245,7 +257,8 @@ const data = {
             "dimensions": {
                 "matiere": getMatiereObj(),
                 "format": formatDistrib,
-                "couleur": couleurDistrib
+                "couleur": couleurDistrib,
+                "qualite": qualiteDistrib
             }
         },
         {
@@ -256,7 +269,8 @@ const data = {
             "dimensions": {
                 "matiere": getMatiereObj(),
                 "format": formatDistrib,
-                "couleur": couleurDistrib
+                "couleur": couleurDistrib,
+                "qualite": qualiteDistrib
             }
         },
         // Pré-tri vers Tri Crème et Déchets
@@ -268,7 +282,8 @@ const data = {
             "dimensions": {
                 "matiere": getMatiereObj(),
                 "format": formatDistrib,
-                "couleur": couleurDistrib
+                "couleur": couleurDistrib,
+                "qualite": qualiteDistrib
             }
         },
         {
@@ -279,7 +294,8 @@ const data = {
             "dimensions": {
                 "matiere": getMatiereObj(),
                 "format": formatDistrib,
-                "couleur": couleurDistrib
+                "couleur": couleurDistrib,
+                "qualite": qualiteDistrib
             }
         }
     ],
@@ -295,6 +311,10 @@ const data = {
         "couleur": {
             "name": "Couleur",
             "values": ["Noir", "Blanc", "Bleu", "Gris", "Marron", "Rouge", "Vert", "Violet", "Orange", "Jaune", "Inconnu", "Multicolore"]
+        },
+        "qualite": {
+            "name": "Qualité",
+            "values": Object.keys(qualiteDistrib)
         }
     }
 }; 
