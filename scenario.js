@@ -49,10 +49,10 @@ function selectFirstLevel(lot, dimension, selectedKeys) {
         });
         // Recalcul des pourcentages dans la dimension concernée
         Object.keys(newDist).forEach(key => {
-            newDist[key].pourcentage = Math.round((newDist[key].pourcentage / newTotal) * 100 * 10) / 10;
+            newDist[key].pourcentage = newDist[key].pourcentage / newTotal * 100;
         });
         Object.keys(restDist).forEach(key => {
-            restDist[key].pourcentage = Math.round((restDist[key].pourcentage / restTotal) * 100 * 10) / 10;
+            restDist[key].pourcentage = restDist[key].pourcentage / restTotal * 100;
         });
     } else {
         // Cas standard pour les autres dimensions
@@ -68,31 +68,31 @@ function selectFirstLevel(lot, dimension, selectedKeys) {
         // Recalcul des pourcentages dans la dimension concernée
         Object.keys(newDist).forEach(key => {
             if (typeof newDist[key] === 'object' && newDist[key] !== null) {
-                newDist[key].pourcentage = Math.round((newDist[key].pourcentage / newTotal) * 100 * 10) / 10;
+                newDist[key].pourcentage = newDist[key].pourcentage / newTotal * 100;
             } else {
-                newDist[key] = Math.round((newDist[key] / newTotal) * lot.total * 10) / 10;
+                newDist[key] = newDist[key] / newTotal * lot.total;
             }
         });
         Object.keys(restDist).forEach(key => {
             if (typeof restDist[key] === 'object' && restDist[key] !== null) {
-                restDist[key].pourcentage = Math.round((restDist[key].pourcentage / restTotal) * 100 * 10) / 10;
+                restDist[key].pourcentage = restDist[key].pourcentage / restTotal * 100;
             } else {
-                restDist[key] = Math.round((restDist[key] / restTotal) * lot.total * 10) / 10;
+                restDist[key] = restDist[key] / restTotal * lot.total;
             }
         });
     }
 
-    // Création des deux lots
+    // Création des deux lots avec conversion en kg
     const targetLot = {
         ...newLot,
         [dimension]: newDist,
-        total: newTotal
+        total: lot.total * newTotal / 100
     };
 
     const coProductLot = {
         ...newLot,
         [dimension]: restDist,
-        total: restTotal
+        total: lot.total * restTotal / 100
     };
 
     return { targetLot, coProductLot };
@@ -111,14 +111,18 @@ function removeKeysFromLot(lot, dimension, keysToRemove) {
       delete newLot[dimension][key];
     }
   });
-  // Recalcul des pourcentages restants
-  let totalPct = 0;
-  Object.values(newLot[dimension]).forEach(obj => { totalPct += obj.pourcentage; });
+  
+  // Calcul du total des pourcentages restants
+  const totalPct = Object.values(newLot[dimension]).reduce((sum, obj) => sum + obj.pourcentage, 0);
+  
+  // Normalisation des pourcentages sur 100
   Object.values(newLot[dimension]).forEach(obj => {
-    obj.pourcentage = Math.round((obj.pourcentage / totalPct) * 1000) / 10;
+    obj.pourcentage = obj.pourcentage / totalPct * 100;
   });
-  // Recalcul du total du lot
-  newLot.total = Math.round(lot.total * totalPct / 100 * 10) / 10;
+  
+  // Calcul du nouveau total du lot en fonction des pourcentages restants
+  newLot.total = lot.total * (totalPct / 100);
+  
   return newLot;
 }
 
@@ -135,10 +139,10 @@ function normalizePourcentages(obj) {
     let acc = 0;
     keys.forEach((k, i) => {
         if (i < keys.length - 1) {
-            obj[k].pourcentage = Math.round((obj[k].pourcentage / total * 100) * 10) / 10;
+            obj[k].pourcentage = Number((obj[k].pourcentage / total * 100).toFixed(1));
             acc += obj[k].pourcentage;
         } else {
-            obj[k].pourcentage = Math.round((100 - acc) * 10) / 10;
+            obj[k].pourcentage = Number((100 - acc).toFixed(1));
         }
     });
 }
@@ -150,7 +154,39 @@ const scenario = {
         type: 'selectFirstLevel',
         dimension: 'format',
         keys: ['Chaussures et bottes'],
+        scenario: {
+            transformations: [
+                {
+                    type: 'selectFirstLevel',
+                    dimension: 'qualite',
+                    keys: ['Neuf étiqueté', 'Parfait état', 'Bon état'],
+                    scenario: {}
+                }
+            ],
+            coproduct_transformations: {}
+        }
+    },
+    {
+        type: 'selectFirstLevel',
+        dimension: 'format',
+        keys: ['non TLC'],
         scenario: {}
+    },
+    {
+        type: 'selectFirstLevel',
+        dimension: 'format',
+        keys: ['Vêtements'],
+        scenario: {
+            transformations: [
+                {
+                    type: 'selectFirstLevel',
+                    dimension: 'qualite',
+                    keys: ['Neuf étiqueté', 'Parfait état', 'Bon état'],
+                    scenario: {}
+                }
+            ],
+            coproduct_transformations: {}
+        }
     },
     {
         type: 'selectFirstLevel',
@@ -159,54 +195,75 @@ const scenario = {
         scenario: {}
     }
   ],
-  coproduct_transformations: []
+  coproduct_transformations: {
+    transformations: [
+        {
+            type: 'selectFirstLevel',
+            dimension: 'matiere',
+            keys: ['100% soie'],
+            scenario: {}
+        }
+    ],
+    coproduct_transformations: {}
+  }
 };
 
 // Nouvelle fonction de parsing du scénario (squelette)
-function applyScenario(lotInitial, scenario) {
-  const nodes = [{ id: '0', name: 'Lot initial', lot: cloneLot(lotInitial) }];
-  const links = [];
-  let idGen = 1;
-  let resteLot = cloneLot(lotInitial);
-
-  (scenario.transformations || []).forEach(transfo => {
-    const dimension = transfo.dimension;
-    const keys = transfo.keys;
-    keys.forEach(key => {
-      if (!resteLot[dimension][key]) return;
-      // Calcule la part correspondante dans le reste
-      const filteredLot = filterLotBySingleSelection(resteLot, dimension, key);
-      if (!filteredLot) return;
-      const targetId = `${idGen++}`;
-      nodes.push({ id: targetId, name: `${dimension}: ${key}`, lot: filteredLot });
-      links.push({ source: '0', target: targetId, value: filteredLot.total });
-      // Retire cette part du reste global (dans toutes les dimensions)
-      const pctToRemove = resteLot[dimension][key].pourcentage / 100;
-      // Supprime la clé du top level sans toucher aux sous-niveaux
-      delete resteLot[dimension][key];
-      // Normalise les pourcentages du top-level restant
-      normalizePourcentages(resteLot[dimension]);
-      // Met à jour le total du reste
-      resteLot.total = Math.round((resteLot.total - filteredLot.total) * 10) / 10;
-      // Met à jour les autres dimensions proportionnellement, sans toucher aux sous-niveaux
-      Object.keys(resteLot).forEach(dim => {
-        if (dim === 'total' || !resteLot[dim]) return;
-        Object.keys(resteLot[dim]).forEach(k => {
-          if (resteLot[dim][k] && typeof resteLot[dim][k].pourcentage === 'number') {
-            resteLot[dim][k].pourcentage = Math.round(resteLot[dim][k].pourcentage / (1 - pctToRemove) * 10) / 10;
-          }
-        });
-        // Normalise aussi les autres dimensions
-        normalizePourcentages(resteLot[dim]);
-      });
-    });
-  });
-  // Ajoute le reste à la fin
-  if (resteLot && resteLot.total > 0.1) {
-    const restId = `${idGen++}_reste`;
-    nodes.push({ id: restId, name: 'Reste', lot: resteLot });
-    links.push({ source: '0', target: restId, value: resteLot.total });
+function applyScenario(lotInitial, scenario, parentNodeId = '0', nodes = null, links = null, idGenObj = null, isRoot = true) {
+  // Créer le nœud Lot initial uniquement à la racine
+  if (!nodes) {
+    nodes = [{ id: parentNodeId, name: 'Lot initial', lot: cloneLot(lotInitial) }];
   }
+  if (!links) links = [];
+  if (!idGenObj) idGenObj = { id: 1 };
+
+  // On travaille toujours sur une copie du lot du parent
+  let resteLot = cloneLot(lotInitial);
+  const parentTotal = lotInitial.total;
+  let totalChildren = 0;
+
+  // 1. Appliquer toutes les transformations principales (indépendantes)
+  (scenario.transformations || []).forEach(transfo => {
+    const { targetLot, coProductLot } = selectFirstLevel(resteLot, transfo.dimension, transfo.keys);
+    if (!targetLot) return;
+    const nodeId = `${idGenObj.id++}`;
+    nodes.push({ id: nodeId, name: `${transfo.dimension}: ${transfo.keys.join(' + ')}`, lot: targetLot });
+    links.push({ source: parentNodeId, target: nodeId, value: targetLot.total });
+    totalChildren += targetLot.total;
+
+    // Sous-scenario récursif (sur le lot sélectionné, relié à ce nœud)
+    if (transfo.scenario && transfo.scenario.transformations && transfo.scenario.transformations.length > 0) {
+      applyScenario(targetLot, transfo.scenario, nodeId, nodes, links, idGenObj, false);
+    }
+    // On retire cette part du reste global
+    resteLot = coProductLot;
+  });
+
+  // 2. Appliquer les transformations du coproduit (le "reste"), récursivement sur le reste
+  let coproductUsed = false;
+  if (resteLot && resteLot.total > 0.1) {
+    const coproductNodeId = `${idGenObj.id++}`;
+    nodes.push({ id: coproductNodeId, name: 'Reste', lot: resteLot });
+    links.push({ source: parentNodeId, target: coproductNodeId, value: resteLot.total });
+    totalChildren += resteLot.total;
+    if (scenario.coproduct_transformations && Object.keys(scenario.coproduct_transformations).length > 0) {
+      coproductUsed = true;
+      applyScenario(resteLot, scenario.coproduct_transformations, coproductNodeId, nodes, links, idGenObj, false);
+    }
+  }
+
+  // Correction des proportions :
+  // Si la somme des enfants diffère du parent, on ajuste le dernier nœud pour garantir la conservation de la masse
+  if (!isRoot && Math.abs(totalChildren - parentTotal) > 0.1 && nodes.length > 1) {
+    // On ajuste le dernier nœud créé
+    const lastNode = nodes[nodes.length - 1];
+    const diff = parentTotal - totalChildren;
+    lastNode.lot.total += diff;
+    // On ajuste aussi le lien
+    const lastLink = links[links.length - 1];
+    lastLink.value += diff;
+  }
+
   return { nodes, links };
 }
 
@@ -231,7 +288,7 @@ function filterLotByCombination(lot, combination) {
             if (k !== key) delete filteredLot[dimension][k];
         });
     });
-    filteredLot.total = Math.round(lot.total * pct * 10) / 10;
+    filteredLot.total = lot.total * pct;
     return filteredLot.total > 0 ? filteredLot : null;
 }
 
@@ -258,7 +315,7 @@ function applyScenarioCrossProductFromInitial(lotInitial, scenario) {
         }
     });
     // Calcule le reste
-    const resteTotal = Math.round((lotInitial.total - totalSelected) * 10) / 10;
+    const resteTotal = Number((lotInitial.total - totalSelected).toFixed(1));
     if (resteTotal > 0.1) {
         const restId = `${idGen++}_reste`;
         // Pour le lot "reste", on ne retire aucune sélection
@@ -279,7 +336,7 @@ function filterLotBySingleSelection(lot, dimension, key) {
         if (k !== key) delete filteredLot[dimension][k];
     });
     // Le total est la part correspondante
-    filteredLot.total = Math.round(lot.total * pct * 10) / 10;
+    filteredLot.total = Number((lot.total * pct).toFixed(1));
     // Les autres dimensions gardent leur distribution
     // Les sous-niveaux (sous/types/fibres) restent inchangés
     return filteredLot.total > 0 ? filteredLot : null;
@@ -309,13 +366,13 @@ function applyScenarioIndependentSelections(lotInitial, scenario) {
             // Normalise les pourcentages du top-level restant
             normalizePourcentages(resteLot[dimension]);
             // Met à jour le total du reste
-            resteLot.total = Math.round((resteLot.total - filteredLot.total) * 10) / 10;
+            resteLot.total = Number((resteLot.total - filteredLot.total).toFixed(1));
             // Met à jour les autres dimensions proportionnellement, sans toucher aux sous-niveaux
             Object.keys(resteLot).forEach(dim => {
                 if (dim === 'total' || !resteLot[dim]) return;
                 Object.keys(resteLot[dim]).forEach(k => {
                     if (resteLot[dim][k] && typeof resteLot[dim][k].pourcentage === 'number') {
-                        resteLot[dim][k].pourcentage = Math.round(resteLot[dim][k].pourcentage / (1 - pctToRemove) * 10) / 10;
+                        resteLot[dim][k].pourcentage = Number((resteLot[dim][k].pourcentage / (1 - pctToRemove)).toFixed(1));
                     }
                 });
                 // Normalise aussi les autres dimensions
@@ -352,7 +409,7 @@ function crossDistrib(lot, formats, formatsMass, lotMass) {
     });
     // On ne garde que les formats présents dans ce sous-lot
     Object.keys(formatObj).forEach(k => {
-        formatObj[k].pourcentage = Math.round(formatObj[k].pourcentage / sumFormat * 1000) / 10;
+        formatObj[k].pourcentage = Number((formatObj[k].pourcentage / sumFormat * 100).toFixed(1));
     });
     newLot.format = formatObj;
 
@@ -372,23 +429,24 @@ function crossDistrib(lot, formats, formatsMass, lotMass) {
             valKg = valKg * (lotMass / formatsMass);
             if (dim === 'matiere') {
                 dimObj[val] = {
-                    pourcentage: Math.round(valKg / lotMass * 1000) / 10,
+                    pourcentage: Number((valKg / lotMass * 100).toFixed(1)),
                     fibres: lot[dim][val] && lot[dim][val].fibres ? JSON.parse(JSON.stringify(lot[dim][val].fibres)) : {}
                 };
             } else {
-                dimObj[val] = Math.round(valKg / lotMass * 1000) / 10;
+                dimObj[val] = Number((valKg / lotMass * 100).toFixed(1));
             }
             sum += valKg;
         });
         // Normalisation pour que la somme fasse lotMass
         if (dim === 'matiere') {
-            let totalPct = Object.values(dimObj).reduce((acc, obj) => acc + obj.pourcentage, 0);
+            let totalKg = Object.values(dimObj).reduce((acc, obj) => acc + (obj.pourcentage * lotMass / 100), 0);
             Object.values(dimObj).forEach(obj => {
-                obj.pourcentage = Math.round(obj.pourcentage / totalPct * 1000) / 10;
+                obj.pourcentage = Number((obj.pourcentage * lotMass / totalKg).toFixed(1));
             });
         } else {
+            let totalKg = Object.values(dimObj).reduce((acc, v) => acc + v, 0);
             Object.keys(dimObj).forEach(k => {
-                dimObj[k] = Math.round(dimObj[k] / sum * lotMass * 10) / 10;
+                dimObj[k] = Number((dimObj[k] * lotMass / totalKg).toFixed(1));
             });
         }
         newLot[dim] = dimObj;

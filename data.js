@@ -1,16 +1,16 @@
 const couleurDistrib = {
-    "Noir": 170,
-    "Blanc": 160,
-    "Bleu": 150,
-    "Gris": 120,
-    "Marron": 70,
-    "Rouge": 50,
-    "Vert": 40,
-    "Violet": 30,
-    "Orange": 15,
-    "Jaune": 15,
-    "Inconnu": 20,
-    "Multicolore": 160
+    "Noir": 17,
+    "Blanc": 16,
+    "Bleu": 15,
+    "Gris": 12,
+    "Marron": 7,
+    "Rouge": 5,
+    "Vert": 4,
+    "Violet": 3,
+    "Orange": 1.5,
+    "Jaune": 1.5,
+    "Inconnu": 2,
+    "Multicolore": 16
 };
 
 const formats_types = {
@@ -61,14 +61,14 @@ const formats_types = {
 // Générer la distribution simple pour les formats à partir de formats_types
 const formatDistrib = {};
 Object.entries(formats_types).forEach(([format, obj]) => {
-  formatDistrib[format] = Math.round(obj.pourcentage * 10) / 10;
+  formatDistrib[format] = obj.pourcentage;
 });
 
 // Générer l'objet matière pour chaque lien à partir de matieres_fibres
 function getMatiereObj() {
     const obj = {};
     Object.entries(matieres_fibres).forEach(([nom, data]) => {
-        obj[nom] = Math.round(data.pourcentage * 10) / 10;
+        obj[nom] = data.pourcentage;
     });
     return obj;
 }
@@ -220,112 +220,15 @@ Object.values(matieres_fibres).forEach(obj => {
 console.log("Somme des pourcentages top-level des matières :", totalPourcentage);
 
 const qualiteDistrib = {
-    "Neuf étiqueté (Aucune usure)": 5,
-    "Parfait état (usure minime)": 15,
-    "Bon état (usure légère)": 15,
-    "Usé (usure moyenne)": 25,
-    "Abîmé (usure forte)": 32,
-    "Inutilisable (usure extrême)": 8
+    "Neuf étiqueté": 5,
+    "Parfait état": 15,
+    "Bon état": 15,
+    "Usé": 25,
+    "Abîmé": 32,
+    "Inutilisable": 8
 };
 
 const data = {
-    "nodes": [
-        { "id": "collecte", "name": "Collecte", "type": "etape" },
-        { "id": "craquage", "name": "Craquage", "type": "etape" },
-        { "id": "pretri", "name": "Pré-tri", "type": "etape" },
-        { "id": "tri_creme", "name": "Tri Crème", "type": "etape" },
-        { "id": "tri_matiere", "name": "Tri Matière", "type": "etape" },
-        { "id": "dechets", "name": "Déchets", "type": "etape" }
-    ],
-    "links": [
-        // Collecte vers Craquage et Pré-tri
-        {
-            "source": "collecte",
-            "target": "craquage",
-            "value": 600,
-            "percentage": 60,
-            "dimensions": {
-                "matiere": getMatiereObj(),
-                "format": formatDistrib,
-                "couleur": couleurDistrib,
-                "qualite": qualiteDistrib
-            }
-        },
-        {
-            "source": "collecte",
-            "target": "pretri",
-            "value": 400,
-            "percentage": 40,
-            "dimensions": {
-                "matiere": getMatiereObj(),
-                "format": formatDistrib,
-                "couleur": couleurDistrib,
-                "qualite": qualiteDistrib
-            }
-        },
-        // Craquage vers Tri Crème et Tri Matière
-        {
-            "source": "craquage",
-            "target": "tri_creme",
-            "value": 300,
-            "percentage": 50,
-            "dimensions": {
-                "matiere": getMatiereObj(),
-                "format": formatDistrib,
-                "couleur": couleurDistrib,
-                "qualite": qualiteDistrib
-            }
-        },
-        {
-            "source": "craquage",
-            "target": "tri_matiere",
-            "value": 200,
-            "percentage": 33.3,
-            "dimensions": {
-                "matiere": getMatiereObj(),
-                "format": formatDistrib,
-                "couleur": couleurDistrib,
-                "qualite": qualiteDistrib
-            }
-        },
-        {
-            "source": "craquage",
-            "target": "dechets",
-            "value": 100,
-            "percentage": 16.7,
-            "dimensions": {
-                "matiere": getMatiereObj(),
-                "format": formatDistrib,
-                "couleur": couleurDistrib,
-                "qualite": qualiteDistrib
-            }
-        },
-        // Pré-tri vers Tri Crème et Déchets
-        {
-            "source": "pretri",
-            "target": "tri_creme",
-            "value": 200,
-            "percentage": 50,
-            "dimensions": {
-                "matiere": getMatiereObj(),
-                "format": formatDistrib,
-                "couleur": couleurDistrib,
-                "qualite": qualiteDistrib
-            }
-        },
-        {
-            "source": "pretri",
-            "target": "dechets",
-            "value": 200,
-            "percentage": 50,
-            "dimensions": {
-                "matiere": getMatiereObj(),
-                "format": formatDistrib,
-                "couleur": couleurDistrib,
-                "qualite": qualiteDistrib
-            }
-        }
-    ],
     "dimensions": {
         "matiere": {
             "name": "Matière",

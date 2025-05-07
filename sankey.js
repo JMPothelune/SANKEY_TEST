@@ -123,8 +123,8 @@ function updateSankey(dimension) {
                 });
             });
         });
-        // On normalise pour que la somme fasse 1000kg
-        const factor = 1000 / total;
+        // On normalise pour que la somme fasse la masse réelle du lot courant
+        const factor = sankeyData.nodes[0].lot.total / total;
         Object.keys(typeTotals).forEach(type => {
             typeTotals[type] = Math.round(typeTotals[type] * factor);
         });
@@ -150,10 +150,10 @@ function updateSankey(dimension) {
                 });
             });
         });
-        // On normalise pour que la somme fasse 1000kg
-        const factor = 1000 / total;
+        // Normalisation des pourcentages de fibres
+        const totalFibre = Object.values(fibreTotals).reduce((sum, val) => sum + val, 0);
         Object.keys(fibreTotals).forEach(fibre => {
-            fibreTotals[fibre] = Math.round(fibreTotals[fibre] * factor);
+            fibreTotals[fibre] = Number((fibreTotals[fibre] * sankeyData.nodes[0].lot.total / totalFibre).toFixed(1));
         });
         stackValues = fibreTotals;
         typeKeys = Object.keys(fibreTotals);
@@ -200,14 +200,18 @@ function updateSankey(dimension) {
             let tooltipContent = `
                 <strong>${d.source.name} → ${d.target.name}</strong><br/>
                 Quantité: ${d.value} kg<br/>
-                Pourcentage: ${(d.value / 1000 * 100).toFixed(1)}%<br/>
+                Pourcentage: ${(d.source.lot && d.source.lot.total ? (d.value / d.source.lot.total * 100).toFixed(1) : '0')}%<br/>
             `;
             if (data.dimensions[dimension]) {
                 tooltipContent += `<br/><strong>Détails ${data.dimensions[dimension].name}:</strong><br/>`;
                 if (d.dimensionData) {
                     Object.entries(d.dimensionData).forEach(([key, value]) => {
-                        const percentage = (value / d.value * 100).toFixed(1);
-                        tooltipContent += `${key}: ${value} kg (${percentage}%)<br/>`;
+                        let val = value;
+                        if (value && typeof value === 'object' && typeof value.pourcentage === 'number') {
+                            val = Math.round(d.value * value.pourcentage / 100 * 10) / 10;
+                        }
+                        const percentage = d.value > 0 ? (val / d.value * 100).toFixed(1) : '0';
+                        tooltipContent += `${key}: ${val} kg (${percentage}%)<br/>`;
                     });
                 }
             }
@@ -326,7 +330,7 @@ function updateSankey(dimension) {
                     .style('opacity', .9);
                 tooltip.html(`
                     <strong>${d.name}</strong><br/>
-                    Quantité totale : ${d.value} kg
+                    Poids du lot : ${d.lot.total} kg
                 `)
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY - 28) + 'px');
@@ -348,6 +352,9 @@ function updateSankey(dimension) {
         .style('font-size', '12px')
         .style('fill', '#333')
         .style('pointer-events', 'none');
+
+    // Réinitialisation du dropdown
+    document.getElementById('dimension-selector').value = 'matiere';
 }
 
 // Gestion du changement de dimension
@@ -390,8 +397,8 @@ function selectFirstLevel(lot, dimension, selectedKeys) {
     });
 
     // Masse réelle (en kg) pour chaque sous-lot
-    const selectedKg = Math.round(total * selectedMass / 100 * 10) / 10;
-    const restKg = Math.round(total * restMass / 100 * 10) / 10;
+    const selectedKg = total * selectedMass / 100;
+    const restKg = total * restMass / 100;
 
     // Fonction pour recalculer la distribution d'une dimension sur un sous-lot
     function crossDistrib(lot, formats, formatsMass, lotMass) {
@@ -406,7 +413,7 @@ function selectFirstLevel(lot, dimension, selectedKeys) {
         });
         // On ne garde que les formats présents dans ce sous-lot
         Object.keys(formatObj).forEach(k => {
-            formatObj[k].pourcentage = Math.round(formatObj[k].pourcentage / sumFormat * 1000) / 10;
+            formatObj[k].pourcentage = formatObj[k].pourcentage / sumFormat * 100;
         });
         newLot.format = formatObj;
 
@@ -429,7 +436,7 @@ function selectFirstLevel(lot, dimension, selectedKeys) {
             });
             // Normalisation pour que la somme fasse lotMass
             Object.keys(dimObj).forEach(k => {
-                dimObj[k] = Math.round(dimObj[k] / sum * lotMass * 10) / 10;
+                dimObj[k] = dimObj[k] / sum * lotMass;
             });
             newLot[dim] = dimObj;
         });
