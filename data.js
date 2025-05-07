@@ -174,15 +174,42 @@ const matieres_fibres = {
     "pourcentage": 0.3,
     "fibres": { "Viscose": 74, "Polyamide": 21, "Élasthanne": 5 }
   },
-  "100% acrylique": { "pourcentage": 6.9, "fibres": { "Acrylique": 100 } },
-  "100% inconnu": { "pourcentage": 8.5, "fibres": { "Autre": 100 } },
-  "100% laine": { "pourcentage": 1.9, "fibres": { "Laine": 100 } },
-  "100% viscose": { "pourcentage": 1.4, "fibres": { "Viscose": 100 } },
-  "100% polyamide": { "pourcentage": 1.3, "fibres": { "Polyamide": 100 } },
-  "mélange 4 matières": { "pourcentage": 1.3, "fibres": { "Autre": 100 } },
-  "autres compositions": { "pourcentage": 4.8, "fibres": { "Autre": 100 } },
-  "100% autre": { "pourcentage": 0.4, "fibres": { "Autre": 100 } },
-  "100% soie": { "pourcentage": 0.3, "fibres": { "Soie": 100 } },
+  "100% acrylique": {
+    "pourcentage": 6.9, 
+    "fibres": { "Acrylique": 100 } 
+  },
+  "100% inconnu": { 
+    "pourcentage": 8.5, 
+    "fibres": { "Autre": 100 } 
+  },
+  "100% laine": {
+    "pourcentage": 1.9,
+    "fibres": { "Laine": 100 } 
+  },
+  "100% viscose": {
+    "pourcentage": 1.4, 
+    "fibres": { "Viscose": 100 } 
+  },
+  "100% polyamide": {
+    "pourcentage": 1.3, 
+    "fibres": { "Polyamide": 100 } 
+  },
+  "mélange 4 matières": {
+     "pourcentage": 1.3, 
+     "fibres": { "Autre": 100 } 
+  },
+  "autres compositions": {
+    "pourcentage": 4.8, 
+    "fibres": { "Autre": 100 } 
+  },
+  "100% autre": {
+    "pourcentage": 0.4, 
+    "fibres": { "Autre": 100 } 
+  },
+  "100% soie": {
+    "pourcentage": 0.3, 
+    "fibres": { "Soie": 100 } 
+  }
 };
 
 // Vérification de la somme des pourcentages top-level des matières

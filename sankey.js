@@ -67,6 +67,7 @@ const tooltip = d3.select('body')
 
 // Fonction pour mettre à jour la visualisation
 function updateSankey(dimension) {
+    console.log('updateSankey dimension:', dimension);
     // Nettoyage du SVG
     svg.selectAll('*').remove();
 
@@ -132,9 +133,6 @@ function updateSankey(dimension) {
         const nTypes = typeKeys.length;
         palette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
         colorAccessor = (key, idx) => palette[idx % palette.length];
-    } else if (dimension === 'format') {
-        // Cas spécial pour les formats qui ont une structure à deux niveaux
-        colorAccessor = (key) => colorScales[dimension](key);
     } else if (dimension === 'matiere_fibres') {
         isMatiereFibres = true;
         // On va afficher la distribution des fibres, tous types de matières confondus
@@ -162,6 +160,9 @@ function updateSankey(dimension) {
         const nFibres = typeKeys.length;
         palette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
         colorAccessor = (key, idx) => palette[idx % palette.length];
+    } else if (dimension === 'format') {
+        // Cas spécial pour les formats qui ont une structure à deux niveaux
+        colorAccessor = (key) => colorScales[dimension](key);
     } else if (data.dimensions[dimension]) {
         // Palette classique
         colorAccessor = (key) => colorScales[dimension](key);
@@ -243,27 +244,44 @@ function updateSankey(dimension) {
         // Stackbars pour la dimension sélectionnée
         let yOffset = 0;
         let dimensionValues = {};
-        if (isFormatType || isMatiereFibres) {
-            dimensionValues = stackValues;
-        } else if (d.lot && d.lot[dimension]) {
-            // Si on veut la sous-dimension ET qu'il y a des sous-objets
-            const hasSous = Object.values(d.lot[dimension]).some(obj => obj.sous);
-            if (hasSous && Array.isArray(Object.values(d.lot[dimension]))) {
-                Object.values(d.lot[dimension]).forEach(obj => {
-                    if (obj.sous) {
-                        Object.entries(obj.sous).forEach(([subKey, subObj]) => {
-                            dimensionValues[subKey] = (dimensionValues[subKey] || 0) + subObj.pourcentage;
+        if (dimension === 'matiere_fibres') {
+            if (d.lot && d.lot.matiere) {
+                console.log('LOT MATIERE', d.lot.matiere);
+                Object.values(d.lot.matiere).forEach(matiereObj => {
+                    console.log('MATIERE OBJ', matiereObj);
+                    if (matiereObj && matiereObj.fibres && typeof matiereObj.fibres === 'object') {
+                        console.log('FIBRES', matiereObj.fibres);
+                        Object.entries(matiereObj.fibres).forEach(([fibre, pct]) => {
+                            const val = matiereObj.pourcentage * pct / 100;
+                            console.log('FIBRE', fibre, 'PCT', pct, 'VAL', val);
+                            dimensionValues[fibre] = (dimensionValues[fibre] || 0) + val;
                         });
                     }
                 });
-            } else {
-                // 1er niveau
-                Object.entries(d.lot[dimension]).forEach(([key, obj]) => {
-                    dimensionValues[key] = obj.pourcentage;
+            }
+        } else if (dimension === 'format_type') {
+            if (d.lot && d.lot.format) {
+                console.log('LOT FORMAT', d.lot.format);
+                Object.values(d.lot.format).forEach(formatObj => {
+                    if (formatObj && formatObj.types && typeof formatObj.types === 'object') {
+                        console.log('TYPES', formatObj.types);
+                        Object.entries(formatObj.types).forEach(([type, pct]) => {
+                            const val = formatObj.pourcentage * pct / 100;
+                            dimensionValues[type] = (dimensionValues[type] || 0) + val;
+                        });
+                    }
                 });
             }
+        } else if (d.lot && d.lot[dimension]) {
+            // AFFICHAGE PAR DÉFAUT : uniquement les top-levels
+            Object.entries(d.lot[dimension]).forEach(([key, obj]) => {
+                if (obj && typeof obj.pourcentage === 'number') {
+                    dimensionValues[key] = obj.pourcentage;
+                }
+            });
         }
         const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
+        console.log('dimensionValues', dimensionValues, 'sum', sum, 'dimension', dimension);
         // Création des stackbars triées
         const sortedEntries = Object.entries(dimensionValues).sort((a, b) => b[1] - a[1]);
         sortedEntries.forEach(([key, value], idx) => {
