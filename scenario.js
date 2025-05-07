@@ -183,6 +183,12 @@ const scenario = {
                     dimension: 'qualite',
                     keys: ['Neuf étiqueté', 'Parfait état', 'Bon état'],
                     scenario: {}
+                },
+                {
+                    type: 'selectFirstLevel',
+                    dimension: 'matiere',
+                    keys: ['100% coton'],
+                    scenario: {}
                 }
             ],
             coproduct_transformations: {}
@@ -428,10 +434,18 @@ function crossDistrib(lot, formats, formatsMass, lotMass) {
             // On ramène à la masse du sous-lot
             valKg = valKg * (lotMass / formatsMass);
             if (dim === 'matiere') {
+                // On recalcule la distribution des fibres pour chaque matière, pondérée par la masse réelle de la matière dans le sous-lot
                 dimObj[val] = {
                     pourcentage: Number((valKg / lotMass * 100).toFixed(1)),
-                    fibres: lot[dim][val] && lot[dim][val].fibres ? JSON.parse(JSON.stringify(lot[dim][val].fibres)) : {}
+                    fibres: {} // <-- Correction ici
                 };
+                // Si la matière existe dans le lot initial et a des fibres
+                if (lot[dim][val] && lot[dim][val].fibres) {
+                    Object.entries(lot[dim][val].fibres).forEach(([fibre, pctFibre]) => {
+                        // La masse de la fibre dans la matière = masse matière * % fibre
+                        dimObj[val].fibres[fibre] = pctFibre;
+                    });
+                }
             } else {
                 dimObj[val] = Number((valKg / lotMass * 100).toFixed(1));
             }

@@ -199,7 +199,7 @@ function updateSankey(dimension) {
                 .style('opacity', .9);
             let tooltipContent = `
                 <strong>${d.source.name} → ${d.target.name}</strong><br/>
-                Quantité: ${d.value} kg<br/>
+                Quantité: ${Math.round(d.value)} kg<br/>
                 Pourcentage: ${(d.source.lot && d.source.lot.total ? (d.value / d.source.lot.total * 100).toFixed(1) : '0')}%<br/>
             `;
             if (data.dimensions[dimension]) {
@@ -352,9 +352,6 @@ function updateSankey(dimension) {
         .style('font-size', '12px')
         .style('fill', '#333')
         .style('pointer-events', 'none');
-
-    // Réinitialisation du dropdown
-    document.getElementById('dimension-selector').value = 'matiere';
 }
 
 // Gestion du changement de dimension
