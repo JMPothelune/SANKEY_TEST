@@ -68,6 +68,7 @@ const tooltip = d3.select('body')
 // Fonction pour mettre à jour la visualisation
 function updateSankey(dimension) {
     console.log('updateSankey dimension:', dimension);
+    console.log('NODES:', sankeyScenario.nodes);
     // Nettoyage du SVG
     svg.selectAll('*').remove();
 

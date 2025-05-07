@@ -143,86 +143,71 @@ function normalizePourcentages(obj) {
     });
 }
 
-// Fonction principale pour parser le scénario en séquence (découpage du reste à chaque étape)
-function applyScenarioSequentialFromInitial(lotInitial, scenario) {
-    const nodes = [{ id: '0', name: 'Lot initial', lot: cloneLot(lotInitial) }];
-    const links = [];
-    let idGen = 1;
-    let currentLot = cloneLot(lotInitial);
-    let currentNodeId = '0';
-
-    scenario.forEach((step, index) => {
-        const { targetLot, coProductLot } = selectFirstLevel(currentLot, step.transform.dimension, step.transform.keys);
-        
-        // Ajout du lot cible
-        const targetId = `${idGen++}`;
-        nodes.push({ 
-            id: targetId, 
-            name: `${step.transform.dimension}: ${step.transform.keys.join(' + ')}`, 
-            lot: targetLot 
-        });
-        
-        // Lien depuis le lot précédent vers le lot cible
-        links.push({ 
-            source: currentNodeId, 
-            target: targetId, 
-            value: targetLot.total 
-        });
-
-        // Mise à jour du lot courant pour la prochaine itération
-        currentLot = coProductLot;
-        currentNodeId = targetId;
-    });
-
-    // Ajout du dernier reste s'il reste quelque chose
-    if (currentLot && currentLot.total > 0) {
-        const restId = `${idGen++}_reste`;
-        nodes.push({ 
-            id: restId, 
-            name: 'Reste', 
-            lot: currentLot 
-        });
-        links.push({ 
-            source: currentNodeId, 
-            target: restId, 
-            value: currentLot.total 
-        });
+// Nouvelle structure de scénario (vide pour l'instant)
+const scenario = {
+  transformations: [
+    {
+        type: 'selectFirstLevel',
+        dimension: 'format',
+        keys: ['Chaussures et bottes'],
+        scenario: {}
+    },
+    {
+        type: 'selectFirstLevel',
+        dimension: 'matiere',
+        keys: ['100% coton'],
+        scenario: {}
     }
+  ],
+  coproduct_transformations: []
+};
 
-    return { nodes, links };
-}
+// Nouvelle fonction de parsing du scénario (squelette)
+function applyScenario(lotInitial, scenario) {
+  const nodes = [{ id: '0', name: 'Lot initial', lot: cloneLot(lotInitial) }];
+  const links = [];
+  let idGen = 1;
+  let resteLot = cloneLot(lotInitial);
 
-// Fonction principale pour parser le scénario en PARALLÈLE (tous les paths partent du lot initial, découpage séquentiel)
-function applyScenarioParallelFromInitial(lotInitial, scenario) {
-    const nodes = [{ id: '0', name: 'Lot initial', lot: cloneLot(lotInitial) }];
-    const links = [];
-    let idGen = 1;
-    let usedKeysByDimension = {};
-    let resteLot = cloneLot(lotInitial);
-
-    scenario.forEach(step => {
-        const dimension = step.transform.dimension;
-        const keys = step.transform.keys;
-        // On retire les clés déjà utilisées dans cette dimension
-        if (!usedKeysByDimension[dimension]) usedKeysByDimension[dimension] = [];
-        const keysToSelect = keys.filter(k => !usedKeysByDimension[dimension].includes(k));
-        if (keysToSelect.length === 0) return; // rien à sélectionner
-        // Sélectionne la part dans le lot initial
-        const { targetLot } = selectFirstLevel(lotInitial, dimension, keysToSelect);
-        const targetId = `${idGen++}`;
-        nodes.push({ id: targetId, name: `${dimension}: ${keysToSelect.join(' + ')}`, lot: targetLot });
-        links.push({ source: '0', target: targetId, value: targetLot.total });
-        // Met à jour le reste pour la fin
-        resteLot = removeKeysFromLot(resteLot, dimension, keysToSelect);
-        usedKeysByDimension[dimension].push(...keysToSelect);
+  (scenario.transformations || []).forEach(transfo => {
+    const dimension = transfo.dimension;
+    const keys = transfo.keys;
+    keys.forEach(key => {
+      if (!resteLot[dimension][key]) return;
+      // Calcule la part correspondante dans le reste
+      const filteredLot = filterLotBySingleSelection(resteLot, dimension, key);
+      if (!filteredLot) return;
+      const targetId = `${idGen++}`;
+      nodes.push({ id: targetId, name: `${dimension}: ${key}`, lot: filteredLot });
+      links.push({ source: '0', target: targetId, value: filteredLot.total });
+      // Retire cette part du reste global (dans toutes les dimensions)
+      const pctToRemove = resteLot[dimension][key].pourcentage / 100;
+      // Supprime la clé du top level sans toucher aux sous-niveaux
+      delete resteLot[dimension][key];
+      // Normalise les pourcentages du top-level restant
+      normalizePourcentages(resteLot[dimension]);
+      // Met à jour le total du reste
+      resteLot.total = Math.round((resteLot.total - filteredLot.total) * 10) / 10;
+      // Met à jour les autres dimensions proportionnellement, sans toucher aux sous-niveaux
+      Object.keys(resteLot).forEach(dim => {
+        if (dim === 'total' || !resteLot[dim]) return;
+        Object.keys(resteLot[dim]).forEach(k => {
+          if (resteLot[dim][k] && typeof resteLot[dim][k].pourcentage === 'number') {
+            resteLot[dim][k].pourcentage = Math.round(resteLot[dim][k].pourcentage / (1 - pctToRemove) * 10) / 10;
+          }
+        });
+        // Normalise aussi les autres dimensions
+        normalizePourcentages(resteLot[dim]);
+      });
     });
-    // Ajoute le reste à la fin
-    if (resteLot && resteLot.total > 0.1) {
-        const restId = `${idGen++}_reste`;
-        nodes.push({ id: restId, name: 'Reste', lot: resteLot });
-        links.push({ source: '0', target: restId, value: resteLot.total });
-    }
-    return { nodes, links };
+  });
+  // Ajoute le reste à la fin
+  if (resteLot && resteLot.total > 0.1) {
+    const restId = `${idGen++}_reste`;
+    nodes.push({ id: restId, name: 'Reste', lot: resteLot });
+    links.push({ source: '0', target: restId, value: resteLot.total });
+  }
+  return { nodes, links };
 }
 
 // Génère le produit cartésien des sélections du scénario
@@ -347,26 +332,8 @@ function applyScenarioIndependentSelections(lotInitial, scenario) {
     return { nodes, links };
 }
 
-// Exemple de scénario à plat
-const scenario = [
-  {
-    transform: {
-      type: 'selectFirstLevel',
-      dimension: 'format',
-      keys: ['Chaussures et bottes']
-    }
-  },
-  {
-    transform: {
-      type: 'selectFirstLevel',
-      dimension: 'matiere',
-      keys: ['100% coton']
-    }
-  }
-];
-
 // Générer les données pour le Sankey
-const sankeyScenario = applyScenarioIndependentSelections(lotInitial, scenario);
+const sankeyScenario = applyScenario(lotInitial, scenario);
 // sankeyScenario.nodes et sankeyScenario.links sont à utiliser dans sankey.js 
 
 // Pour tester :

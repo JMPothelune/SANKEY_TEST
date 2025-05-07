@@ -89,46 +89,104 @@ Pour modifier ou étendre le projet :
 
 ## Système de transformations dynamiques (scénario Sankey)
 
-### Principe
-Le Sankey peut être généré dynamiquement à partir d'un lot de départ (distribution initiale sur 1000 kg) et d'une suite de transformations appliquées à ce lot. Chaque transformation modifie la répartition d'une dimension (format, matière, couleur, qualité, etc.) et génère un nouveau lot. Le Sankey affiche tous les lots intermédiaires, chaque transformation créant un nouveau nœud et un lien dans le diagramme.
+### Principe général du parsing (logique actuelle)
 
-### Structure d'un lot
-Un lot est un objet contenant la répartition de chaque dimension sur un volume total :
+- **Chaque transformation** du tableau `transformations` découpe sa part dans le lot initial (toutes dimensions confondues).
+- **Tous les paths partent du lot initial** : chaque sélection crée un nœud et un lien depuis le lot initial.
+- **Le "reste"** est ce qui n'a pas été sélectionné dans aucune transformation (toutes dimensions confondues), et il est ajouté à la fin comme un nœud supplémentaire.
+- **Aucune logique séquentielle ni croisée** : chaque sélection est indépendante, il n'y a pas d'enchaînement ni d'intersection entre les sélections.
+- **Les sous-scenarios (`scenario`) et les `coproduct_transformations` ne sont pas encore gérés** dans le parsing actuel.
+
+#### Exemple de scénario
 ```js
-const lot = {
-  total: 1000,
-  format: { "Vêtements": 724, "Chaussures et bottes": 94, ... },
-  matiere: { ... },
-  couleur: { ... },
-  qualite: { ... }
+const scenario = {
+  transformations: [
+    {
+      type: 'selectFirstLevel',
+      dimension: 'format',
+      keys: ['Chaussures et bottes'],
+      scenario: {}
+    },
+    {
+      type: 'selectFirstLevel',
+      dimension: 'matiere',
+      keys: ['100% coton'],
+      scenario: {}
+    }
+  ],
+  coproduct_transformations: []
 };
 ```
 
-### Transformations
-- **Une transformation ne modifie qu'une seule dimension à la fois.**
-- Après chaque transformation, les pourcentages de la dimension concernée sont recalculés pour que la somme fasse 100%.
-- Les sous-dimensions (ex : fibres dans matière) ne sont pas recalculées automatiquement pour l'instant.
-- Exemple de transformation de base : `selectFirstLevel(lot, dimension, selectedKeys)`
-  - Garde uniquement les valeurs sélectionnées dans la dimension, recalcule les pourcentages et le total du lot.
+#### Résultat attendu dans le Sankey
+- 1 nœud "Lot initial" à gauche
+- 1 path pour la sélection "format: Chaussures et bottes"
+- 1 path pour la sélection "matiere: 100% coton"
+- 1 path "Reste" pour tout ce qui n'a pas été sélectionné
 
-### Scénario/arbre de transformations
-- Un scénario est une suite (ou un arbre) de transformations appliquées à un lot.
-- Chaque transformation est définie par :
-  - un identifiant unique (`id`)
-  - le parent (`from`) : l'id du lot d'origine (ou `null` pour le lot initial)
-  - la transformation à appliquer (`transform`)
-- Exemple de scénario (arbre à 2 branches par nœud) :
+#### Différence avec un parsing séquentiel ou croisé
+- **Séquentiel** : chaque transformation s'applique sur le reste du lot précédent (ce n'est PAS le cas ici)
+- **Croisé** : chaque path correspond à une combinaison de sélections sur plusieurs dimensions (ce n'est PAS le cas ici)
+- **Ici** : chaque sélection découpe sa part dans le lot initial, indépendamment des autres, puis le reste est ajouté à la fin.
+
+### Principe
+Le Sankey peut être généré dynamiquement à partir d'un lot de départ (distribution initiale sur 1000 kg) et d'un **scénario** arborescent de transformations. Chaque transformation modifie la répartition d'une dimension (format, matière, couleur, qualité, etc.) et génère un ou plusieurs nouveaux lots. Le Sankey affiche tous les lots intermédiaires, chaque transformation créant un nouveau nœud et un lien dans le diagramme.
+
+### Nouvelle structure du scénario
+
+Un scénario est un objet avec deux propriétés :
+- `transformations` : tableau de transformations principales (sélections)
+- `coproduct_transformations` : tableau de transformations appliquées au "reste" (coproduit)
+
+Chaque transformation est un objet :
+- `transform` : { type, dimension, keys } (type = "select", dimension = nom de la dimension, keys = valeurs sélectionnées)
+- `scenario` : (optionnel) sous-scénario imbriqué, même structure (objet avec transformations/coproduct_transformations)
+
+#### Exemple minimal (vide)
 ```js
-const scenario = [
-  { id: '1', from: null, transform: { type: 'selectFirstLevel', dimension: 'format', keys: ['Vêtements'] } },
-  { id: '2', from: null, transform: { type: 'selectFirstLevel', dimension: 'format', keys: ['Chaussures et bottes'] } },
-  { id: '3', from: '1', transform: { type: 'selectFirstLevel', dimension: 'qualite', keys: ['Bon état (usure légère)', 'Usé (usure moyenne)'] } },
-  // etc.
-];
+const scenario = {
+  transformations: [],
+  coproduct_transformations: []
+};
 ```
-- Le Sankey généré affichera tous les lots intermédiaires (chaque étape comme un nœud), et les liens représenteront les transformations.
 
-### Extension future
-- Possibilité d'ajouter d'autres types de transformations (filtrage par seuil, fusion de catégories, etc.).
-- Possibilité d'avoir plus de 2 branches à chaque nœud.
-- Possibilité de recalculer les sous-dimensions si besoin.
+#### Exemple imbriqué
+```js
+const scenario = {
+  transformations: [
+    {
+      transform: {
+        type: "select",
+        dimension: "format",
+        keys: ["Chaussures et bottes"]
+      },
+      scenario: {
+        transformations: [
+          {
+            transform: {
+              type: "select",
+              dimension: "matiere",
+              keys: ["100% coton"]
+            },
+            scenario: {
+              transformations: [],
+              coproduct_transformations: []
+            }
+          }
+        ],
+        coproduct_transformations: []
+      }
+    }
+  ],
+  coproduct_transformations: [
+    // transformations à appliquer au reste du lot initial
+  ]
+};
+```
+
+- À chaque niveau, tu peux imbriquer autant de sous-scénarios que tu veux.
+- Les transformations du "reste" (coproduit) sont toujours dans le champ `coproduct_transformations`.
+- Cette structure permet de représenter n'importe quel arbre de transformations, avec une logique homogène et facile à parser.
+
+### Parsing
+Le parsing du scénario se fait récursivement : à chaque niveau, on applique toutes les transformations principales, puis toutes les transformations du coproduit (reste), en descendant dans les sous-scénarios si présents.
