@@ -4,7 +4,16 @@ const scenario = {
     {
         type: 'selectByFormat',
         keys: ['Chaussures et bottes'],
-        scenario: {}
+        scenario: {
+            transformations: [
+                {
+                type: 'selectByQualite',
+                keys: ['Neuf étiqueté', 'Parfait état', 'Bon état'],
+                scenario: {}
+                }
+            ],
+            coproduct_transformations: {}
+        }
     },
     {
         type: 'selectByFormat',
@@ -22,13 +31,18 @@ const scenario = {
             scenario: {
               transformations: [
                 {
-                  type: 'selectByMatiere',
-                  keys: ['100% coton'],
+                  type: 'selectByFibre',
+                  keys: ['Coton'],
                   scenario: {}
                 }
               ],
               coproduct_transformations: {}
             }
+          },
+          {
+            type: 'selectByCouleur',
+            keys: ['blanc', 'noir'],
+            scenario: {}
           }
         ],
         coproduct_transformations: {}

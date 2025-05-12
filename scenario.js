@@ -70,6 +70,12 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
       result = selectByType(resteLot, transfo.keys);
     } else if (transfo.type === 'selectByMatiere') {
       result = selectByMatiere(resteLot, transfo.keys);
+    } else if (transfo.type === 'selectByQualite') {
+      result = selectByQualite(resteLot, transfo.keys);
+    } else if (transfo.type === 'selectByCouleur') {
+      result = selectByCouleur(resteLot, transfo.keys);
+    } else if (transfo.type === 'selectByFibre') {
+      result = selectByFibre(resteLot, transfo.keys);
     } else {
       throw new Error('Type de transformation non géré : ' + transfo.type);
     }
@@ -493,20 +499,145 @@ function selectByQualite(lot, selectedQualites) {
     rest[k] = rest[k] / restPct * 100;
   });
 
-  // Création des lots sélectionnés et reste
-  const lots = [];
+  let targetLot = null;
+  let coProductLot = null;
   if (selectedPct > 0) {
-    const lotSel = JSON.parse(JSON.stringify(lot));
-    lotSel.qualite = selected;
-    lotSel.total = lot.total * (selectedPct / 100);
-    lots.push(lotSel);
+    targetLot = JSON.parse(JSON.stringify(lot));
+    targetLot.qualite = selected;
+    targetLot.total = lot.total * (selectedPct / 100);
   }
   if (restPct > 0) {
-    const lotRest = JSON.parse(JSON.stringify(lot));
-    lotRest.qualite = rest;
-    lotRest.total = lot.total * (restPct / 100);
-    lots.push(lotRest);
+    coProductLot = JSON.parse(JSON.stringify(lot));
+    coProductLot.qualite = rest;
+    coProductLot.total = lot.total * (restPct / 100);
   }
-  return lots;
+  return { targetLot, coProductLot };
 }
+
+// Sélectionne une ou plusieurs couleurs dans un lot
+function selectByCouleur(lot, selectedCouleurs) {
+  // Deep clone pour ne pas modifier l'objet d'origine
+  const newLot = JSON.parse(JSON.stringify(lot));
+  let selectedPct = 0;
+  let restPct = 0;
+
+  // Parcourir tous les formats et types pour agréger les couleurs
+  Object.entries(lot.format).forEach(([formatKey, formatObj]) => {
+    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
+      if (typeObj.couleurs) {
+        Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
+          // Calculer le pourcentage pondéré par le format et le type
+          const pct = couleurObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+          if (selectedCouleurs.includes(couleur)) {
+            selectedPct += pct;
+          } else {
+            restPct += pct;
+          }
+        });
+      }
+    });
+  });
+
+  // Création des deux lots
+  const targetLot = JSON.parse(JSON.stringify(lot));
+  const coProductLot = JSON.parse(JSON.stringify(lot));
+
+  // Mise à jour des couleurs dans les deux lots
+  Object.entries(targetLot.format).forEach(([formatKey, formatObj]) => {
+    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
+      if (typeObj.couleurs) {
+        const selected = {};
+        const rest = {};
+        Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
+          if (selectedCouleurs.includes(couleur)) {
+            selected[couleur] = { ...couleurObj };
+          } else {
+            rest[couleur] = { ...couleurObj };
+          }
+        });
+        // Mettre à jour les couleurs dans le type
+        typeObj.couleurs = selected;
+      }
+    });
+  });
+
+  Object.entries(coProductLot.format).forEach(([formatKey, formatObj]) => {
+    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
+      if (typeObj.couleurs) {
+        const selected = {};
+        const rest = {};
+        Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
+          if (selectedCouleurs.includes(couleur)) {
+            selected[couleur] = { ...couleurObj };
+          } else {
+            rest[couleur] = { ...couleurObj };
+          }
+        });
+        // Mettre à jour les couleurs dans le type
+        typeObj.couleurs = rest;
+      }
+    });
+  });
+
+  // Mise à jour des totaux
+  targetLot.total = lot.total * (selectedPct / 100);
+  coProductLot.total = lot.total * (restPct / 100);
+
+  return { targetLot, coProductLot };
+}
+
+// Sélectionne une ou plusieurs fibres dans un lot
+function selectByFibre(lot, selectedFibres) {
+  // On suppose que lot ne contient qu'un seul format et un seul type (après selectByFormat et selectByType)
+  const formatKeys = Object.keys(lot.format);
+  if (formatKeys.length !== 1) throw new Error('selectByFibre attend un lot avec un seul format');
+  const formatKey = formatKeys[0];
+  const typeKeys = Object.keys(lot.format[formatKey].types);
+  if (typeKeys.length !== 1) throw new Error('selectByFibre attend un lot avec un seul type');
+  const typeKey = typeKeys[0];
+  const typeObj = lot.format[formatKey].types[typeKey];
+
+  // On travaille sur l'objet matieres du type courant
+  const matieresObj = typeObj.matieres || {};
+  let selected = {};
+  let rest = {};
+  let selectedPct = 0;
+  let restPct = 0;
+
+  Object.entries(matieresObj).forEach(([nom, matiere]) => {
+    const hasSelectedFibre = matiere.fibres && Object.keys(matiere.fibres).some(fibre => selectedFibres.includes(fibre));
+    if (hasSelectedFibre) {
+      selected[nom] = { ...matiere };
+      selectedPct += matiere.pourcentage;
+    } else {
+      rest[nom] = { ...matiere };
+      restPct += matiere.pourcentage;
+    }
+  });
+
+  // Recalcul des pourcentages
+  Object.keys(selected).forEach(nom => {
+    selected[nom].pourcentage = selected[nom].pourcentage / selectedPct * 100;
+  });
+  Object.keys(rest).forEach(nom => {
+    rest[nom].pourcentage = rest[nom].pourcentage / restPct * 100;
+  });
+
+  // Récupérer le pourcentage du type parent
+  const typePourcentage = typeof typeObj.pourcentage === 'number' ? typeObj.pourcentage : 100;
+
+  // Création des deux lots
+  const targetLot = JSON.parse(JSON.stringify(lot));
+  targetLot.format[formatKey].types[typeKey].matieres = selected;
+  targetLot.format[formatKey].types[typeKey].pourcentage = typePourcentage;
+  targetLot.total = lot.total * (typePourcentage / 100) * (selectedPct / 100);
+
+  const coProductLot = JSON.parse(JSON.stringify(lot));
+  coProductLot.format[formatKey].types[typeKey].matieres = rest;
+  coProductLot.format[formatKey].types[typeKey].pourcentage = typePourcentage;
+  coProductLot.total = lot.total * (typePourcentage / 100) * (restPct / 100);
+
+  return { targetLot, coProductLot };
+}
+
 

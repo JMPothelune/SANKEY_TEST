@@ -134,7 +134,8 @@ const stackbarComponents = {
           Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
             if (typeObj.matieres) {
               Object.entries(typeObj.matieres).forEach(([matiereName, matiereObj]) => {
-                if (matiereObj && matiereObj.fibres && typeof matiereObj.fibres === 'object') {
+                // On ignore les matières sans fibres
+                if (matiereObj && matiereObj.fibres && Object.keys(matiereObj.fibres).length > 0) {
                   Object.entries(matiereObj.fibres).forEach(([fibre, pctFibre]) => {
                     // Pondération par le pourcentage de la matière, du type et du format
                     const pct = (pctFibre / 100) * (matiereObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
@@ -146,8 +147,15 @@ const stackbarComponents = {
           });
         }
       });
-      // Affichage debug
-      console.log('Résultat fibres pour lot', lot, values);
+      // Normalisation pour que la somme fasse 100% de la part du lot qui a des fibres
+      const sum = Object.values(values).reduce((a, b) => a + b, 0);
+      if (sum > 0) {
+        Object.keys(values).forEach(k => {
+          values[k] = values[k] / sum * 100;
+        });
+      }
+      // Optionnel : indiquer la part sans fibre
+      values._missing = 100 - (sum > 0 ? 100 : 0);
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -158,14 +166,18 @@ const stackbarComponents = {
     getStackValues: lot => {
       if (!lot.format) return {};
       const values = {};
+      let totalWithCouleur = 0;
       Object.entries(lot.format).forEach(([formatName, formatObj]) => {
         if (formatObj.types) {
           Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
             if (typeObj.couleurs) {
+              // Masse de ce type dans le lot
+              const typePct = (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+              totalWithCouleur += typePct;
               Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
                 if (typeof couleurObj.pourcentage === 'number') {
-                  // Correction ici :
-                  const pct = (couleurObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
+                  // Pondération par la masse du type
+                  const pct = (couleurObj.pourcentage / 100) * typePct * 100;
                   values[couleur] = (values[couleur] || 0) + pct;
                 }
               });
@@ -173,8 +185,28 @@ const stackbarComponents = {
           });
         }
       });
-      // Affichage debug
-      // console.log('Résultat couleurs pour lot', lot, values);
+      // Normalisation pour que la somme fasse 100% de la part du lot qui a des couleurs
+      const sum = Object.values(values).reduce((a, b) => a + b, 0);
+      if (sum > 0) {
+        Object.keys(values).forEach(k => {
+          values[k] = values[k] / sum * 100;
+        });
+      }
+      values._missing = 100 - (sum > 0 ? 100 : 0); // Pour info, part sans couleur
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
+  qualite: {
+    getStackValues: lot => {
+      if (!lot.qualite) return {};
+      const values = {};
+      Object.entries(lot.qualite).forEach(([qual, pct]) => {
+        // pct peut être un nombre ou un objet (selon la structure)
+        values[qual] = typeof pct === 'number' ? pct : (pct.pourcentage || 0);
+      });
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -299,6 +331,17 @@ function updateSankey(dimension) {
           const mappedKey = mapping[key.toLowerCase()] || keyNorm;
           return colorScales.couleur(mappedKey) || d3.interpolateRainbow(idx / nCouleurs);
         };
+    } else if (dimension === 'qualite') {
+        // Palette dynamique pour la qualité
+        const component = stackbarComponents[dimension];
+        const allQualites = new Set();
+        sankeyData.nodes.forEach(d => {
+          const vals = component.getStackValues(d.lot);
+          Object.keys(vals).forEach(q => allQualites.add(q));
+        });
+        const qualiteKeys = Array.from(allQualites);
+        const nQualites = qualiteKeys.length;
+        colorAccessor = (key, idx) => colorScales.qualite(key) || d3.interpolateOranges(idx / nQualites);
     } else if (data.dimensions[dimension]) {
         // Palette classique
         colorAccessor = (key) => colorScales[dimension](key);
@@ -334,7 +377,7 @@ function updateSankey(dimension) {
         .attr('d', d3.sankeyLinkHorizontal())
         .attr('stroke-width', d => Math.max(1, d.width))
         .style('stroke', '#000')
-        .style('stroke-opacity', 0.5)
+        .style('stroke-opacity', 0.18)
         .on('mouseover', function(event, d) {
             tooltip.transition()
                 .duration(200)
@@ -429,12 +472,22 @@ function updateSankey(dimension) {
             .style('fill', '#cccccc')
             .style('opacity', 0.7)
             .on('mouseover', function(event) {
+                const component = stackbarComponents[dimension];
+                const dimensionValues = component ? component.getStackValues(d.lot) : {};
+                const sumPct = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
+                const missingPct = dimensionValues._missing || 0;
+                let missingInfo = '';
+                if (missingPct > 0.1) {
+                  missingInfo = `<br/><span style='font-size:12px;color:#c00;'>Donnée couleur manquante pour ${missingPct.toFixed(1)}%</span>`;
+                }
                 tooltip.transition()
                     .duration(200)
                     .style('opacity', .9);
                 tooltip.html(`
                     <strong>${d.name}</strong><br/>
-                    Poids du lot : ${Math.round(d.lot.total)} kg
+                    Poids du lot : ${Math.round(d.lot.total)} kg<br/>
+                    <span style='font-size:12px;color:#666;'>Somme des % stackbar : ${sumPct.toFixed(1)}%</span>
+                    ${missingInfo}
                 `)
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY - 28) + 'px');

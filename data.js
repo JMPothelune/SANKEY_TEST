@@ -1,17 +1,3 @@
-const couleurDistrib = {
-    "Noir": 17,
-    "Blanc": 16,
-    "Bleu": 15,
-    "Gris": 12,
-    "Marron": 7,
-    "Rouge": 5,
-    "Vert": 4,
-    "Violet": 3,
-    "Orange": 1.5,
-    "Jaune": 1.5,
-    "Inconnu": 2,
-    "Multicolore": 16
-};
 
 const formats_types = {
   "Vêtements": {
@@ -228,6 +214,7 @@ const qualiteDistrib = {
     "Inutilisable": 8
 };
 
+// à effacer dans le futur. Mais est utilisé pour générer les couleurs 
 const data = {
     "dimensions": {
         "matiere": {
