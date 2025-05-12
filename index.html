@@ -12,17 +12,18 @@
     <div class="container">
         <div class="controls">
             <select id="dimension-selector">
-                <option value="matiere">Matière</option>
-                <option value="matiere_fibres">Matière - Fibres</option>
-                <option value="format">Format</option>
-                <option value="format_type">Format - Type</option>
-                <option value="couleur">Couleur</option>
+                <option value="format" selected>Format</option>
+                <option value="format_type">- Type</option>
+                <option value="matiere">-- Matière</option>
+                <option value="fibres">--- Fibres</option>
+                <option value="couleur">--Couleur</option>
                 <option value="qualite">Qualité</option>
             </select>
         </div>
         <div id="sankey-container"></div>
     </div>
     <script src="data.js"></script>
+    <script src="scenario-data.js"></script>
     <script src="scenario.js"></script>
     <script src="sankey.js"></script>
 </body>

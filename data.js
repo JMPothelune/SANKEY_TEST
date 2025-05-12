@@ -714,3 +714,6 @@ Object.entries(formats_types).forEach(([format, formatObj]) => {
 console.log('lotType généré :', lotType);
 
 
+
+
+

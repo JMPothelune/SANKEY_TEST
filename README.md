@@ -190,3 +190,63 @@ const scenario = {
 
 ### Parsing
 Le parsing du scénario se fait récursivement : à chaque niveau, on applique toutes les transformations principales, puis toutes les transformations du coproduit (reste), en descendant dans les sous-scénarios si présents.
+
+## Génération dynamique de l'objet `lotType`
+
+Au chargement de la page, un objet `lotType` est généré automatiquement à partir des constantes `formats_types`, `repartitionParType` et `matieres_fibres`.
+
+Cet objet permet d'obtenir une structure hiérarchique complète : format > type > matière > fibres, avec la répartition des couleurs et la qualité.
+
+### Exemple de structure générée
+
+```js
+{
+  total: 1000,
+  format: {
+    "Vêtements": {
+      pourcentage: 60,
+      types: {
+        "T-shirt": {
+          pourcentage: 40,
+          matieres: {
+            "Coton": {
+              pourcentage: 80,
+              fibres: { /* ... */ }
+            },
+            // ...
+          },
+          couleurs: {
+            "Bleu": { pourcentage: 50 },
+            // ...
+          }
+        },
+        // ...
+      }
+    },
+    // ...
+  },
+  qualite: {
+    "Neuf étiqueté": 5,
+    "Parfait état": 15,
+    "Bon état": 15,
+    "Usé": 25,
+    "Abîmé": 32,
+    "Inutilisable": 8
+  }
+}
+```
+
+- Le champ `total` correspond à la masse totale de référence (exemple : 1000).
+- Le champ `format` contient tous les formats, chacun avec ses types, matières, fibres et couleurs.
+- Le champ `qualite` reprend la distribution qualité.
+
+---
+
+## Utilisation
+
+- Toutes les données sont générées automatiquement à partir des fichiers de données (`data.js`).
+- Pour voir la structure générée, ouvrez la console du navigateur : un log `lotType généré : ...` s'affiche au chargement de la page.
+
+---
+
+Pour toute question ou adaptation de la structure, contactez le développeur du projet.

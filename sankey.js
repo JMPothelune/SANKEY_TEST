@@ -65,10 +65,127 @@ const tooltip = d3.select('body')
     .attr('class', 'tooltip')
     .style('opacity', 0);
 
+// Components pour stackbars et tooltips selon la dimension
+const stackbarComponents = {
+  format: {
+    getStackValues: lot => {
+      if (!lot.format) return {};
+      const values = {};
+      Object.entries(lot.format).forEach(([key, obj]) => {
+        if (typeof obj.pourcentage === 'number') values[key] = obj.pourcentage;
+      });
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
+  format_type: {
+    getStackValues: lot => {
+      // Concatène tous les types de tous les formats présents dans le lot
+      if (!lot.format) return {};
+      const values = {};
+      Object.values(lot.format).forEach(formatObj => {
+        if (formatObj.types) {
+          Object.entries(formatObj.types).forEach(([type, typeObj]) => {
+            if (typeof typeObj.pourcentage === 'number') {
+              values[type] = (values[type] || 0) + typeObj.pourcentage * (formatObj.pourcentage / 100);
+            }
+          });
+        }
+      });
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
+  matiere: {
+    getStackValues: lot => {
+      if (!lot.format) return {};
+      const values = {};
+      Object.values(lot.format).forEach(formatObj => {
+        if (formatObj.types) {
+          Object.values(formatObj.types).forEach(typeObj => {
+            if (typeObj.matieres) {
+              Object.entries(typeObj.matieres).forEach(([matiere, matiereObj]) => {
+                if (typeof matiereObj.pourcentage === 'number') {
+                  // Pondération par le pourcentage du type et du format
+                  const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+                  values[matiere] = (values[matiere] || 0) + pct;
+                }
+              });
+            }
+          });
+        }
+      });
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
+  fibres: {
+    getStackValues: lot => {
+      if (!lot.format) return {};
+      const values = {};
+      Object.entries(lot.format).forEach(([formatName, formatObj]) => {
+        if (formatObj.types) {
+          Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
+            if (typeObj.matieres) {
+              Object.entries(typeObj.matieres).forEach(([matiereName, matiereObj]) => {
+                if (matiereObj && matiereObj.fibres && typeof matiereObj.fibres === 'object') {
+                  Object.entries(matiereObj.fibres).forEach(([fibre, pctFibre]) => {
+                    // Pondération par le pourcentage de la matière, du type et du format
+                    const pct = (pctFibre / 100) * (matiereObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
+                    values[fibre] = (values[fibre] || 0) + pct;
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+      // Affichage debug
+      console.log('Résultat fibres pour lot', lot, values);
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
+  couleur: {
+    getStackValues: lot => {
+      if (!lot.format) return {};
+      const values = {};
+      Object.entries(lot.format).forEach(([formatName, formatObj]) => {
+        if (formatObj.types) {
+          Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
+            if (typeObj.couleurs) {
+              Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
+                if (typeof couleurObj.pourcentage === 'number') {
+                  // Correction ici :
+                  const pct = (couleurObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
+                  values[couleur] = (values[couleur] || 0) + pct;
+                }
+              });
+            }
+          });
+        }
+      });
+      // Affichage debug
+      // console.log('Résultat couleurs pour lot', lot, values);
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
+  // Ajoute ici d'autres dimensions si besoin
+};
+
 // Fonction pour mettre à jour la visualisation
 function updateSankey(dimension) {
-    console.log('updateSankey dimension:', dimension);
-    console.log('NODES:', sankeyScenario.nodes);
     // Nettoyage du SVG
     svg.selectAll('*').remove();
 
@@ -134,36 +251,54 @@ function updateSankey(dimension) {
         const nTypes = typeKeys.length;
         palette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
         colorAccessor = (key, idx) => palette[idx % palette.length];
-    } else if (dimension === 'matiere_fibres') {
-        isMatiereFibres = true;
-        // On va afficher la distribution des fibres, tous types de matières confondus
-        const fibreTotals = {};
-        let total = 0;
-        sankeyData.nodes.forEach(node => {
-            const matiereData = node.lot.matiere;
-            Object.values(matiereData).forEach(matiereObj => {
-                const parentPct = matiereObj.pourcentage;
-                Object.entries(matiereObj.fibres).forEach(([fibre, pct]) => {
-                    const val = parentPct * pct / 100;
-                    fibreTotals[fibre] = (fibreTotals[fibre] || 0) + val;
-                    total += val;
-                });
-            });
-        });
-        // Normalisation des pourcentages de fibres
-        const totalFibre = Object.values(fibreTotals).reduce((sum, val) => sum + val, 0);
-        Object.keys(fibreTotals).forEach(fibre => {
-            fibreTotals[fibre] = Number((fibreTotals[fibre] * sankeyData.nodes[0].lot.total / totalFibre).toFixed(1));
-        });
-        stackValues = fibreTotals;
-        typeKeys = Object.keys(fibreTotals);
-        // Palette dynamique pour les fibres
-        const nFibres = typeKeys.length;
-        palette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
-        colorAccessor = (key, idx) => palette[idx % palette.length];
     } else if (dimension === 'format') {
         // Cas spécial pour les formats qui ont une structure à deux niveaux
         colorAccessor = (key) => colorScales[dimension](key);
+    } else if (dimension === 'fibres') {
+        // Palette dynamique pour les fibres
+        const component = stackbarComponents[dimension];
+        const allFibres = new Set();
+        sankeyData.nodes.forEach(d => {
+          const vals = component.getStackValues(d.lot);
+          Object.keys(vals).forEach(f => allFibres.add(f));
+        });
+        const fibreKeys = Array.from(allFibres);
+        const nFibres = fibreKeys.length;
+        const palette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
+        colorAccessor = (key, idx) => palette[fibreKeys.indexOf(key) % palette.length];
+    } else if (dimension === 'couleur') {
+        // Palette dynamique pour les couleurs
+        const component = stackbarComponents[dimension];
+        const allCouleurs = new Set();
+        sankeyData.nodes.forEach(d => {
+          const vals = component.getStackValues(d.lot);
+          Object.keys(vals).forEach(c => allCouleurs.add(c));
+        });
+        const couleurKeys = Array.from(allCouleurs);
+        const nCouleurs = couleurKeys.length;
+        // Utilise la palette définie ou une palette dynamique
+        colorAccessor = (key, idx) => {
+          // Harmonisation de la casse et mapping
+          const keyNorm = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+          // Gestion des variantes connues
+          const mapping = {
+            "multicolore": "Multicolore",
+            "autre": "Inconnu",
+            "autres": "Inconnu",
+            "gris": "Gris",
+            "bleu": "Bleu",
+            "noir": "Noir",
+            "blanc": "Blanc",
+            "marron": "Marron",
+            "rouge": "Rouge",
+            "vert": "Vert",
+            "violet": "Violet",
+            "orange": "Orange",
+            "jaune": "Jaune"
+          };
+          const mappedKey = mapping[key.toLowerCase()] || keyNorm;
+          return colorScales.couleur(mappedKey) || d3.interpolateRainbow(idx / nCouleurs);
+        };
     } else if (data.dimensions[dimension]) {
         // Palette classique
         colorAccessor = (key) => colorScales[dimension](key);
@@ -175,13 +310,20 @@ function updateSankey(dimension) {
     // Création du layout Sankey
     const stackbarWidth = 80;
     const extraBlockWidth = 30;
+    const horizontalPadding = 20;
     const sankey = d3.sankey()
         .nodeWidth(stackbarWidth + extraBlockWidth)
         .nodePadding(10)
-        .extent([[0, 0], [width, height]]);
+        .extent([[horizontalPadding, 0], [width - horizontalPadding, height]]);
 
     // Application du layout
     const { nodes, links } = sankey(sankeyData);
+
+    // Calcul du nombre de colonnes (niveaux)
+    const maxDepth = Math.max(...sankeyScenario.nodes.map(n => n.depth || 0));
+    const minWidth = 300; // largeur minimale pour ne pas écraser
+    const dynamicWidth = Math.max(minWidth, (stackbarWidth + extraBlockWidth) * (maxDepth + 1) + 40);
+    svg.attr('width', Math.min(width + margin.left + margin.right, dynamicWidth));
 
     // Création des liens
     svg.append('g')
@@ -248,46 +390,9 @@ function updateSankey(dimension) {
 
         // Stackbars pour la dimension sélectionnée
         let yOffset = 0;
-        let dimensionValues = {};
-        if (dimension === 'matiere_fibres') {
-            if (d.lot && d.lot.matiere) {
-                console.log('LOT MATIERE', d.lot.matiere);
-                Object.values(d.lot.matiere).forEach(matiereObj => {
-                    console.log('MATIERE OBJ', matiereObj);
-                    if (matiereObj && matiereObj.fibres && typeof matiereObj.fibres === 'object') {
-                        console.log('FIBRES', matiereObj.fibres);
-                        Object.entries(matiereObj.fibres).forEach(([fibre, pct]) => {
-                            const val = matiereObj.pourcentage * pct / 100;
-                            console.log('FIBRE', fibre, 'PCT', pct, 'VAL', val);
-                            dimensionValues[fibre] = (dimensionValues[fibre] || 0) + val;
-                        });
-                    }
-                });
-            }
-        } else if (dimension === 'format_type') {
-            if (d.lot && d.lot.format) {
-                console.log('LOT FORMAT', d.lot.format);
-                Object.values(d.lot.format).forEach(formatObj => {
-                    if (formatObj && formatObj.types && typeof formatObj.types === 'object') {
-                        console.log('TYPES', formatObj.types);
-                        Object.entries(formatObj.types).forEach(([type, pct]) => {
-                            const val = formatObj.pourcentage * pct / 100;
-                            dimensionValues[type] = (dimensionValues[type] || 0) + val;
-                        });
-                    }
-                });
-            }
-        } else if (d.lot && d.lot[dimension]) {
-            // AFFICHAGE PAR DÉFAUT : uniquement les top-levels
-            Object.entries(d.lot[dimension]).forEach(([key, obj]) => {
-                if (obj && typeof obj.pourcentage === 'number') {
-                    dimensionValues[key] = obj.pourcentage;
-                }
-            });
-        }
+        const component = stackbarComponents[dimension];
+        const dimensionValues = component ? component.getStackValues(d.lot) : {};
         const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
-        console.log('dimensionValues', dimensionValues, 'sum', sum, 'dimension', dimension);
-        // Création des stackbars triées
         const sortedEntries = Object.entries(dimensionValues).sort((a, b) => b[1] - a[1]);
         sortedEntries.forEach(([key, value], idx) => {
             const height = sum > 0 ? (value / sum) * nodeHeight : 0;
@@ -299,9 +404,7 @@ function updateSankey(dimension) {
                 .style('fill', colorAccessor(key, idx))
                 .style('opacity', 0.8)
                 .on('mouseover', function(event) {
-                    const percent = sum > 0 ? (value / sum * 100).toFixed(1) : 0;
-                    const weight = Math.round(d.lot.total * value / 100);
-                    let tooltipContent = `<strong>${key}</strong><br/>Pourcentage : ${percent}%<br/>Poids : ${weight} kg`;
+                    let tooltipContent = component ? component.getTooltipContent(d.lot, key, value, d.lot.total) : '';
                     tooltip.transition()
                         .duration(200)
                         .style('opacity', .9);
@@ -401,7 +504,8 @@ document.getElementById('dimension-selector').addEventListener('change', functio
 });
 
 // Initialisation avec la première dimension
-updateSankey('matiere');
+document.getElementById('dimension-selector').value = 'format';
+updateSankey('format');
 
 // Gestion du redimensionnement
 window.addEventListener('resize', function() {
@@ -414,76 +518,3 @@ window.addEventListener('resize', function() {
     updateSankey(document.getElementById('dimension-selector').value);
 });
 
-function selectFirstLevel(lot, dimension, selectedKeys) {
-    const dist = lot[dimension];
-    const total = lot.total;
-
-    // Séparation des formats sélectionnés et restants
-    let selectedFormats = {};
-    let restFormats = {};
-    let selectedMass = 0;
-    let restMass = 0;
-
-    Object.entries(dist).forEach(([key, value]) => {
-        if (selectedKeys.includes(key)) {
-            selectedFormats[key] = { ...value };
-            selectedMass += value.pourcentage;
-        } else {
-            restFormats[key] = { ...value };
-            restMass += value.pourcentage;
-        }
-    });
-
-    // Masse réelle (en kg) pour chaque sous-lot
-    const selectedKg = total * selectedMass / 100;
-    const restKg = total * restMass / 100;
-
-    // Fonction pour recalculer la distribution d'une dimension sur un sous-lot
-    function crossDistrib(lot, formats, formatsMass, lotMass) {
-        const newLot = { total: lotMass };
-
-        // FORMAT : ne garder que les formats concernés, recalculer les pourcentages
-        const formatObj = {};
-        let sumFormat = 0;
-        Object.entries(formats).forEach(([key, value]) => {
-            formatObj[key] = { ...value };
-            sumFormat += value.pourcentage;
-        });
-        // On ne garde que les formats présents dans ce sous-lot
-        Object.keys(formatObj).forEach(k => {
-            formatObj[k].pourcentage = formatObj[k].pourcentage / sumFormat * 100;
-        });
-        newLot.format = formatObj;
-
-        // AUTRES DIMENSIONS : produit en croix
-        ['matiere', 'couleur', 'qualite'].forEach(dim => {
-            const dimObj = {};
-            let sum = 0;
-            Object.entries(lot[dim]).forEach(([val, pct]) => {
-                let valKg = 0;
-                Object.entries(formats).forEach(([fKey, fVal]) => {
-                    // Masse de ce format dans le sous-lot
-                    const fKg = lot.total * fVal.pourcentage / 100;
-                    // Contribution de cette valeur dans ce format (en supposant la même répartition que dans le lot initial)
-                    valKg += fKg * (pct / 100);
-                });
-                // On ramène à la masse du sous-lot
-                valKg = valKg * (lotMass / formatsMass);
-                dimObj[val] = valKg;
-                sum += valKg;
-            });
-            // Normalisation pour que la somme fasse lotMass
-            Object.keys(dimObj).forEach(k => {
-                dimObj[k] = dimObj[k] / sum * lotMass;
-            });
-            newLot[dim] = dimObj;
-        });
-
-        return newLot;
-    }
-
-    const targetLot = Object.keys(selectedFormats).length > 0 ? crossDistrib(lot, selectedFormats, selectedMass, selectedKg) : null;
-    const coProductLot = Object.keys(restFormats).length > 0 ? crossDistrib(lot, restFormats, restMass, restKg) : null;
-
-    return { targetLot, coProductLot };
-}
