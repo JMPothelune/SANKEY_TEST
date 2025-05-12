@@ -300,7 +300,8 @@ function updateSankey(dimension) {
                 .style('opacity', 0.8)
                 .on('mouseover', function(event) {
                     const percent = sum > 0 ? (value / sum * 100).toFixed(1) : 0;
-                    let tooltipContent = `<strong>${key}</strong><br/>Pourcentage : ${percent}%`;
+                    const weight = Math.round(d.lot.total * value / 100);
+                    let tooltipContent = `<strong>${key}</strong><br/>Pourcentage : ${percent}%<br/>Poids : ${weight} kg`;
                     tooltip.transition()
                         .duration(200)
                         .style('opacity', .9);
@@ -330,7 +331,7 @@ function updateSankey(dimension) {
                     .style('opacity', .9);
                 tooltip.html(`
                     <strong>${d.name}</strong><br/>
-                    Poids du lot : ${d.lot.total} kg
+                    Poids du lot : ${Math.round(d.lot.total)} kg
                 `)
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY - 28) + 'px');
@@ -340,6 +341,46 @@ function updateSankey(dimension) {
                     .duration(500)
                     .style('opacity', 0);
             });
+
+        // Ajout des icônes SVG pour chaque lien sortant (sauf "Reste")
+        const outgoingLinks = links.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
+        if (outgoingLinks.length > 0) {
+            outgoingLinks.forEach((link, idx) => {
+                const linkY = link.y0 - d.y0;
+                // Ajout du fond carré arrondi avec tooltip
+                const transfoName = link.target.name;
+                nodeGroup.append('rect')
+                    .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+                    .attr('y', linkY - 12)
+                    .attr('width', 24)
+                    .attr('height', 24)
+                    .attr('rx', 6)
+                    .attr('ry', 6)
+                    .style('fill', '#999')
+                    .style('opacity', 1)
+                    .on('mouseover', function(event) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style('opacity', .9);
+                        tooltip.html(`<strong>${transfoName}</strong>`)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 28) + 'px');
+                    })
+                    .on('mouseout', function() {
+                        tooltip.transition()
+                            .duration(500)
+                            .style('opacity', 0);
+                    });
+                // Ajout de l'icône centrée dans le carré
+                nodeGroup.append('image')
+                    .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
+                    .attr('y', linkY - 10)
+                    .attr('width', 20)
+                    .attr('height', 20)
+                    .attr('href', 'assets/svg/arrows-split.svg')
+                    .style('pointer-events', 'none');
+            });
+        }
     });
 
     // Ajout des labels

@@ -215,10 +215,10 @@ const scenario = {
 };
 
 // Nouvelle fonction de parsing du scénario (squelette)
-function applyScenario(lotInitial, scenario, parentNodeId = '0', nodes = null, links = null, idGenObj = null, isRoot = true) {
+function applyScenario(lotInitial, scenario, parentNodeId = '0', nodes = null, links = null, idGenObj = null, isRoot = true, transformations_appliquees = []) {
   // Créer le nœud Lot initial uniquement à la racine
   if (!nodes) {
-    nodes = [{ id: parentNodeId, name: 'Lot initial', lot: cloneLot(lotInitial) }];
+    nodes = [{ id: parentNodeId, name: 'Lot initial', lot: cloneLot(lotInitial), transformations_appliquees: [] }];
   }
   if (!links) links = [];
   if (!idGenObj) idGenObj = { id: 1 };
@@ -233,13 +233,14 @@ function applyScenario(lotInitial, scenario, parentNodeId = '0', nodes = null, l
     const { targetLot, coProductLot } = selectFirstLevel(resteLot, transfo.dimension, transfo.keys);
     if (!targetLot) return;
     const nodeId = `${idGenObj.id++}`;
-    nodes.push({ id: nodeId, name: `${transfo.dimension}: ${transfo.keys.join(' + ')}`, lot: targetLot });
+    const newTransformations = [...transformations_appliquees, transfo];
+    nodes.push({ id: nodeId, name: `${transfo.dimension}: ${transfo.keys.join(' + ')}`, lot: targetLot, transformations_appliquees: newTransformations });
     links.push({ source: parentNodeId, target: nodeId, value: targetLot.total });
     totalChildren += targetLot.total;
 
     // Sous-scenario récursif (sur le lot sélectionné, relié à ce nœud)
     if (transfo.scenario && transfo.scenario.transformations && transfo.scenario.transformations.length > 0) {
-      applyScenario(targetLot, transfo.scenario, nodeId, nodes, links, idGenObj, false);
+      applyScenario(targetLot, transfo.scenario, nodeId, nodes, links, idGenObj, false, newTransformations);
     }
     // On retire cette part du reste global
     resteLot = coProductLot;
@@ -249,12 +250,12 @@ function applyScenario(lotInitial, scenario, parentNodeId = '0', nodes = null, l
   let coproductUsed = false;
   if (resteLot && resteLot.total > 0.1) {
     const coproductNodeId = `${idGenObj.id++}`;
-    nodes.push({ id: coproductNodeId, name: 'Reste', lot: resteLot });
+    nodes.push({ id: coproductNodeId, name: 'Reste', lot: resteLot, transformations_appliquees: transformations_appliquees });
     links.push({ source: parentNodeId, target: coproductNodeId, value: resteLot.total });
     totalChildren += resteLot.total;
     if (scenario.coproduct_transformations && Object.keys(scenario.coproduct_transformations).length > 0) {
       coproductUsed = true;
-      applyScenario(resteLot, scenario.coproduct_transformations, coproductNodeId, nodes, links, idGenObj, false);
+      applyScenario(resteLot, scenario.coproduct_transformations, coproductNodeId, nodes, links, idGenObj, false, transformations_appliquees);
     }
   }
 
