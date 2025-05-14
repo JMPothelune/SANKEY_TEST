@@ -3,7 +3,7 @@
 ## Description
 Ce projet est un prototype de visualisation interactive de type Sankey pour suivre le flux de valorisation des matières textiles. Il permet de visualiser les différents parcours de valorisation d'un lot de textile, avec la possibilité de voir différentes dimensions (matière, format, couleur, qualité, fibres) à travers les étapes de traitement.
 
-## Nouveautés et évolutions récentes (2024)
+## Nouveautés et évolutions récentes (2025)
 
 ### Palette et affichage des couleurs
 - **Palettes dynamiques** : Les palettes de couleurs sont générées dynamiquement pour chaque dimension (matière, format, type, couleur, qualité) à partir des vraies données présentes dans le lot.
@@ -39,6 +39,129 @@ Ce projet est un prototype de visualisation interactive de type Sankey pour suiv
 ### Instructions pour modification
 - **Ajout de dimension ou palette** : Pour ajouter une nouvelle dimension ou palette, il suffit d'ajouter une entrée dans la section correspondante du code JS.
 - **Modification de la structure des lots** : Adapter le générateur de `lotType` dans `data.js` pour toute évolution de la structure.
+
+### Filtrage avancé par fibre (`selectByFibre`)
+
+Vous pouvez désormais filtrer les matières selon la proportion d'une ou plusieurs fibres, grâce à deux nouveaux paramètres optionnels :  
+- `threshold` : valeur seuil (entre 0 et 100)
+- `condition` : "over" (plus que) ou "under" (moins que)
+
+**Exemples d'utilisation dans le scénario :**
+
+#### Cas simple (présence d'une fibre, comportement historique)
+```js
+{
+  type: 'selectByFibre',
+  keys: ['coton', 'polyester'],
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne toutes les matières contenant au moins une des fibres listées, quel que soit le pourcentage.
+
+#### Cas avancé (avec seuil et condition)
+```js
+{
+  type: 'selectByFibre',
+  keys: ['coton'],
+  threshold: 60,
+  condition: 'over',
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne uniquement les matières contenant **au moins 60% de coton**.
+
+```js
+{
+  type: 'selectByFibre',
+  keys: ['polyester'],
+  threshold: 20,
+  condition: 'under',
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne uniquement les matières contenant **moins de 20% de polyester**.
+
+#### Plusieurs fibres avec seuil
+```js
+{
+  type: 'selectByFibre',
+  keys: ['coton', 'polyester'],
+  threshold: 30,
+  condition: 'over',
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne toutes les matières contenant **au moins 30% de coton ou de polyester**.
+
+**Remarques :**
+- Si `threshold` et `condition` ne sont pas fournis, le comportement par défaut (présence de la fibre) est conservé.
+- Vous pouvez passer une ou plusieurs fibres dans `keys`.
+
+### Sélections classiques (format, type, matière, couleur, qualité)
+
+Pour filtrer sur une dimension précise, utilisez les types de transformation suivants dans votre scénario :
+
+- `selectByFormat` : sélectionne un ou plusieurs formats
+- `selectByType` : sélectionne un ou plusieurs types (nécessite d'avoir déjà sélectionné un format)
+- `selectByMatiere` : sélectionne une ou plusieurs matières (nécessite d'avoir déjà sélectionné un format et un type)
+- `selectByCouleur` : sélectionne une ou plusieurs couleurs
+- `selectByQualite` : sélectionne une ou plusieurs qualités
+
+**Exemples d'utilisation dans le scénario :**
+
+#### Sélection par format
+```js
+{
+  type: 'selectByFormat',
+  keys: ['Vêtements', 'Chaussures et bottes'],
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne tous les lots dont le format est "Vêtements" ou "Chaussures et bottes".
+
+#### Sélection par type
+```js
+{
+  type: 'selectByType',
+  keys: ['T-shirt', 'Pantalon en jean'],
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne tous les lots dont le type est "T-shirt" ou "Pantalon en jean" (après avoir sélectionné un format).
+
+#### Sélection par matière
+```js
+{
+  type: 'selectByMatiere',
+  keys: ['100% coton', 'coton/polyester'],
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne tous les lots dont la matière est "100% coton" ou "coton/polyester" (après avoir sélectionné un format et un type).
+
+#### Sélection par couleur
+```js
+{
+  type: 'selectByCouleur',
+  keys: ['blanc', 'noir'],
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne tous les lots dont la couleur est "blanc" ou "noir".
+
+#### Sélection par qualité
+```js
+{
+  type: 'selectByQualite',
+  keys: ['neuf étiqueté', 'parfait état'],
+  scenario: { /* ... */ }
+}
+```
+→ Sélectionne tous les lots dont la qualité est "neuf étiqueté" ou "parfait état".
+
+**Remarques :**
+- Pour les sélections imbriquées (type, matière), il faut d'abord avoir filtré sur le niveau supérieur (format, puis type).
+- Vous pouvez passer une ou plusieurs valeurs dans `keys` pour chaque type de sélection.
 
 ---
 

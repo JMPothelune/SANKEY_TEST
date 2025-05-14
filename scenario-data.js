@@ -22,7 +22,12 @@ const scenario = {
     },
     {
         type: 'selectByFormat',
-        keys: ['non TLC', 'linges et rideaux'],
+        keys: ['linges et rideaux'],
+        scenario: {}
+    },
+    {
+        type: 'selectByFormat',
+        keys: ['non TLC'],
         scenario: {}
     },
     {
@@ -30,29 +35,43 @@ const scenario = {
       keys: ['vêtements'],
       scenario: {
         transformations: [
-          {
-            type: 'selectByType',
-            keys: ['pantalons en jean'],
-            scenario: {
-              transformations: [
-                {
-                  type: 'selectByFibre',
-                  keys: ['coton'],
-                  scenario: {}
-                }
-              ],
-              coproduct_transformations: {}
+            {
+                type: 'selectByQualite',
+                keys: ['neuf étiqueté', 'parfait état', 'bon état'],
+                scenario: {}
             }
-          },
-          {
-            type: 'selectByCouleur',
-            keys: ['blanc', 'noir'],
-            scenario: {}
-          }
         ],
-        coproduct_transformations: {}
+        coproduct_transformations: {
+            transformations: [
+                {
+                    type: 'selectByType',
+                    keys: ['pantalons en jean'],
+                    scenario: {
+                      transformations: [
+                        {
+                            type: 'selectByFibre',
+                            keys: ['coton'],
+                            scenario: {}
+                        }
+                      ],
+                      coproduct_transformations: {}
+                    }
+                  },
+                  {
+                    type: 'selectByMatiere',
+                    keys: ['100% coton'],
+                    scenario: {}
+                  },
+                  {
+                    type: 'selectByMatiere',
+                    keys: ['100% polyester'],
+                    scenario: {}
+                  }
+            ]
+        }
       }
     }
   ],
   coproduct_transformations: {}
 }; 
+

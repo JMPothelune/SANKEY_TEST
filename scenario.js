@@ -75,7 +75,11 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     } else if (transfo.type === 'selectByCouleur') {
       result = selectByCouleur(resteLot, transfo.keys);
     } else if (transfo.type === 'selectByFibre') {
-      result = selectByFibre(resteLot, transfo.keys);
+      if ('threshold' in transfo && 'condition' in transfo) {
+        result = selectByFibre(resteLot, transfo.keys, transfo.threshold, transfo.condition);
+      } else {
+        result = selectByFibre(resteLot, transfo.keys);
+      }
     } else {
       throw new Error('Type de transformation non géré : ' + transfo.type);
     }
@@ -305,53 +309,81 @@ function selectByType(lot, selectedTypes) {
 
 // Sélectionne une ou plusieurs matières dans un type donné (niveau 3)
 function selectByMatiere(lot, selectedMatieres) {
-  // On suppose que lot ne contient qu'un seul format et un seul type (après selectByFormat et selectByType)
+  // On suppose que lot ne contient qu'un seul format (après selectByFormat)
   const formatKeys = Object.keys(lot.format);
   if (formatKeys.length !== 1) throw new Error('selectByMatiere attend un lot avec un seul format');
   const formatKey = formatKeys[0];
-  const typeKeys = Object.keys(lot.format[formatKey].types);
-  if (typeKeys.length !== 1) throw new Error('selectByMatiere attend un lot avec un seul type');
-  const typeKey = typeKeys[0];
-  const typeObj = lot.format[formatKey].types[typeKey];
+  const typesObj = lot.format[formatKey].types;
 
-  // On travaille sur l'objet matieres du type courant
-  const matieresObj = typeObj.matieres || {};
-  let selected = {};
-  let rest = {};
-  let selectedPct = 0;
-  let restPct = 0;
+  let selectedTypes = {};
+  let restTypes = {};
+  let selectedMassTotal = 0;
+  let restMassTotal = 0;
+  let typeMassesSelected = {};
+  let typeMassesRest = {};
 
-  Object.entries(matieresObj).forEach(([nom, matiere]) => {
-    if (selectedMatieres.includes(nom)) {
-      selected[nom] = { ...matiere };
-      selectedPct += matiere.pourcentage;
-    } else {
-      rest[nom] = { ...matiere };
-      restPct += matiere.pourcentage;
+  Object.entries(typesObj).forEach(([typeKey, typeObj]) => {
+    const matieresObj = typeObj.matieres || {};
+    let selectedMatieresObj = {};
+    let restMatieresObj = {};
+    let selectedPct = 0;
+    let restPct = 0;
+
+    Object.entries(matieresObj).forEach(([nom, matiere]) => {
+      if (selectedMatieres.includes(nom)) {
+        selectedMatieresObj[nom] = { ...matiere };
+        selectedPct += matiere.pourcentage;
+      } else {
+        restMatieresObj[nom] = { ...matiere };
+        restPct += matiere.pourcentage;
+      }
+    });
+
+    const typeMass = lot.total * (typeObj.pourcentage / 100);
+    const selectedMass = typeMass * (selectedPct / 100);
+    const restMass = typeMass * (restPct / 100);
+
+    if (selectedPct > 0) {
+      // Normalisation des pourcentages matières dans ce type
+      Object.keys(selectedMatieresObj).forEach(nom => {
+        selectedMatieresObj[nom].pourcentage = selectedMatieresObj[nom].pourcentage / selectedPct * 100;
+      });
+      selectedTypes[typeKey] = {
+        ...typeObj,
+        matieres: selectedMatieresObj
+      };
+      typeMassesSelected[typeKey] = selectedMass;
+      selectedMassTotal += selectedMass;
+    }
+    if (restPct > 0) {
+      Object.keys(restMatieresObj).forEach(nom => {
+        restMatieresObj[nom].pourcentage = restMatieresObj[nom].pourcentage / restPct * 100;
+      });
+      restTypes[typeKey] = {
+        ...typeObj,
+        matieres: restMatieresObj
+      };
+      typeMassesRest[typeKey] = restMass;
+      restMassTotal += restMass;
     }
   });
 
-  // Recalcul des pourcentages
-  Object.keys(selected).forEach(nom => {
-    selected[nom].pourcentage = selected[nom].pourcentage / selectedPct * 100;
+  // Recalcul des pourcentages des types dans chaque lot
+  Object.keys(selectedTypes).forEach(typeKey => {
+    selectedTypes[typeKey].pourcentage = selectedMassTotal > 0 ? (typeMassesSelected[typeKey] / selectedMassTotal) * 100 : 0;
   });
-  Object.keys(rest).forEach(nom => {
-    rest[nom].pourcentage = rest[nom].pourcentage / restPct * 100;
+  Object.keys(restTypes).forEach(typeKey => {
+    restTypes[typeKey].pourcentage = restMassTotal > 0 ? (typeMassesRest[typeKey] / restMassTotal) * 100 : 0;
   });
-
-  // Récupérer le pourcentage du type parent
-  const typePourcentage = typeof typeObj.pourcentage === 'number' ? typeObj.pourcentage : 100;
 
   // Création des deux lots
   const targetLot = JSON.parse(JSON.stringify(lot));
-  targetLot.format[formatKey].types[typeKey].matieres = selected;
-  targetLot.format[formatKey].types[typeKey].pourcentage = typePourcentage;
-  targetLot.total = lot.total * (typePourcentage / 100) * (selectedPct / 100);
+  targetLot.format[formatKey].types = selectedTypes;
+  targetLot.total = selectedMassTotal;
 
   const coProductLot = JSON.parse(JSON.stringify(lot));
-  coProductLot.format[formatKey].types[typeKey].matieres = rest;
-  coProductLot.format[formatKey].types[typeKey].pourcentage = typePourcentage;
-  coProductLot.total = lot.total * (typePourcentage / 100) * (restPct / 100);
+  coProductLot.format[formatKey].types = restTypes;
+  coProductLot.total = restMassTotal;
 
   return { targetLot, coProductLot };
 }
@@ -472,55 +504,90 @@ function selectByCouleur(lot, selectedCouleurs) {
 }
 
 // Sélectionne une ou plusieurs fibres dans un lot
-function selectByFibre(lot, selectedFibres) {
-  // On suppose que lot ne contient qu'un seul format et un seul type (après selectByFormat et selectByType)
+function selectByFibre(lot, selectedFibres, threshold = null, condition = null) {
+  // On suppose que lot ne contient qu'un seul format (après selectByFormat)
   const formatKeys = Object.keys(lot.format);
   if (formatKeys.length !== 1) throw new Error('selectByFibre attend un lot avec un seul format');
   const formatKey = formatKeys[0];
-  const typeKeys = Object.keys(lot.format[formatKey].types);
-  if (typeKeys.length !== 1) throw new Error('selectByFibre attend un lot avec un seul type');
-  const typeKey = typeKeys[0];
-  const typeObj = lot.format[formatKey].types[typeKey];
+  const typesObj = lot.format[formatKey].types;
 
-  // On travaille sur l'objet matieres du type courant
-  const matieresObj = typeObj.matieres || {};
-  let selected = {};
-  let rest = {};
-  let selectedPct = 0;
-  let restPct = 0;
+  let selectedTypes = {};
+  let restTypes = {};
+  let selectedMassTotal = 0;
+  let restMassTotal = 0;
+  let typeMassesSelected = {};
+  let typeMassesRest = {};
 
-  Object.entries(matieresObj).forEach(([nom, matiere]) => {
-    const hasSelectedFibre = matiere.fibres && Object.keys(matiere.fibres).some(fibre => selectedFibres.includes(fibre));
-    if (hasSelectedFibre) {
-      selected[nom] = { ...matiere };
-      selectedPct += matiere.pourcentage;
-    } else {
-      rest[nom] = { ...matiere };
-      restPct += matiere.pourcentage;
+  Object.entries(typesObj).forEach(([typeKey, typeObj]) => {
+    const matieresObj = typeObj.matieres || {};
+    let selectedMatieresObj = {};
+    let restMatieresObj = {};
+    let selectedPct = 0;
+    let restPct = 0;
+
+    Object.entries(matieresObj).forEach(([nom, matiere]) => {
+      const hasSelectedFibre = matiere.fibres && Object.entries(matiere.fibres).some(([fibre, pctFibre]) => {
+        if (!selectedFibres.includes(fibre)) return false;
+        if (threshold !== null && condition !== null) {
+          if (condition === 'over') return pctFibre >= threshold;
+          if (condition === 'under') return pctFibre <= threshold;
+          return false;
+        }
+        return true;
+      });
+      if (hasSelectedFibre) {
+        selectedMatieresObj[nom] = { ...matiere };
+        selectedPct += matiere.pourcentage;
+      } else {
+        restMatieresObj[nom] = { ...matiere };
+        restPct += matiere.pourcentage;
+      }
+    });
+
+    const typeMass = lot.total * (typeObj.pourcentage / 100);
+    const selectedMass = typeMass * (selectedPct / 100);
+    const restMass = typeMass * (restPct / 100);
+
+    if (selectedPct > 0) {
+      Object.keys(selectedMatieresObj).forEach(nom => {
+        selectedMatieresObj[nom].pourcentage = selectedMatieresObj[nom].pourcentage / selectedPct * 100;
+      });
+      selectedTypes[typeKey] = {
+        ...typeObj,
+        matieres: selectedMatieresObj
+      };
+      typeMassesSelected[typeKey] = selectedMass;
+      selectedMassTotal += selectedMass;
+    }
+    if (restPct > 0) {
+      Object.keys(restMatieresObj).forEach(nom => {
+        restMatieresObj[nom].pourcentage = restMatieresObj[nom].pourcentage / restPct * 100;
+      });
+      restTypes[typeKey] = {
+        ...typeObj,
+        matieres: restMatieresObj
+      };
+      typeMassesRest[typeKey] = restMass;
+      restMassTotal += restMass;
     }
   });
 
-  // Recalcul des pourcentages
-  Object.keys(selected).forEach(nom => {
-    selected[nom].pourcentage = selected[nom].pourcentage / selectedPct * 100;
+  // Recalcul des pourcentages des types dans chaque lot
+  Object.keys(selectedTypes).forEach(typeKey => {
+    selectedTypes[typeKey].pourcentage = selectedMassTotal > 0 ? (typeMassesSelected[typeKey] / selectedMassTotal) * 100 : 0;
   });
-  Object.keys(rest).forEach(nom => {
-    rest[nom].pourcentage = rest[nom].pourcentage / restPct * 100;
+  Object.keys(restTypes).forEach(typeKey => {
+    restTypes[typeKey].pourcentage = restMassTotal > 0 ? (typeMassesRest[typeKey] / restMassTotal) * 100 : 0;
   });
-
-  // Récupérer le pourcentage du type parent
-  const typePourcentage = typeof typeObj.pourcentage === 'number' ? typeObj.pourcentage : 100;
 
   // Création des deux lots
   const targetLot = JSON.parse(JSON.stringify(lot));
-  targetLot.format[formatKey].types[typeKey].matieres = selected;
-  targetLot.format[formatKey].types[typeKey].pourcentage = typePourcentage;
-  targetLot.total = lot.total * (typePourcentage / 100) * (selectedPct / 100);
+  targetLot.format[formatKey].types = selectedTypes;
+  targetLot.total = selectedMassTotal;
 
   const coProductLot = JSON.parse(JSON.stringify(lot));
-  coProductLot.format[formatKey].types[typeKey].matieres = rest;
-  coProductLot.format[formatKey].types[typeKey].pourcentage = typePourcentage;
-  coProductLot.total = lot.total * (typePourcentage / 100) * (restPct / 100);
+  coProductLot.format[formatKey].types = restTypes;
+  coProductLot.total = restMassTotal;
 
   return { targetLot, coProductLot };
 }
