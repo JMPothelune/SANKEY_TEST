@@ -3,15 +3,25 @@ const margin = { top: 20, right: 20, bottom: 20, left: 20 };
 let width = document.getElementById('sankey-container').offsetWidth - margin.left - margin.right;
 let height = document.getElementById('sankey-container').offsetHeight - margin.top - margin.bottom;
 
+
 // Palette harmonieuse pour les matières (dégradé, plage centrale, ordre mélangé)
-const matiereValues = data.dimensions.matiere.values;
+const matiereSet = new Set();
+Object.values(lotType.format).forEach(formatObj => {
+  Object.values(formatObj.types).forEach(typeObj => {
+    if (typeObj.matieres) {
+      Object.keys(typeObj.matieres).forEach(matiere => matiereSet.add(matiere));
+    }
+  });
+});
+const matiereValues = Array.from(matiereSet);
 const nMatieres = matiereValues.length;
 // Générer la palette sur une plage centrale (0.15 à 0.85)
 let matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCool(0.15 + 0.7 * (i / (nMatieres - 1))));
 // Mélanger l'ordre des couleurs
 matierePalette = d3.shuffle(matierePalette);
 
-const formatValues = data.dimensions.format.values;
+// Pour les formats, on prend les clés de lotType.format (ordre dynamique)
+const formatValues = Object.keys(lotType.format);
 const nFormats = formatValues.length;
 const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
 
@@ -26,7 +36,10 @@ formatValues.forEach(format => {
 const nTypes = allTypeValues.length;
 const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
 
-const couleurValues = data.dimensions.couleur.values;
+// Palette pour les couleurs (statique)
+const couleurValues = [
+    'noir', 'blanc', 'bleu', 'gris', 'marron', 'rouge', 'vert', 'violet', 'orange', 'jaune', 'inconnu', 'multicolore'
+];
 const couleurPalette = [
     '#222',      // Noir
     '#f5f5f5',  // Blanc
@@ -42,7 +55,8 @@ const couleurPalette = [
     '#fd79a8'   // Multicolore
 ];
 
-const qualiteValues = data.dimensions.qualite.values;
+// Palette pour la qualité
+const qualiteValues = Object.keys(qualiteDistrib);
 const nQualite = qualiteValues.length;
 const qualitePalette = Array.from({length: nQualite}, (_, i) => d3.interpolateOranges(0.2 + 0.6 * (i / (nQualite - 1))));
 
@@ -266,8 +280,6 @@ function updateSankey(dimension) {
     svg.selectAll('*').remove();
 
     // Gestion spéciale pour les sous-catégories
-    let isFormatType = false;
-    let isMatiereFibres = false;
     let stackValues = null;
     let typeKeys = null;
     let palette = null;
@@ -301,7 +313,6 @@ function updateSankey(dimension) {
     };
 
     if (dimension === 'format_type') {
-        isFormatType = true;
         // On va afficher la distribution des types de format, tous formats confondus
         const typeTotals = {};
         let total = 0;
@@ -386,9 +397,8 @@ function updateSankey(dimension) {
         const qualiteKeys = Array.from(allQualites);
         const nQualites = qualiteKeys.length;
         colorAccessor = (key, idx) => colorScales.qualite(key) || d3.interpolateOranges(idx / nQualites);
-    } else if (data.dimensions[dimension]) {
-        // Palette classique
-        colorAccessor = (key) => colorScales[dimension](key);
+    } else if (dimension === 'matiere') {
+        colorAccessor = (key) => colorScales.matiere(key);
     } else {
         // fallback : couleur grise
         colorAccessor = () => '#bbb';
@@ -846,15 +856,14 @@ function updateSankey(dimension) {
         }
     });
 
-    // Ajout des labels
+    // Ajout du nom du lot au-dessus du nœud (centré sur la stackbar)
     node.append('text')
-        .attr('x', d => (d.x1 - d.x0) / 2)
-        .attr('y', d => (d.y1 - d.y0) / 2)
-        .attr('dy', '0.35em')
+        .attr('x', stackbarWidth / 2)
+        .attr('y', -8) // 8px au-dessus du nœud
         .attr('text-anchor', 'middle')
-        .text(d => d.name)
-        .style('font-size', '12px')
-        .style('fill', '#333')
+        .text(d => d.name || '')
+        .style('font-size', '11px')
+        .style('fill', '#666')
         .style('pointer-events', 'none');
 }
 

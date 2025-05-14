@@ -125,128 +125,6 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
   return { nodes, links };
 }
 
-// Génère le produit cartésien des sélections du scénario
-function cartesianProduct(arrays) {
-    return arrays.reduce((a, b) => a.flatMap(d => b.map(e => d.concat([e]))), [[]]);
-}
-
-// Calcule la part du lot initial correspondant à une combinaison de sélections
-function filterLotByCombination(lot, combination) {
-    let filteredLot = cloneLot(lot);
-    let pct = 1;
-    combination.forEach(sel => {
-        const { dimension, key } = sel;
-        if (!filteredLot[dimension][key]) {
-            pct = 0;
-            return;
-        }
-        pct *= filteredLot[dimension][key].pourcentage / 100;
-        // On ne garde que la clé sélectionnée dans la dimension
-        Object.keys(filteredLot[dimension]).forEach(k => {
-            if (k !== key) delete filteredLot[dimension][k];
-        });
-    });
-    filteredLot.total = lot.total * pct;
-    return filteredLot.total > 0 ? filteredLot : null;
-}
-
-// Fonction principale pour parser le scénario en produit croisé (toutes les combinaisons)
-function applyScenarioCrossProductFromInitial(lotInitial, scenario) {
-    const nodes = [{ id: '0', name: 'Lot initial', lot: cloneLot(lotInitial) }];
-    const links = [];
-    let idGen = 1;
-    // Prépare les sélections par dimension
-    const selections = scenario.map(step => {
-        return step.transform.keys.map(key => ({ dimension: step.transform.dimension, key }));
-    });
-    // Produit cartésien de toutes les sélections
-    const combos = cartesianProduct(selections);
-    let totalSelected = 0;
-    combos.forEach(combo => {
-        const filteredLot = filterLotByCombination(lotInitial, combo);
-        if (filteredLot && filteredLot.total > 0) {
-            const comboName = combo.map(sel => sel.dimension + ': ' + sel.key).join(' | ');
-            const comboId = `${idGen++}`;
-            nodes.push({ id: comboId, name: comboName, lot: filteredLot });
-            links.push({ source: '0', target: comboId, value: filteredLot.total });
-            totalSelected += filteredLot.total;
-        }
-    });
-    // Calcule le reste
-    const resteTotal = Number((lotInitial.total - totalSelected).toFixed(1));
-    if (resteTotal > 0.1) {
-        const restId = `${idGen++}_reste`;
-        // Pour le lot "reste", on ne retire aucune sélection
-        nodes.push({ id: restId, name: 'Reste', lot: { ...cloneLot(lotInitial), total: resteTotal } });
-        links.push({ source: '0', target: restId, value: resteTotal });
-    }
-    return { nodes, links };
-}
-
-// Calcule la part du lot initial correspondant à une sélection sur une dimension (somme sur toutes les autres dimensions)
-function filterLotBySingleSelection(lot, dimension, key) {
-    if (!lot[dimension][key]) return null;
-    // Pourcentage de la clé sélectionnée
-    const pct = lot[dimension][key].pourcentage / 100;
-    // On clone le lot et on ne garde que la clé sélectionnée dans la dimension
-    let filteredLot = cloneLot(lot);
-    Object.keys(filteredLot[dimension]).forEach(k => {
-        if (k !== key) delete filteredLot[dimension][k];
-    });
-    // Le total est la part correspondante
-    filteredLot.total = Number((lot.total * pct).toFixed(1));
-    // Les autres dimensions gardent leur distribution
-    // Les sous-niveaux (sous/types/fibres) restent inchangés
-    return filteredLot.total > 0 ? filteredLot : null;
-}
-
-// Fonction principale pour parser le scénario en découpant des sélections indépendantes (toutes dimensions confondues)
-function applyScenarioIndependentSelections(lotInitial, scenario) {
-    const nodes = [{ id: '0', name: 'Lot initial', lot: cloneLot(lotInitial) }];
-    const links = [];
-    let idGen = 1;
-    let resteLot = cloneLot(lotInitial);
-    scenario.forEach(step => {
-        const dimension = step.transform.dimension;
-        const keys = step.transform.keys;
-        keys.forEach(key => {
-            if (!resteLot[dimension][key]) return;
-            // Calcule la part correspondante dans le reste
-            const filteredLot = filterLotBySingleSelection(resteLot, dimension, key);
-            if (!filteredLot) return;
-            const targetId = `${idGen++}`;
-            nodes.push({ id: targetId, name: `${dimension}: ${key}`, lot: filteredLot });
-            links.push({ source: '0', target: targetId, value: filteredLot.total });
-            // Retire cette part du reste global (dans toutes les dimensions)
-            const pctToRemove = resteLot[dimension][key].pourcentage / 100;
-            // Supprime la clé du top level sans toucher aux sous-niveaux
-            delete resteLot[dimension][key];
-            // Normalise les pourcentages du top-level restant
-            normalizePourcentages(resteLot[dimension]);
-            // Met à jour le total du reste
-            resteLot.total = Number((resteLot.total - filteredLot.total).toFixed(1));
-            // Met à jour les autres dimensions proportionnellement, sans toucher aux sous-niveaux
-            Object.keys(resteLot).forEach(dim => {
-                if (dim === 'total' || !resteLot[dim]) return;
-                Object.keys(resteLot[dim]).forEach(k => {
-                    if (resteLot[dim][k] && typeof resteLot[dim][k].pourcentage === 'number') {
-                        resteLot[dim][k].pourcentage = Number((resteLot[dim][k].pourcentage / (1 - pctToRemove)).toFixed(1));
-                    }
-                });
-                // Normalise aussi les autres dimensions
-                normalizePourcentages(resteLot[dim]);
-            });
-        });
-    });
-    // Ajoute le reste à la fin
-    if (resteLot && resteLot.total > 0.1) {
-        const restId = `${idGen++}_reste`;
-        nodes.push({ id: restId, name: 'Reste', lot: resteLot });
-        links.push({ source: '0', target: restId, value: resteLot.total });
-    }
-    return { nodes, links };
-}
-
 // Générer les données pour le Sankey
 const sankeyScenario = applyScenario(lotType, scenario);
 // sankeyScenario.nodes et sankeyScenario.links sont à utiliser dans sankey.js 
@@ -353,6 +231,13 @@ function selectByFormat(lot, selectedFormats) {
     format: selected,
     total: lot.total * selectedPct / 100
   };
+  // Pour le lot cible, on ne garde que les formats sélectionnés
+  Object.keys(targetLot.format).forEach(k => {
+    if (!selectedFormats.includes(k)) {
+      delete targetLot.format[k];
+    }
+  });
+
   const coProductLot = {
     ...newLot,
     format: rest,

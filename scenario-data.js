@@ -3,12 +3,12 @@ const scenario = {
   transformations: [
     {
         type: 'selectByFormat',
-        keys: ['Chaussures et bottes'],
+        keys: ['chaussures et bottes'],
         scenario: {
             transformations: [
                 {
                 type: 'selectByQualite',
-                keys: ['Neuf étiqueté', 'Parfait état', 'Bon état'],
+                keys: ['neuf étiqueté', 'parfait état', 'bon état'],
                 scenario: {}
                 }
             ],
@@ -17,22 +17,22 @@ const scenario = {
     },
     {
         type: 'selectByFormat',
-        keys: ['non TLC', 'Linges et rideaux'],
+        keys: ['non TLC', 'linges et rideaux'],
         scenario: {}
     },
     {
       type: 'selectByFormat',
-      keys: ['Vêtements'],
+      keys: ['vêtements'],
       scenario: {
         transformations: [
           {
             type: 'selectByType',
-            keys: ['Pantalons en jean'],
+            keys: ['pantalons en jean'],
             scenario: {
               transformations: [
                 {
                   type: 'selectByFibre',
-                  keys: ['Coton'],
+                  keys: ['coton'],
                   scenario: {}
                 }
               ],
