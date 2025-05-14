@@ -37,23 +37,20 @@ const nTypes = allTypeValues.length;
 const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
 
 // Palette pour les couleurs (statique)
-const couleurValues = [
-    'noir', 'blanc', 'bleu', 'gris', 'marron', 'rouge', 'vert', 'violet', 'orange', 'jaune', 'inconnu', 'multicolore'
-];
-const couleurPalette = [
-    '#222',      // Noir
-    '#f5f5f5',  // Blanc
-    '#2980b9',  // Bleu
-    '#7f8c8d',  // Gris
-    '#8d5524',  // Marron
-    '#e74c3c',  // Rouge
-    '#27ae60',  // Vert
-    '#8e44ad',  // Violet
-    '#e67e22',  // Orange
-    '#f1c40f',  // Jaune
-    '#b2bec3',  // Inconnu
-    '#fd79a8'   // Multicolore
-];
+const couleurMap = {
+    'noir': '#222',
+    'blanc': '#f5f5f5',
+    'bleu': '#2980b9',
+    'gris': '#7f8c8d',
+    'marron': '#8d5524',
+    'rouge': '#e74c3c',
+    'vert': '#27ae60',
+    'violet': '#8e44ad',
+    'orange': '#e67e22',
+    'jaune': '#f1c40f',
+    'inconnu': '#b2bec3',
+    'multicolore': '#fd79a8'
+};
 
 // Palette pour la qualité
 const qualiteValues = Object.keys(qualiteDistrib);
@@ -72,8 +69,8 @@ const colorScales = {
         .domain(allTypeValues)
         .range(typePalette),
     couleur: d3.scaleOrdinal()
-        .domain(couleurValues)
-        .range(couleurPalette),
+        .domain(Object.keys(couleurMap))
+        .range(Object.values(couleurMap)),
     qualite: d3.scaleOrdinal()
         .domain(qualiteValues)
         .range(qualitePalette)
@@ -354,37 +351,15 @@ function updateSankey(dimension) {
         const palette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
         colorAccessor = (key, idx) => palette[fibreKeys.indexOf(key) % palette.length];
     } else if (dimension === 'couleur') {
-        // Palette dynamique pour les couleurs
-        const component = stackbarComponents[dimension];
-        const allCouleurs = new Set();
-        sankeyData.nodes.forEach(d => {
-          const vals = component.getStackValues(d.lot);
-          Object.keys(vals).forEach(c => allCouleurs.add(c));
-        });
-        const couleurKeys = Array.from(allCouleurs);
-        const nCouleurs = couleurKeys.length;
-        // Utilise la palette définie ou une palette dynamique
-        colorAccessor = (key, idx) => {
-          // Harmonisation de la casse et mapping
-          const keyNorm = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
-          // Gestion des variantes connues
-          const mapping = {
-            "multicolore": "Multicolore",
-            "autre": "Inconnu",
-            "autres": "Inconnu",
-            "gris": "Gris",
-            "bleu": "Bleu",
-            "noir": "Noir",
-            "blanc": "Blanc",
-            "marron": "Marron",
-            "rouge": "Rouge",
-            "vert": "Vert",
-            "violet": "Violet",
-            "orange": "Orange",
-            "jaune": "Jaune"
-          };
-          const mappedKey = mapping[key.toLowerCase()] || keyNorm;
-          return colorScales.couleur(mappedKey) || d3.interpolateRainbow(idx / nCouleurs);
+        // Utilisation directe du couleurMap pour les couleurs
+        colorAccessor = (key) => {
+            // Normalisation de la clé
+            const normalizedKey = key.toLowerCase();
+            // Gestion des cas spéciaux
+            if (normalizedKey === 'autre' || normalizedKey === 'autres') {
+                return couleurMap['inconnu'];
+            }
+            return couleurMap[normalizedKey] || '#bbb';
         };
     } else if (dimension === 'qualite') {
         // Palette dynamique pour la qualité
