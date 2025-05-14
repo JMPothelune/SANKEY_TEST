@@ -15,6 +15,17 @@ const formatValues = data.dimensions.format.values;
 const nFormats = formatValues.length;
 const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
 
+// Palette stable pour les types (tous types de tous formats)
+const allTypeValues = [];
+formatValues.forEach(format => {
+  const types = Object.keys(lotType.format[format]?.types || {});
+  types.forEach(type => {
+    if (!allTypeValues.includes(type)) allTypeValues.push(type);
+  });
+});
+const nTypes = allTypeValues.length;
+const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
+
 const couleurValues = data.dimensions.couleur.values;
 const couleurPalette = [
     '#222',      // Noir
@@ -43,6 +54,9 @@ const colorScales = {
     format: d3.scaleOrdinal()
         .domain(formatValues)
         .range(formatPalette),
+    type: d3.scaleOrdinal()
+        .domain(allTypeValues)
+        .range(typePalette),
     couleur: d3.scaleOrdinal()
         .domain(couleurValues)
         .range(couleurPalette),
@@ -82,18 +96,31 @@ const stackbarComponents = {
   },
   format_type: {
     getStackValues: lot => {
-      // Concatène tous les types de tous les formats présents dans le lot
       if (!lot.format) return {};
       const values = {};
+      let totalWithType = 0;
       Object.values(lot.format).forEach(formatObj => {
         if (formatObj.types) {
           Object.entries(formatObj.types).forEach(([type, typeObj]) => {
             if (typeof typeObj.pourcentage === 'number') {
-              values[type] = (values[type] || 0) + typeObj.pourcentage * (formatObj.pourcentage / 100);
+              // On ne prend en compte que les types qui ont une part > 0
+              const typePct = typeObj.pourcentage * (formatObj.pourcentage / 100);
+              if (typePct > 0) {
+                values[type] = (values[type] || 0) + typePct;
+                totalWithType += typePct;
+              }
             }
           });
         }
       });
+      // Normalisation pour que la somme fasse 100% de la part du lot qui a des types
+      if (totalWithType > 0) {
+        Object.keys(values).forEach(k => {
+          values[k] = values[k] / totalWithType * 100;
+        });
+      }
+      // Optionnel : indiquer la part sans type (rare, mais pour homogénéité)
+      values._missing = 100 - (totalWithType > 0 ? 100 : 0);
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -282,7 +309,7 @@ function updateSankey(dimension) {
         // Palette dynamique pour les types
         const nTypes = typeKeys.length;
         palette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
-        colorAccessor = (key, idx) => palette[idx % palette.length];
+        colorAccessor = (key) => colorScales.type(key);
     } else if (dimension === 'format') {
         // Cas spécial pour les formats qui ont une structure à deux niveaux
         colorAccessor = (key) => colorScales[dimension](key);
@@ -382,27 +409,185 @@ function updateSankey(dimension) {
             tooltip.transition()
                 .duration(200)
                 .style('opacity', .9);
+
+            // Récupérer la position du SVG dans la page
+            const svgRect = svg.node().ownerSVGElement.getBoundingClientRect();
+
+            // Largeur d'un noeud (stackbar + extraBlock)
+            const nodeWidth = 80 + 30; // stackbarWidth + extraBlockWidth
+
+            // Coordonnées du point de départ du path (source), décalées à droite du noeud
+            const x = d.source.x1 + 20; // x1 = bord droit du noeud source
+            const y = d.y0 + 20 - (d.width ? d.width / 2 : 0); // remonter de la moitié de la largeur du path
+
             let tooltipContent = `
                 <strong>${d.source.name} → ${d.target.name}</strong><br/>
                 Quantité: ${Math.round(d.value)} kg<br/>
                 Pourcentage: ${(d.source.lot && d.source.lot.total ? (d.value / d.source.lot.total * 100).toFixed(1) : '0')}%<br/>
             `;
-            if (data.dimensions[dimension]) {
-                tooltipContent += `<br/><strong>Détails ${data.dimensions[dimension].name}:</strong><br/>`;
-                if (d.dimensionData) {
-                    Object.entries(d.dimensionData).forEach(([key, value]) => {
-                        let val = value;
-                        if (value && typeof value === 'object' && typeof value.pourcentage === 'number') {
-                            val = Math.round(d.value * value.pourcentage / 100 * 10) / 10;
-                        }
-                        const percentage = d.value > 0 ? (val / d.value * 100).toFixed(1) : '0';
-                        tooltipContent += `${key}: ${val} kg (${percentage}%)<br/>`;
-                    });
+            if (dimension === 'format' && d.dimensionData) {
+                tooltipContent += `<br/><strong>Détails Format :</strong><br/>`;
+                // Utiliser d.target.lot pour le détail
+                if (d.target.lot && d.target.lot.format) {
+                  Object.entries(d.target.lot.format).forEach(([key, obj]) => {
+                    if (typeof obj.pourcentage === 'number') {
+                      tooltipContent += `${key}: ${obj.pourcentage.toFixed(1)}%<br/>`;
+                    }
+                  });
                 }
+            } else if (dimension === 'format_type') {
+                // Recalcule la distribution des types à la volée sur d.target.lot
+                const values = {};
+                let totalWithType = 0;
+                if (d.target.lot && d.target.lot.format) {
+                  Object.values(d.target.lot.format).forEach(formatObj => {
+                    if (formatObj.types) {
+                      Object.entries(formatObj.types).forEach(([type, typeObj]) => {
+                        if (typeof typeObj.pourcentage === 'number') {
+                          const typePct = typeObj.pourcentage * (formatObj.pourcentage / 100);
+                          if (typePct > 0) {
+                            values[type] = (values[type] || 0) + typePct;
+                            totalWithType += typePct;
+                          }
+                        }
+                      });
+                    }
+                  });
+                }
+                if (totalWithType > 0) {
+                  Object.keys(values).forEach(k => {
+                    values[k] = values[k] / totalWithType * 100;
+                  });
+                }
+                tooltipContent += `<br/><strong>Détails Type :</strong><br/>`;
+                Object.entries(values).forEach(([key, value]) => {
+                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
+                });
+            } else if (dimension === 'matiere') {
+                // Recalcule la distribution des matières à la volée sur d.target.lot
+                const values = {};
+                if (d.target.lot && d.target.lot.format) {
+                  Object.values(d.target.lot.format).forEach(formatObj => {
+                    if (formatObj.types) {
+                      Object.values(formatObj.types).forEach(typeObj => {
+                        if (typeObj.matieres) {
+                          Object.entries(typeObj.matieres).forEach(([matiere, matiereObj]) => {
+                            if (typeof matiereObj.pourcentage === 'number') {
+                              // Pondération par le pourcentage du type et du format
+                              const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+                              values[matiere] = (values[matiere] || 0) + pct;
+                            }
+                          });
+                        }
+                      });
+                    }
+                  });
+                }
+                // Normalisation pour que la somme fasse 100
+                const sum = Object.values(values).reduce((a, b) => a + b, 0);
+                if (sum > 0) {
+                  Object.keys(values).forEach(k => {
+                    values[k] = values[k] / sum * 100;
+                  });
+                }
+                tooltipContent += `<br/><strong>Détails Matière :</strong><br/>`;
+                Object.entries(values).forEach(([key, value]) => {
+                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
+                });
+            } else if (dimension === 'fibres') {
+                // Recalcule la distribution des fibres à la volée sur d.target.lot
+                const values = {};
+                if (d.target.lot && d.target.lot.format) {
+                  Object.entries(d.target.lot.format).forEach(([formatName, formatObj]) => {
+                    if (formatObj.types) {
+                      Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
+                        if (typeObj.matieres) {
+                          Object.entries(typeObj.matieres).forEach(([matiereName, matiereObj]) => {
+                            if (matiereObj && matiereObj.fibres && Object.keys(matiereObj.fibres).length > 0) {
+                              Object.entries(matiereObj.fibres).forEach(([fibre, pctFibre]) => {
+                                // Pondération par le pourcentage de la matière, du type et du format
+                                const pct = (pctFibre / 100) * (matiereObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
+                                values[fibre] = (values[fibre] || 0) + pct;
+                              });
+                            }
+                          });
+                        }
+                      });
+                    }
+                  });
+                }
+                // Normalisation pour que la somme fasse 100% de la part du lot qui a des fibres
+                const sum = Object.values(values).reduce((a, b) => a + b, 0);
+                if (sum > 0) {
+                  Object.keys(values).forEach(k => {
+                    values[k] = values[k] / sum * 100;
+                  });
+                }
+                tooltipContent += `<br/><strong>Détails Fibres :</strong><br/>`;
+                Object.entries(values).forEach(([key, value]) => {
+                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
+                });
+            } else if (dimension === 'couleur') {
+                // Recalcule la distribution des couleurs à la volée sur d.target.lot
+                const values = {};
+                let totalWithCouleur = 0;
+                if (d.target.lot && d.target.lot.format) {
+                  Object.entries(d.target.lot.format).forEach(([formatName, formatObj]) => {
+                    if (formatObj.types) {
+                      Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
+                        if (typeObj.couleurs) {
+                          // Masse de ce type dans le lot
+                          const typePct = (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+                          totalWithCouleur += typePct;
+                          Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
+                            if (typeof couleurObj.pourcentage === 'number') {
+                              // Pondération par la masse du type
+                              const pct = (couleurObj.pourcentage / 100) * typePct * 100;
+                              values[couleur] = (values[couleur] || 0) + pct;
+                            }
+                          });
+                        }
+                      });
+                    }
+                  });
+                }
+                // Normalisation pour que la somme fasse 100% de la part du lot qui a des couleurs
+                const sum = Object.values(values).reduce((a, b) => a + b, 0);
+                if (sum > 0) {
+                  Object.keys(values).forEach(k => {
+                    values[k] = values[k] / sum * 100;
+                  });
+                }
+                tooltipContent += `<br/><strong>Détails Couleur :</strong><br/>`;
+                Object.entries(values).forEach(([key, value]) => {
+                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
+                });
+            } else if (dimension === 'qualite') {
+                // Recalcule la distribution des qualités à la volée sur d.target.lot
+                const values = {};
+                let totalQualite = 0;
+                if (d.target.lot && d.target.lot.qualite) {
+                  Object.entries(d.target.lot.qualite).forEach(([qual, pct]) => {
+                    // pct peut être un nombre ou un objet (selon la structure)
+                    const val = typeof pct === 'number' ? pct : (pct.pourcentage || 0);
+                    values[qual] = val;
+                    totalQualite += val;
+                  });
+                }
+                // Normalisation pour que la somme fasse 100
+                if (totalQualite > 0) {
+                  Object.keys(values).forEach(k => {
+                    values[k] = values[k] / totalQualite * 100;
+                  });
+                }
+                tooltipContent += `<br/><strong>Détails Qualité :</strong><br/>`;
+                Object.entries(values).forEach(([key, value]) => {
+                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
+                });
             }
             tooltip.html(tooltipContent)
-                .style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 28) + 'px');
+                .style('left', (svgRect.left + x) + 'px')
+                .style('top', (svgRect.top + y) + 'px');
         })
         .on('mouseout', function() {
             tooltip.transition()
@@ -429,7 +614,7 @@ function updateSankey(dimension) {
             .attr('height', nodeHeight)
             .attr('width', stackbarWidth)
             .style('fill', '#e0e0e0')
-            .style('opacity', 0.8);
+            .style('opacity', 0.6);
 
         // Stackbars pour la dimension sélectionnée
         let yOffset = 0;
@@ -439,21 +624,35 @@ function updateSankey(dimension) {
         const sortedEntries = Object.entries(dimensionValues).sort((a, b) => b[1] - a[1]);
         sortedEntries.forEach(([key, value], idx) => {
             const height = sum > 0 ? (value / sum) * nodeHeight : 0;
+            const fillColor = d3.color(colorAccessor(key, idx));
+            const fillColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.6)`;
+            const strokeColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
             nodeGroup.append('rect')
                 .attr('x', 0)
                 .attr('y', yOffset)
                 .attr('height', height)
                 .attr('width', stackbarWidth)
-                .style('fill', colorAccessor(key, idx))
-                .style('opacity', 0.8)
+                .attr('rx', 4)
+                .attr('ry', 4)
+                .style('fill', fillColorStr)
+                .style('stroke', strokeColorStr)
+                .style('stroke-width', '1px')
+                .style('opacity', 1)
                 .on('mouseover', function(event) {
                     let tooltipContent = component ? component.getTooltipContent(d.lot, key, value, d.lot.total) : '';
                     tooltip.transition()
                         .duration(200)
                         .style('opacity', .9);
+                    // Positionner le tooltip au coin haut gauche de la stackbar
+                    const svgRect = svg.node().ownerSVGElement.getBoundingClientRect();
+                    // Position du rectangle dans le SVG
+                    const rect = this.getBoundingClientRect();
+                    // Décalage du SVG dans la page
+                    const offsetX = rect.left - svgRect.left;
+                    const offsetY = rect.top - svgRect.top;
                     tooltip.html(tooltipContent)
-                        .style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 28) + 'px');
+                        .style('left', (svgRect.left + offsetX) + 'px')
+                        .style('top', (svgRect.top + offsetY) + 'px');
                 })
                 .on('mouseout', function() {
                     tooltip.transition()
@@ -469,8 +668,12 @@ function updateSankey(dimension) {
             .attr('y', 0)
             .attr('width', extraBlockWidth)
             .attr('height', nodeHeight)
-            .style('fill', '#cccccc')
-            .style('opacity', 0.7)
+            .attr('rx', 4)
+            .attr('ry', 4)
+            .style('fill', 'rgba(204,204,204,0.6)') // gris clair, opacité 60%
+            .style('stroke', 'rgba(204,204,204,1)') // bordure 100%
+            .style('stroke-width', '1px')
+            .style('opacity', 1)
             .on('mouseover', function(event) {
                 const component = stackbarComponents[dimension];
                 const dimensionValues = component ? component.getStackValues(d.lot) : {};
