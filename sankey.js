@@ -73,6 +73,23 @@ const svg = d3.select('#sankey-container')
     .append('g')
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
+// Ajout du pattern SVG pour le fond dashed (à faire UNE SEULE FOIS)
+d3.select('#sankey-container svg').select('defs').remove(); // supprime un éventuel doublon
+const defs = d3.select('#sankey-container svg').append('defs');
+const pattern = defs.append('pattern')
+    .attr('id', 'dashed-bg')
+    .attr('patternUnits', 'userSpaceOnUse')
+    .attr('width', 8)
+    .attr('height', 8);
+pattern.append('rect')
+    .attr('width', 8)
+    .attr('height', 8)
+    .attr('fill', '#f5f5f5');
+pattern.append('path')
+    .attr('d', 'M0,0 l8,8')
+    .attr('stroke', '#bbb')
+    .attr('stroke-width', 2);
+
 // Création du tooltip
 const tooltip = d3.select('body')
     .append('div')
@@ -621,7 +638,23 @@ function updateSankey(dimension) {
         const component = stackbarComponents[dimension];
         const dimensionValues = component ? component.getStackValues(d.lot) : {};
         const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
-        const sortedEntries = Object.entries(dimensionValues).sort((a, b) => b[1] - a[1]);
+        const sortedEntries = Object.entries(dimensionValues)
+          .filter(([key]) => !key.startsWith('_'))
+          .sort((a, b) => b[1] - a[1]);
+        // Si la stackbar est vide, afficher un fond dashed
+        if (sortedEntries.length === 0) {
+            nodeGroup.append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('height', nodeHeight)
+                .attr('width', stackbarWidth)
+                .attr('rx', 4)
+                .attr('ry', 4)
+                .style('fill', 'url(#dashed-bg)')
+                .style('stroke', '#bbb')
+                .style('stroke-width', '1px')
+                .style('opacity', 1);
+        }
         sortedEntries.forEach(([key, value], idx) => {
             const height = sum > 0 ? (value / sum) * nodeHeight : 0;
             const fillColor = d3.color(colorAccessor(key, idx));
@@ -739,6 +772,77 @@ function updateSankey(dimension) {
                     .attr('href', 'assets/svg/arrows-split.svg')
                     .style('pointer-events', 'none');
             });
+            // Ajout de l'icône + sur le dernier path (celui qui correspond au 'reste')
+            const resteLinks = links.filter(l => l.source.id === d.id && l.target.name.startsWith('Reste'));
+            if (resteLinks.length > 0) {
+                // On prend le dernier (s'il y en a plusieurs)
+                const lastResteLink = resteLinks[resteLinks.length - 1];
+                const linkY = lastResteLink.y0 - d.y0;
+                nodeGroup.append('rect')
+                    .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+                    .attr('y', linkY - 12)
+                    .attr('width', 24)
+                    .attr('height', 24)
+                    .attr('rx', 6)
+                    .attr('ry', 6)
+                    .style('fill', '#999')
+                    .style('opacity', 1)
+                    .on('mouseover', function(event) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style('opacity', .9);
+                        tooltip.html(`<strong>Ajouter une transformation</strong>`)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 28) + 'px');
+                    })
+                    .on('mouseout', function() {
+                        tooltip.transition()
+                            .duration(500)
+                            .style('opacity', 0);
+                    });
+                nodeGroup.append('image')
+                    .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
+                    .attr('y', linkY - 10)
+                    .attr('width', 20)
+                    .attr('height', 20)
+                    .attr('href', 'assets/svg/plus.svg')
+                    .style('pointer-events', 'none');
+            }
+        }
+        // Ajout de l'icône + sur les nœuds feuilles (aucun lien sortant sauf 'Reste')
+        const outgoingNonReste = links.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
+        if (outgoingNonReste.length === 0) {
+            // Position : en bas du bloc extraBlockWidth, centré
+            const yPlus = nodeHeight / 2 - 12; // centré verticalement
+            nodeGroup.append('rect')
+                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+                .attr('y', yPlus)
+                .attr('width', 24)
+                .attr('height', 24)
+                .attr('rx', 6)
+                .attr('ry', 6)
+                .style('fill', '#999')
+                .style('opacity', 1)
+                .on('mouseover', function(event) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`<strong>Ajouter une transformation</strong>`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
+            nodeGroup.append('image')
+                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
+                .attr('y', yPlus + 2)
+                .attr('width', 20)
+                .attr('height', 20)
+                .attr('href', 'assets/svg/plus.svg')
+                .style('pointer-events', 'none');
         }
     });
 
