@@ -16,6 +16,11 @@ const scenario = {
         }
     },
     {
+        type: 'selectByQualite',
+        keys: ['inutilisable'],
+        scenario: {}
+    },
+    {
         type: 'selectByFormat',
         keys: ['non TLC', 'linges et rideaux'],
         scenario: {}

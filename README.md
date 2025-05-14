@@ -1,7 +1,46 @@
 # Visualisation Sankey - Valorisation des Matières Textiles
 
 ## Description
-Ce projet est un prototype de visualisation interactive de type Sankey pour suivre le flux de valorisation des matières textiles. Il permet de visualiser les différents parcours de valorisation d'un lot de textile, avec la possibilité de voir différentes dimensions (matière, format, couleur) à travers les étapes de traitement.
+Ce projet est un prototype de visualisation interactive de type Sankey pour suivre le flux de valorisation des matières textiles. Il permet de visualiser les différents parcours de valorisation d'un lot de textile, avec la possibilité de voir différentes dimensions (matière, format, couleur, qualité, fibres) à travers les étapes de traitement.
+
+## Nouveautés et évolutions récentes (2024)
+
+### Palette et affichage des couleurs
+- **Palettes dynamiques** : Les palettes de couleurs sont générées dynamiquement pour chaque dimension (matière, format, type, couleur, qualité) à partir des vraies données présentes dans le lot.
+- **Couleurs des matières robustes** : Les couleurs des matières sont désormais alignées sur les matières réellement présentes dans les données (plus de stackbars grises ou de matières manquantes).
+- **Stackbars visuelles** : Les stackbars sont colorées avec opacité, contour et border-radius. Un fond hachuré s'affiche si la dimension est vide.
+
+### Stackbars et gestion des dimensions
+- **Affichage robuste** : Les stackbars affichent la répartition de la dimension sélectionnée (format, type, matière, fibres, couleur, qualité) et ignorent les clés techniques (`_missing`).
+- **Gestion des cas particuliers** : Les stackbars restent robustes même si certaines branches sont vides ou incomplètes.
+
+### Tooltips
+- **Détail dynamique** : Les tooltips affichent le détail de la dimension courante pour chaque path, calculé dynamiquement à partir du lot cible.
+- **Pourcentages et poids** : Les valeurs sont toujours normalisées et cohérentes avec la structure réelle du lot.
+
+### Icônes d'action
+- **Ajout de transformation** : Une icône "+" s'affiche sur chaque nœud feuille et sur le carré du dernier path "Reste", avec un tooltip "Ajouter une transformation".
+
+### Affichage des titres
+- **Nom du lot au-dessus du nœud** : Le nom du lot (ex : "Lot initial", "Reste", etc.) est affiché au-dessus de chaque nœud, centré sur la stackbar.
+
+### Suppression de l'objet `data`
+- **Plus de dépendance statique** : L'objet `data` n'est plus utilisé. Toutes les listes de valeurs sont générées dynamiquement à partir des vraies données (`lotType`, `matieres_fibres`, etc.).
+- **Synchronisation automatique** : Plus aucune dépendance à un objet statique pour les dimensions : tout est synchronisé avec les données affichées.
+
+### Robustesse et nettoyage
+- **Nettoyage du code** : Suppression de tout code mort, debug ou variables inutilisées.
+- **Synchronisation palettes/données** : Les palettes et les mappings sont toujours synchronisés avec les données affichées.
+
+### Scénario dynamique
+- **Scénario imbriqué** : Le scénario de transformations est totalement dynamique et peut être imbriqué à volonté.
+- **Correspondance stricte des clés** : Les clés du scénario doivent être en accord exact (casse, accents, espaces) avec les clés des données.
+
+### Instructions pour modification
+- **Ajout de dimension ou palette** : Pour ajouter une nouvelle dimension ou palette, il suffit d'ajouter une entrée dans la section correspondante du code JS.
+- **Modification de la structure des lots** : Adapter le générateur de `lotType` dans `data.js` pour toute évolution de la structure.
+
+---
 
 ## Structure Technique
 
@@ -15,77 +54,36 @@ Ce projet est un prototype de visualisation interactive de type Sankey pour suiv
 Le projet est conçu pour être léger et facilement intégrable dans d'autres applications (notamment Bubble). Il se compose de :
 - Un fichier HTML principal
 - Un fichier CSS pour le style
-- Un fichier JavaScript pour la logique
-- Un fichier JSON pour les données
+- Un ou plusieurs fichiers JavaScript pour la logique et la génération dynamique des données
 
 ### Structure des Données
-Le format JSON suit cette structure :
-```json
-{
-  "nodes": [
-    {
-      "id": "string",
-      "name": "string",
-      "type": "string" // étape ou dimension
-    }
-  ],
-  "links": [
-    {
-      "source": "string", // id du nœud source
-      "target": "string", // id du nœud cible
-      "value": number,    // valeur en kg
-      "percentage": number // pourcentage
-    }
-  ],
-  "dimensions": {
-    "matiere": {
-      "name": "Matière",
-      "values": ["coton", "polyester", ...]
-    },
-    "format": {
-      "name": "Format",
-      "values": ["vêtements", "chutes", ...]
-    },
-    "couleur": {
-      "name": "Couleur",
-      "values": ["bleu", "rouge", ...]
-    }
-  }
-}
-```
+La structure des données est générée dynamiquement à partir des constantes du projet (`formats_types`, `repartitionParType`, `matieres_fibres`, etc.) et produit un objet hiérarchique `lotType` : format > type > matière > fibres, avec la répartition des couleurs et la qualité.
 
-### Fonctionnalités
-1. **Visualisation Sankey Horizontale**
-   - Représentation des flux de matière entre les différentes étapes
-   - Adaptation responsive à la taille du conteneur
-
-2. **Dimensions Multiples**
-   - Possibilité de basculer entre différentes dimensions (matière, format, couleur)
-   - Chaque dimension est représentée comme une stackbar dans les nœuds
-
-3. **Interactivité**
-   - Clic sur les éléments pour afficher :
-     - Pourcentage de valorisation
-     - Quantité en kg
-   - Tooltips informatifs
-
-4. **Responsive Design**
-   - Adaptation automatique à la taille du conteneur
-   - Optimisé pour l'intégration dans Bubble
+## Fonctionnalités principales
+- Visualisation Sankey horizontale, responsive
+- Sélection dynamique de la dimension à afficher (format, type, matière, fibres, couleur, qualité)
+- Stackbars colorées et robustes pour chaque dimension
+- Tooltips détaillés et dynamiques
+- Icônes d'action pour ajouter des transformations
+- Affichage du nom du lot au-dessus de chaque nœud
+- Gestion dynamique et imbriquée des scénarios de transformation
 
 ## Intégration
 Le diagramme est conçu pour être facilement intégrable dans d'autres applications, notamment Bubble. Il suffit d'inclure les fichiers nécessaires et d'initialiser le diagramme avec les données appropriées.
 
 ## Développement
 Pour modifier ou étendre le projet :
-1. Modifier le fichier JSON pour mettre à jour les données
+1. Modifier les constantes de données ou la structure du générateur dans `data.js`
 2. Ajuster le CSS pour personnaliser l'apparence
-3. Modifier le JavaScript pour ajouter de nouvelles fonctionnalités
+3. Modifier le JavaScript pour ajouter de nouvelles fonctionnalités ou dimensions
 
 ## Limitations Actuelles
-- Version prototype avec fonctionnalités de base
+- Version prototype avec fonctionnalités avancées mais non exhaustives
 - Optimisé pour les petits à moyens volumes de données
-- Nécessite une structure de données spécifique 
+- Nécessite une structure de données hiérarchique cohérente
+
+## Note
+Ce projet évolue rapidement. Pour toute modification, bien vérifier la correspondance exacte des clés entre le scénario et les données, et privilégier la génération dynamique des listes de valeurs pour garantir la robustesse de la visualisation.
 
 ## Système de transformations dynamiques (scénario Sankey)
 
