@@ -59,7 +59,10 @@ const scenario = {
                 target: 'Buitex'
               }
             }
-          ]
+          ],
+          coproduct_scenario: {
+            target: 'CSR'
+          }
         }
     },
     {
