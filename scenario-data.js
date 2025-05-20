@@ -14,7 +14,7 @@ const scenario2 = {
         }
     },
     ],
-    coproduct_transformations: {}
+    coproduct_scenario: {}
   }; 
   
   
@@ -25,7 +25,9 @@ const scenario = {
     {
       type: 'selectByProprete',
       keys: ['contaminé'],
-      scenario: {}
+      scenario: {
+        target: 'CSR'
+      }
     },
     {
         type: 'selectByFormat',
@@ -35,10 +37,14 @@ const scenario = {
                 {
                 type: 'selectByQualite',
                 keys: ['neuf étiqueté', 'parfait état', 'bon état'],
-                scenario: {}
+                scenario: {
+                  target: 'CT2'
+                }
                 }
             ],
-            coproduct_transformations: {}
+            coproduct_scenario: {
+              target: 'CSR'
+            }
         }
     },
     {
@@ -49,7 +55,9 @@ const scenario = {
     {
         type: 'selectByFormat',
         keys: ['non TLC'],
-        scenario: {}
+        scenario: {
+          target: 'CT2'
+        }
     },
     {
       type: 'selectByFormat',
@@ -59,10 +67,12 @@ const scenario = {
             {
                 type: 'selectByQualite',
                 keys: ['neuf étiqueté', 'parfait état', 'bon état'],
-                scenario: {}
+                scenario: {
+                  target: 'CT2'
+                }
             }
         ],
-        coproduct_transformations: {
+        coproduct_scenario: {
             transformations: [
                 {
                     type: 'selectByType',
@@ -74,10 +84,12 @@ const scenario = {
                             keys: ['coton'],
                             threshold: 60,
                             condition: 'over',
-                            scenario: {}
+                            scenario: {
+                              target: 'Buitex'
+                            }
                         }
                       ],
-                      coproduct_transformations: {}
+                      coproduct_scenario: {}
                     }
                   },
                   {
@@ -85,12 +97,16 @@ const scenario = {
                     keys: ['coton'],
                     threshold: 100,
                     condition: 'over',
-                    scenario: {}
+                    scenario: {
+                      target: 'Buitex'
+                    }
                   },
                   {
                     type: 'selectByMatiere',
                     keys: ['100% polyester', 'coton/polyester', 'polyester/élasthanne', 'polyester/polyamide'],
-                    scenario: {}
+                    scenario: {
+                      target: 'RecycElit'
+                    }
                   },
                   {
                     type: 'selectByType',
@@ -103,7 +119,7 @@ const scenario = {
                             scenario: {}
                         }
                       ],
-                      coproduct_transformations: {}
+                      coproduct_scenario: {}
                     }
                   }
             ]
@@ -111,6 +127,6 @@ const scenario = {
       }
     }
   ],
-  coproduct_transformations: {}
+  coproduct_scenario: {}
 }; 
 

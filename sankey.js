@@ -456,6 +456,14 @@ function updateSankey(dimension) {
     const dynamicWidth = Math.max(minWidth, (stackbarWidth + extraBlockWidth) * (maxDepth + 1) + 40);
     svg.attr('width', Math.min(width + margin.left + margin.right, dynamicWidth));
 
+    // Calcul des totaux par target
+    const targetTotals = {};
+    sankeyScenario.nodes.forEach(node => {
+        if (node.lot && node.lot.target) {
+            targetTotals[node.lot.target] = (targetTotals[node.lot.target] || 0) + node.lot.total;
+        }
+    });
+
     // Création des liens
     svg.append('g')
         .selectAll('path')
@@ -782,8 +790,21 @@ function updateSankey(dimension) {
                 const missingPct = dimensionValues._missing || 0;
                 let missingInfo = '';
                 if (missingPct > 0.1) {
-                  missingInfo = `<br/><span style='font-size:12px;color:#c00;'>Donnée couleur manquante pour ${missingPct.toFixed(1)}%</span>`;
+                    missingInfo = `<br/><span style='font-size:12px;color:#c00;'>Donnée couleur manquante pour ${missingPct.toFixed(1)}%</span>`;
                 }
+                
+                // Ajout des informations sur la target
+                let targetInfo = '';
+                if (d.lot && d.lot.target) {
+                    targetInfo = `
+                        <br/>
+                        <div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'>
+                            <strong style='color:#4CAF50;'>✓ Destination validée</strong><br/>
+                            <span style='font-size:12px;'>Target: ${d.lot.target}</span>
+                        </div>
+                    `;
+                }
+                
                 tooltip.transition()
                     .duration(200)
                     .style('opacity', .9);
@@ -792,6 +813,7 @@ function updateSankey(dimension) {
                     Poids du lot : ${Math.round(d.lot.total)} kg<br/>
                     <span style='font-size:12px;color:#666;'>Somme des % stackbar : ${sumPct.toFixed(1)}%</span>
                     ${missingInfo}
+                    ${targetInfo}
                 `)
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY - 28) + 'px');
@@ -802,84 +824,53 @@ function updateSankey(dimension) {
                     .style('opacity', 0);
             });
 
-        // Ajout des icônes SVG pour chaque lien sortant (sauf "Reste")
-        const outgoingLinks = links.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
-        if (outgoingLinks.length > 0) {
-            outgoingLinks.forEach((link, idx) => {
-                const linkY = link.y0 - d.y0;
-                // Ajout du fond carré arrondi avec tooltip
-                const transfoName = link.target.name;
-                nodeGroup.append('rect')
-                    .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
-                    .attr('y', linkY - 12)
-                    .attr('width', 24)
-                    .attr('height', 24)
-                    .attr('rx', 6)
-                    .attr('ry', 6)
-                    .style('fill', '#999')
-                    .style('opacity', 1)
-                    .on('mouseover', function(event) {
-                        tooltip.transition()
-                            .duration(200)
-                            .style('opacity', .9);
-                        tooltip.html(`<strong>${transfoName}</strong>`)
-                            .style('left', (event.pageX + 10) + 'px')
-                            .style('top', (event.pageY - 28) + 'px');
-                    })
-                    .on('mouseout', function() {
-                        tooltip.transition()
-                            .duration(500)
-                            .style('opacity', 0);
-                    });
-                // Ajout de l'icône centrée dans le carré
-                nodeGroup.append('image')
-                    .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
-                    .attr('y', linkY - 10)
-                    .attr('width', 20)
-                    .attr('height', 20)
-                    .attr('href', 'assets/svg/arrows-split.svg')
-                    .style('pointer-events', 'none');
-            });
-            // Ajout de l'icône + sur le dernier path (celui qui correspond au 'reste')
-            const resteLinks = links.filter(l => l.source.id === d.id && l.target.name.startsWith('Reste'));
-            if (resteLinks.length > 0) {
-                // On prend le dernier (s'il y en a plusieurs)
-                const lastResteLink = resteLinks[resteLinks.length - 1];
-                const linkY = lastResteLink.y0 - d.y0;
-                nodeGroup.append('rect')
-                    .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
-                    .attr('y', linkY - 12)
-                    .attr('width', 24)
-                    .attr('height', 24)
-                    .attr('rx', 6)
-                    .attr('ry', 6)
-                    .style('fill', '#999')
-                    .style('opacity', 1)
-                    .on('mouseover', function(event) {
-                        tooltip.transition()
-                            .duration(200)
-                            .style('opacity', .9);
-                        tooltip.html(`<strong>Ajouter une transformation</strong>`)
-                            .style('left', (event.pageX + 10) + 'px')
-                            .style('top', (event.pageY - 28) + 'px');
-                    })
-                    .on('mouseout', function() {
-                        tooltip.transition()
-                            .duration(500)
-                            .style('opacity', 0);
-                    });
-                nodeGroup.append('image')
-                    .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
-                    .attr('y', linkY - 10)
-                    .attr('width', 20)
-                    .attr('height', 20)
-                    .attr('href', 'assets/svg/plus.svg')
-                    .style('pointer-events', 'none');
-            }
+        // Si le lot a une target, ajouter l'icône de validation
+        if (d.lot && d.lot.target) {
+            const yCheck = nodeHeight / 2 - 12;
+            nodeGroup.append('rect')
+                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+                .attr('y', yCheck)
+                .attr('width', 24)
+                .attr('height', 24)
+                .attr('rx', 6)
+                .attr('ry', 6)
+                .style('fill', '#4CAF50')
+                .style('opacity', 1)
+                .on('mouseover', function(event) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`
+                        <strong>Destination validée</strong><br/>
+                        Target: ${d.lot.target}<br/>
+                        <span style='font-size:12px;color:#666;'>Poids du lot: ${Math.round(d.lot.total)} kg</span>
+                        <div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'>
+                            <span style='font-size:12px;color:#666;'>Total ${d.lot.target}: ${Math.round(targetTotals[d.lot.target])} kg</span>
+                        </div>
+                    `)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
+            
+            // Ajout de l'icône check-circle existante
+            nodeGroup.append('image')
+                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
+                .attr('y', yCheck + 2)
+                .attr('width', 20)
+                .attr('height', 20)
+                .attr('href', 'assets/svg/check-circle.svg')
+                .style('pointer-events', 'none');
         }
+
         // Ajout de l'icône + sur les nœuds feuilles (aucun lien sortant sauf 'Reste')
         const outgoingNonReste = links.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
-        if (outgoingNonReste.length === 0) {
+        // Ne pas afficher le + si le lot a une target
+        if (outgoingNonReste.length === 0 && !d.lot.target) {
             // Position : en bas du bloc extraBlockWidth, centré
             const yPlus = nodeHeight / 2 - 12; // centré verticalement
             nodeGroup.append('rect')

@@ -3,6 +3,103 @@
 ## Description
 Ce projet est un prototype de visualisation interactive de type Sankey pour suivre le flux de valorisation des matières textiles. Il permet de visualiser les différents parcours de valorisation d'un lot de textile, avec la possibilité de voir différentes dimensions (matière, format, couleur, qualité, fibres) à travers les étapes de traitement.
 
+## Fonctionnalités Principales
+
+### Visualisation et Navigation
+- **Diagramme Sankey horizontal** : Visualisation interactive des flux de valorisation
+- **Dimensions multiples** : Affichage dynamique des différentes dimensions (format, type, matière, fibres, couleur, qualité, propreté)
+- **Stackbars colorées** : Représentation visuelle de la répartition des dimensions avec des palettes de couleurs harmonieuses
+- **Tooltips informatifs** : Affichage détaillé des informations au survol des éléments
+
+### Gestion des Lots
+- **Structure hiérarchique** : Organisation des données en format > type > matière > fibres
+- **Calculs dynamiques** : Génération automatique des pourcentages et des masses
+- **Validation des destinations** : Indication visuelle des lots valorisés avec leur destination finale
+
+### Système de Transformation
+- **Scénario dynamique** : Structure flexible permettant des transformations imbriquées
+- **Filtres avancés** : Sélection par format, type, matière, couleur, qualité, propreté et fibres
+- **Seuils de fibres** : Filtrage précis des matières selon leur composition en fibres
+
+## Utilisation
+
+### Structure du Scénario
+Le scénario est défini comme un objet avec deux propriétés principales :
+```js
+const scenario = {
+  transformations: [
+    {
+      type: 'selectByFormat', // ou autre type de sélection
+      keys: ['vêtements'],    // valeurs à sélectionner
+      scenario: {            // sous-scénario optionnel
+        target: 'CT2',       // destination finale
+        transformations: []  // transformations supplémentaires
+      }
+    }
+  ],
+  coproduct_transformations: {} // transformations pour le reste
+};
+```
+
+### Types de Sélection Disponibles
+1. **Sélections de base**
+   - `selectByFormat` : Sélection par format (vêtements, chaussures, etc.)
+   - `selectByType` : Sélection par type (après format)
+   - `selectByMatiere` : Sélection par matière (après format et type)
+   - `selectByCouleur` : Sélection par couleur
+   - `selectByQualite` : Sélection par qualité
+   - `selectByProprete` : Sélection par propreté
+
+2. **Sélection avancée par fibres**
+   ```js
+   {
+     type: 'selectByFibre',
+     keys: ['coton'],
+     threshold: 60,        // optionnel
+     condition: 'over',    // optionnel
+     scenario: { /* ... */ }
+   }
+   ```
+
+### Validation des Destinations
+- Chaque lot peut avoir une destination finale (`target`)
+- Les lots validés sont marqués d'une icône de validation
+- Le tooltip affiche :
+  - La destination du lot
+  - Le poids du lot
+  - Le total des lots ayant la même destination
+
+## Intégration Technique
+
+### Structure des Fichiers
+- `index.html` : Structure de base
+- `styles.css` : Styles et apparence
+- `data.js` : Données et constantes
+- `scenario.js` : Logique de transformation
+- `sankey.js` : Visualisation et interaction
+
+### Dépendances
+- D3.js v7
+- d3-sankey v0.12.3
+
+## Développement
+
+### Ajout de Nouvelles Dimensions
+1. Ajouter la dimension dans les constantes de données
+2. Créer une fonction de sélection correspondante
+3. Ajouter la palette de couleurs appropriée
+4. Mettre à jour le sélecteur de dimensions
+
+### Modification de la Structure
+- Adapter le générateur de `lotType` dans `data.js`
+- Maintenir la cohérence des clés entre le scénario et les données
+- Utiliser la génération dynamique des listes de valeurs
+
+## Limitations
+- Optimisé pour les petits à moyens volumes de données
+- Nécessite une structure de données hiérarchique cohérente
+- Les clés doivent correspondre exactement (casse, accents, espaces)
+
 ## Nouveautés et évolutions récentes (2025)
 
 ### Palette et affichage des couleurs
@@ -216,7 +313,7 @@ Ce projet évolue rapidement. Pour toute modification, bien vérifier la corresp
 - **Tous les paths partent du lot initial** : chaque sélection crée un nœud et un lien depuis le lot initial.
 - **Le "reste"** est ce qui n'a pas été sélectionné dans aucune transformation (toutes dimensions confondues), et il est ajouté à la fin comme un nœud supplémentaire.
 - **Aucune logique séquentielle ni croisée** : chaque sélection est indépendante, il n'y a pas d'enchaînement ni d'intersection entre les sélections.
-- **Les sous-scenarios (`scenario`) et les `coproduct_transformations` ne sont pas encore gérés** dans le parsing actuel.
+- **Les sous-scenarios (`scenario`) et les `coproduct_scenario` ne sont pas encore gérés** dans le parsing actuel.
 
 #### Exemple de scénario
 ```js
@@ -235,7 +332,7 @@ const scenario = {
       scenario: {}
     }
   ],
-  coproduct_transformations: []
+  coproduct_scenario: []
 };
 ```
 
@@ -257,17 +354,17 @@ Le Sankey peut être généré dynamiquement à partir d'un lot de départ (dist
 
 Un scénario est un objet avec deux propriétés :
 - `transformations` : tableau de transformations principales (sélections)
-- `coproduct_transformations` : tableau de transformations appliquées au "reste" (coproduit)
+- `coproduct_scenario` : tableau de transformations appliquées au "reste" (coproduit)
 
 Chaque transformation est un objet :
 - `transform` : { type, dimension, keys } (type = "select", dimension = nom de la dimension, keys = valeurs sélectionnées)
-- `scenario` : (optionnel) sous-scénario imbriqué, même structure (objet avec transformations/coproduct_transformations)
+- `scenario` : (optionnel) sous-scénario imbriqué, même structure (objet avec transformations/coproduct_scenario)
 
 #### Exemple minimal (vide)
 ```js
 const scenario = {
   transformations: [],
-  coproduct_transformations: []
+  coproduct_scenario: []
 };
 ```
 
@@ -291,22 +388,22 @@ const scenario = {
             },
             scenario: {
               transformations: [],
-              coproduct_transformations: []
+              coproduct_scenario: []
             }
           }
         ],
-        coproduct_transformations: []
+        coproduct_scenario: []
       }
     }
   ],
-  coproduct_transformations: [
+  coproduct_scenario: [
     // transformations à appliquer au reste du lot initial
   ]
 };
 ```
 
 - À chaque niveau, tu peux imbriquer autant de sous-scénarios que tu veux.
-- Les transformations du "reste" (coproduit) sont toujours dans le champ `coproduct_transformations`.
+- Les transformations du "reste" (coproduit) sont toujours dans le champ `coproduct_scenario`.
 - Cette structure permet de représenter n'importe quel arbre de transformations, avec une logique homogène et facile à parser.
 
 ### Parsing
