@@ -48,7 +48,7 @@ function normalizePourcentages(obj) {
 }
 
 // Nouvelle fonction de parsing du scénario (squelette)
-function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = null, idGenObj = null, isRoot = true, transformations_appliquees = [], depth = 0, pathNum = '') {
+function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = null, idGenObj = null, isRoot = true, transformations_appliquees = [], depth = 0, pathNum = '1') {
   if (!nodes) {
     const lotInit = JSON.parse(JSON.stringify(lot));
     lotInit.titre = 'lot Type';
@@ -80,13 +80,15 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
       } else {
         result = selectByFibre(resteLot, transfo.keys);
       }
+    } else if (transfo.type === 'selectByProprete') {
+      result = selectByProprete(resteLot, transfo.keys);
     } else {
       throw new Error('Type de transformation non géré : ' + transfo.type);
     }
     const { targetLot, coProductLot } = result;
     if (!targetLot) return;
-    // Génération du titre
-    const titre = pathNum ? `${depth + 1}.${idx + 1}` : `${depth + 1}`;
+    // Génération du titre unique basé sur le chemin complet
+    const titre = `${pathNum}.${idx + 1}`;
     targetLot.titre = titre;
     console.log('Création lot:', targetLot);
     const nodeId = `${idGenObj.id++}`;
@@ -105,7 +107,7 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
 
   // 2. Appliquer les transformations du coproduit (le "reste"), récursivement sur le reste
   if (resteLot && resteLot.total > 0.1) {
-    const titre = pathNum ? `${depth + 1}.${(scenario.transformations || []).length + 1}` : `${depth + 1}`;
+    const titre = `${pathNum}.${(scenario.transformations || []).length + 1}`;
     resteLot.titre = titre;
     console.log('Création lot:', resteLot);
     const coproductNodeId = `${idGenObj.id++}`;
@@ -591,5 +593,59 @@ function selectByFibre(lot, selectedFibres, threshold = null, condition = null) 
 
   return { targetLot, coProductLot };
 }
+
+function selectByProprete(lot, selectedProprete) {
+    // Accepte un tableau ou une valeur unique
+    const selectedArray = Array.isArray(selectedProprete) ? selectedProprete : [selectedProprete];
+    const targetLot = JSON.parse(JSON.stringify(lot));
+    const coProductLot = JSON.parse(JSON.stringify(lot));
+    
+    // Calculer les masses pour chaque lot
+    let targetMass = 0;
+    let coProductMass = 0;
+    
+    if (lot.proprete) {
+        Object.entries(lot.proprete).forEach(([prop, pct]) => {
+            const mass = lot.total * (pct.pourcentage / 100);
+            if (selectedArray.includes(prop)) {
+                targetMass += mass;
+            } else {
+                coProductMass += mass;
+            }
+        });
+    }
+    
+    // Mettre à jour les totaux
+    targetLot.total = targetMass;
+    coProductLot.total = coProductMass;
+    
+    // Mettre à jour les pourcentages de propreté
+    if (targetMass > 0) {
+        const targetProprete = {};
+        Object.entries(lot.proprete).forEach(([prop, pct]) => {
+            if (selectedArray.includes(prop)) {
+                targetProprete[prop] = {
+                    pourcentage: (pct.pourcentage * lot.total) / targetMass
+                };
+            }
+        });
+        targetLot.proprete = targetProprete;
+    }
+    
+    if (coProductMass > 0) {
+        const coProductProprete = {};
+        Object.entries(lot.proprete).forEach(([prop, pct]) => {
+            if (!selectedArray.includes(prop)) {
+                coProductProprete[prop] = {
+                    pourcentage: (pct.pourcentage * lot.total) / coProductMass
+                };
+            }
+        });
+        coProductLot.proprete = coProductProprete;
+    }
+    
+    return { targetLot, coProductLot };
+}
+
 
 

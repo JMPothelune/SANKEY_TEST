@@ -57,6 +57,11 @@ const qualiteValues = Object.keys(qualiteDistrib);
 const nQualite = qualiteValues.length;
 const qualitePalette = Array.from({length: nQualite}, (_, i) => d3.interpolateOranges(0.2 + 0.6 * (i / (nQualite - 1))));
 
+// Palette pour la propreté (comme pour la qualité)
+const propreteValues = Object.keys(propreteDistrib); // À définir
+const nProprete = propreteValues.length;
+const propretePalette = Array.from({length: nProprete}, (_, i) => d3.interpolateBlues(0.2 + 0.6 * (i / (nProprete - 1))));
+
 // Palette de couleurs pour les dimensions
 const colorScales = {
     matiere: d3.scaleOrdinal()
@@ -73,7 +78,10 @@ const colorScales = {
         .range(Object.values(couleurMap)),
     qualite: d3.scaleOrdinal()
         .domain(qualiteValues)
-        .range(qualitePalette)
+        .range(qualitePalette),
+    proprete: d3.scaleOrdinal()
+        .domain(propreteValues)
+        .range(propretePalette)
 };
 
 // Création du SVG
@@ -177,7 +185,34 @@ const stackbarComponents = {
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+      // Trouver la matière dans le lot courant
+      let fibresDistrib = {};
+      Object.values(lot.format).forEach(formatObj => {
+        if (formatObj.types) {
+          Object.values(formatObj.types).forEach(typeObj => {
+            if (typeObj.matieres && typeObj.matieres[key] && typeObj.matieres[key].fibres) {
+              Object.entries(typeObj.matieres[key].fibres).forEach(([fibre, pct]) => {
+                fibresDistrib[fibre] = (fibresDistrib[fibre] || 0) + pct;
+              });
+            }
+          });
+        }
+      });
+      // Normalisation (au cas où plusieurs types)
+      const sumFibres = Object.values(fibresDistrib).reduce((a, b) => a + b, 0);
+      if (sumFibres > 0) {
+        Object.keys(fibresDistrib).forEach(f => {
+          fibresDistrib[f] = fibresDistrib[f] / sumFibres * 100;
+        });
+      }
+      let fibresStr = '';
+      if (Object.keys(fibresDistrib).length > 0) {
+        fibresStr = '<br/><em>Fibres :</em><br/>' +
+          Object.entries(fibresDistrib)
+            .map(([f, pct]) => `${f} : ${pct.toFixed(1)}%`)
+            .join('<br/>');
+      }
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg${fibresStr}`;
     }
   },
   fibres: {
@@ -261,6 +296,19 @@ const stackbarComponents = {
       Object.entries(lot.qualite).forEach(([qual, pct]) => {
         // pct peut être un nombre ou un objet (selon la structure)
         values[qual] = typeof pct === 'number' ? pct : (pct.pourcentage || 0);
+      });
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
+  proprete: {
+    getStackValues: lot => {
+      if (!lot.proprete) return {};
+      const values = {};
+      Object.entries(lot.proprete).forEach(([prop, pct]) => {
+        values[prop] = typeof pct === 'number' ? pct : (pct.pourcentage || 0);
       });
       return values;
     },
@@ -372,6 +420,17 @@ function updateSankey(dimension) {
         const qualiteKeys = Array.from(allQualites);
         const nQualites = qualiteKeys.length;
         colorAccessor = (key, idx) => colorScales.qualite(key) || d3.interpolateOranges(idx / nQualites);
+    } else if (dimension === 'proprete') {
+        // Palette dynamique pour la propreté
+        const component = stackbarComponents[dimension];
+        const allPropretes = new Set();
+        sankeyData.nodes.forEach(d => {
+          const vals = component.getStackValues(d.lot);
+          Object.keys(vals).forEach(p => allPropretes.add(p));
+        });
+        const propreteKeys = Array.from(allPropretes);
+        const nPropretes = propreteKeys.length;
+        colorAccessor = (key, idx) => colorScales.proprete(key) || d3.interpolateBlues(idx / nPropretes);
     } else if (dimension === 'matiere') {
         colorAccessor = (key) => colorScales.matiere(key);
     } else {
@@ -586,6 +645,28 @@ function updateSankey(dimension) {
                 Object.entries(values).forEach(([key, value]) => {
                   tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
                 });
+            } else if (dimension === 'proprete') {
+                // Recalcule la distribution des propretés à la volée sur d.target.lot
+                const values = {};
+                let totalProprete = 0;
+                if (d.target.lot && d.target.lot.proprete) {
+                  Object.entries(d.target.lot.proprete).forEach(([prop, pct]) => {
+                    // pct peut être un nombre ou un objet (selon la structure)
+                    const val = typeof pct === 'number' ? pct : (pct.pourcentage || 0);
+                    values[prop] = val;
+                    totalProprete += val;
+                  });
+                }
+                // Normalisation pour que la somme fasse 100
+                if (totalProprete > 0) {
+                  Object.keys(values).forEach(k => {
+                    values[k] = values[k] / totalProprete * 100;
+                  });
+                }
+                tooltipContent += `<br/><strong>Détails Propreté :</strong><br/>`;
+                Object.entries(values).forEach(([key, value]) => {
+                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
+                });
             }
             tooltip.html(tooltipContent)
                 .style('left', (svgRect.left + x) + 'px')
@@ -645,6 +726,8 @@ function updateSankey(dimension) {
             const fillColor = d3.color(colorAccessor(key, idx));
             const fillColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.6)`;
             const strokeColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
+            // Vérifier si c'est une matière "inconnu" ou une fibre "autre"
+            const isUnknown = key.toLowerCase() === 'inconnu' || key.toLowerCase() === 'autre';
             nodeGroup.append('rect')
                 .attr('x', 0)
                 .attr('y', yOffset)
@@ -652,8 +735,8 @@ function updateSankey(dimension) {
                 .attr('width', stackbarWidth)
                 .attr('rx', 4)
                 .attr('ry', 4)
-                .style('fill', fillColorStr)
-                .style('stroke', strokeColorStr)
+                .style('fill', isUnknown ? 'url(#dashed-bg)' : fillColorStr)
+                .style('stroke', isUnknown ? '#999' : strokeColorStr)
                 .style('stroke-width', '1px')
                 .style('opacity', 1)
                 .on('mouseover', function(event) {
@@ -836,7 +919,7 @@ function updateSankey(dimension) {
         .attr('x', stackbarWidth / 2)
         .attr('y', -8) // 8px au-dessus du nœud
         .attr('text-anchor', 'middle')
-        .text(d => d.name || '')
+        .text(d => d.lot && d.lot.titre ? d.lot.titre : d.id)
         .style('font-size', '11px')
         .style('fill', '#666')
         .style('pointer-events', 'none');

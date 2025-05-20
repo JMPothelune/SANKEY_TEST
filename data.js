@@ -155,7 +155,7 @@ const matieres_fibres = {
     "pourcentage": 6.9, 
     "fibres": { "acrylique": 100 } 
   },
-  "100% inconnu": { 
+  "inconnu": { 
     "pourcentage": 8.5, 
     "fibres": { "autre": 100 } 
   },
@@ -195,6 +195,8 @@ Object.values(matieres_fibres).forEach(obj => {
   totalPourcentage += obj.pourcentage;
 });
 
+// Distribution de la qualité
+
 const qualiteDistrib = {
     "neuf étiqueté": 5,
     "parfait état": 15,
@@ -202,6 +204,15 @@ const qualiteDistrib = {
     "usé": 25,
     "abîmé": 32,
     "inutilisable": 8
+};
+
+// Distribution de la propreté
+
+const propreteDistrib = {
+    "propre": 45,
+    "légèrement souillé": 40,
+    "fortement souillé": 10,
+    "contaminé": 5
 };
 
 // Liste des distributions par type 
@@ -220,7 +231,7 @@ const repartitionParType = {
       { "nom": "coton/autre/élasthanne", "pourcentage": 0.6 },
       { "nom": "coton/viscose", "pourcentage": 0.2 },
       { "nom": "viscose/polyamide/élasthanne", "pourcentage": 0.1 },
-      { "nom": "100% inconnu", "pourcentage": 0.5 },
+      { "nom": "inconnu", "pourcentage": 0.5 },
       { "nom": "autres compositions", "pourcentage": 8.8 }
     ],
     "couleurs": [
@@ -244,7 +255,7 @@ const repartitionParType = {
       { "nom": "coton/élasthanne", "pourcentage": 1.1 },
       { "nom": "polyester/acrylique", "pourcentage": 0.9 },
       { "nom": "coton/autre", "pourcentage": 0.9 },
-      { "nom": "100% inconnu", "pourcentage": 5.1 },
+      { "nom": "inconnu", "pourcentage": 5.1 },
       { "nom": "autres compositions", "pourcentage": 4.4 }
     ],
     "couleurs": [
@@ -272,7 +283,7 @@ const repartitionParType = {
       { "nom": "100% laine", "pourcentage": 2.2 },
       { "nom": "polyester/laine", "pourcentage": 2.1 },
       { "nom": "polyester/viscose", "pourcentage": 1.8 },
-      { "nom": "100% inconnu", "pourcentage": 9.8 },
+      { "nom": "inconnu", "pourcentage": 9.8 },
       { "nom": "autres compositions", "pourcentage": 17.0 }
     ],
     "couleurs": [
@@ -299,7 +310,7 @@ const repartitionParType = {
       { "nom": "viscose/élasthanne", "pourcentage": 1.3 },
       { "nom": "polyester/élasthanne", "pourcentage": 1.2 },
       { "nom": "coton/autre", "pourcentage": 1.2 },
-      { "nom": "100% inconnu", "pourcentage": 2.6 },
+      { "nom": "inconnu", "pourcentage": 2.6 },
       { "nom": "autres compositions", "pourcentage": 7.4 }
     ],
     "couleurs": [
@@ -327,7 +338,7 @@ const repartitionParType = {
       { "nom": "viscose/polyamide", "pourcentage": 2.7 },
       { "nom": "laine/polyamide", "pourcentage": 2.4 },
       { "nom": "coton/polyamide", "pourcentage": 1.9 },
-      { "nom": "100% inconnu", "pourcentage": 11.3 },
+      { "nom": "inconnu", "pourcentage": 11.3 },
       { "nom": "autres compositions", "pourcentage": 20.4 }
     ],
     "couleurs": [
@@ -356,7 +367,7 @@ const repartitionParType = {
       { "nom": "polyester/élasthanne", "pourcentage": 1.7 },
       { "nom": "100% acrylique", "pourcentage": 1.2 },
       { "nom": "viscose/polyamide", "pourcentage": 1.0 },
-      { "nom": "100% inconnu", "pourcentage": 3.7 },
+      { "nom": "inconnu", "pourcentage": 3.7 },
       { "nom": "autres compositions", "pourcentage": 8.6 }
     ],
     "couleurs": [
@@ -384,7 +395,7 @@ const repartitionParType = {
       { "nom": "100% acrylique", "pourcentage": 0.3 },
       { "nom": "100% polyamide", "pourcentage": 0.2 },
       { "nom": "coton/viscose", "pourcentage": 0.2 },
-      { "nom": "100% inconnu", "pourcentage": 1.4 },
+      { "nom": "inconnu", "pourcentage": 1.4 },
       { "nom": "autres compositions", "pourcentage": 0.3 }
     ],
     "couleurs": [
@@ -412,7 +423,7 @@ const repartitionParType = {
       { "nom": "coton/acrylique", "pourcentage": 1.0 },
       { "nom": "polyester/viscose", "pourcentage": 0.8 },
       { "nom": "coton/élasthanne", "pourcentage": 0.6 },
-      { "nom": "100% inconnu", "pourcentage": 4.8 },
+      { "nom": "inconnu", "pourcentage": 4.8 },
       { "nom": "autres compositions", "pourcentage": 4.4 }
     ],
     "couleurs": [
@@ -441,7 +452,7 @@ const repartitionParType = {
       { "nom": "polyester/élasthanne", "pourcentage": 4.7 },
       { "nom": "mélange 4 matières", "pourcentage": 3.2 },
       { "nom": "viscose/élasthanne", "pourcentage": 2.0 },
-      { "nom": "100% inconnu", "pourcentage": 5.7 },
+      { "nom": "inconnu", "pourcentage": 5.7 },
       { "nom": "autres compositions", "pourcentage": 9.4 }
     ],
     "couleurs": [
@@ -470,7 +481,7 @@ const repartitionParType = {
       { "nom": "viscose/élasthanne", "pourcentage": 1.4 },
       { "nom": "coton/viscose", "pourcentage": 1.3 },
       { "nom": "coton/polyester/élasthanne", "pourcentage": 1.0 },
-      { "nom": "100% inconnu", "pourcentage": 7 },
+      { "nom": "inconnu", "pourcentage": 7 },
       { "nom": "autres compositions", "pourcentage": 5.6 }
     ],
     "couleurs": [
@@ -498,7 +509,7 @@ const repartitionParType = {
       { "nom": "polyester/acrylique", "pourcentage": 1.2 },
       { "nom": "polyester/viscose", "pourcentage": 0.8 },
       { "nom": "polyester/polyamide", "pourcentage": 0.7 },
-      { "nom": "100% inconnu", "pourcentage": 5.4 },
+      { "nom": "inconnu", "pourcentage": 5.4 },
       { "nom": "autres compositions", "pourcentage": 2.0 }
     ],
     "couleurs": [
@@ -526,7 +537,7 @@ const repartitionParType = {
       { "nom": "100% viscose", "pourcentage": 3.5 },
       { "nom": "coton/élasthanne", "pourcentage": 3.4 },
       { "nom": "coton/polyester", "pourcentage": 3.2 },
-      { "nom": "100% inconnu", "pourcentage": 7.4 },
+      { "nom": "inconnu", "pourcentage": 7.4 },
       { "nom": "autres compositions", "pourcentage": 28.5 }
     ],
     "couleurs": [
@@ -554,7 +565,7 @@ const repartitionParType = {
       { "nom": "coton/polyester/élasthanne", "pourcentage": 2.8 },
       { "nom": "coton/polyester", "pourcentage": 2.7 },
       { "nom": "100% laine", "pourcentage": 1.9 },
-      { "nom": "100% inconnu", "pourcentage": 15.1 },
+      { "nom": "inconnu", "pourcentage": 15.1 },
       { "nom": "autres compositions", "pourcentage": 18.3 }
     ],
     "couleurs": [
@@ -582,7 +593,7 @@ const repartitionParType = {
       { "nom": "polyester/laine", "pourcentage": 2.2 },
       { "nom": "laine/polyamide", "pourcentage": 1.9 },
       { "nom": "polyester/élasthanne", "pourcentage": 1.8 },
-      { "nom": "100% inconnu", "pourcentage": 9.0 },
+      { "nom": "inconnu", "pourcentage": 9.0 },
       { "nom": "autres compositions", "pourcentage": 18.3 }
     ],
     "couleurs": [
@@ -610,7 +621,7 @@ const repartitionParType = {
       { "nom": "coton/polyamide", "pourcentage": 2.0 },
       { "nom": "100% laine", "pourcentage": 1.6 },
       { "nom": "mélange 4 matières", "pourcentage": 1.4 },
-      { "nom": "100% inconnu", "pourcentage": 4.2 },
+      { "nom": "inconnu", "pourcentage": 4.2 },
       { "nom": "autres compositions", "pourcentage": 8.5 }
     ],
     "couleurs": [
@@ -634,7 +645,10 @@ const total = 1000;
 const lotType = {
   total,
   format: {},
-  qualite: qualiteDistrib
+  qualite: qualiteDistrib,
+  proprete: Object.fromEntries(
+    Object.entries(propreteDistrib).map(([k, v]) => [k, { pourcentage: v }])
+  )
 };
 
 Object.entries(formats_types).forEach(([format, formatObj]) => {
@@ -648,7 +662,7 @@ Object.entries(formats_types).forEach(([format, formatObj]) => {
     const matieres = {};
     const matieresSource = (repType.matieres && repType.matieres.length)
       ? repType.matieres
-      : [{ nom: '100% inconnu', pourcentage: 100 }];
+      : [{ nom: 'inconnu', pourcentage: 100 }];
     matieresSource.forEach(m => {
       const matiereFibres = matieres_fibres[m.nom] || {};
       matieres[m.nom] = {

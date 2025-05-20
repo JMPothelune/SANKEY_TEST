@@ -1,6 +1,32 @@
 // Définition du scénario principal (modifiez ici pour changer le scénario)
+const scenario2 = {
+    transformations: [
+      {
+          type: 'selectByFormat',
+          keys: ['non TLC'],
+          scenario: {
+          }
+      },
+      {
+        type: 'selectByQualite',
+        keys: ['neuf étiqueté', 'parfait état', 'bon état'],
+        scenario: {
+        }
+    },
+    ],
+    coproduct_transformations: {}
+  }; 
+  
+  
+
+// Définition du scénario principal (modifiez ici pour changer le scénario)
 const scenario = {
   transformations: [
+    {
+      type: 'selectByProprete',
+      keys: ['contaminé'],
+      scenario: {}
+    },
     {
         type: 'selectByFormat',
         keys: ['chaussures et bottes'],
@@ -14,11 +40,6 @@ const scenario = {
             ],
             coproduct_transformations: {}
         }
-    },
-    {
-        type: 'selectByQualite',
-        keys: ['inutilisable'],
-        scenario: {}
     },
     {
         type: 'selectByFormat',
@@ -51,6 +72,8 @@ const scenario = {
                         {
                             type: 'selectByFibre',
                             keys: ['coton'],
+                            threshold: 60,
+                            condition: 'over',
                             scenario: {}
                         }
                       ],
@@ -58,14 +81,30 @@ const scenario = {
                     }
                   },
                   {
-                    type: 'selectByMatiere',
-                    keys: ['100% coton'],
+                    type: 'selectByFibre',
+                    keys: ['coton'],
+                    threshold: 100,
+                    condition: 'over',
                     scenario: {}
                   },
                   {
                     type: 'selectByMatiere',
-                    keys: ['100% polyester'],
+                    keys: ['100% polyester', 'coton/polyester', 'polyester/élasthanne', 'polyester/polyamide'],
                     scenario: {}
+                  },
+                  {
+                    type: 'selectByType',
+                    keys: ['hauts type pull'],
+                    scenario: {
+                      transformations: [
+                        {
+                            type: 'selectByCouleur',
+                            keys: ['rouge', 'vert'],
+                            scenario: {}
+                        }
+                      ],
+                      coproduct_transformations: {}
+                    }
                   }
             ]
         }
