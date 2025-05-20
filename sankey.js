@@ -494,13 +494,16 @@ function updateSankey(dimension) {
                 Quantité: ${Math.round(d.value)} kg<br/>
                 Pourcentage: ${(d.source.lot && d.source.lot.total ? (d.value / d.source.lot.total * 100).toFixed(1) : '0')}%<br/>
             `;
-            if (dimension === 'format' && d.dimensionData) {
+            if (dimension === 'format') {
                 tooltipContent += `<br/><strong>Détails Format :</strong><br/>`;
-                // Utiliser d.target.lot pour le détail
-                if (d.target.lot && d.target.lot.format) {
+                if (d.target.lot && d.target.lot.format && typeof d.target.lot.format === 'object') {
                   Object.entries(d.target.lot.format).forEach(([key, obj]) => {
-                    if (typeof obj.pourcentage === 'number') {
-                      tooltipContent += `${key}: ${obj.pourcentage.toFixed(1)}%<br/>`;
+                    // Gestion des cas où obj est un nombre (parfois structure simplifiée)
+                    const pct = typeof obj === 'number'
+                      ? obj
+                      : (typeof obj.pourcentage === 'number' ? obj.pourcentage : null);
+                    if (pct !== null) {
+                      tooltipContent += `${key}: ${pct.toFixed(1)}%<br/>`;
                     }
                   });
                 }

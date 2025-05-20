@@ -50,7 +50,17 @@ const scenario = {
     {
         type: 'selectByFormat',
         keys: ['linges et rideaux'],
-        scenario: {}
+        scenario: {
+          transformations: [
+            {
+              type: 'selectByMatiere',
+              keys: ['100% coton'],
+              scenario: {
+                target: 'Buitex'
+              }
+            }
+          ]
+        }
     },
     {
         type: 'selectByFormat',
@@ -122,8 +132,11 @@ const scenario = {
                       coproduct_scenario: {}
                     }
                   }
-            ]
-        }
+            ],
+            coproduct_scenario: {
+              target: 'CSR'
+            }
+          }
       }
     }
   ],

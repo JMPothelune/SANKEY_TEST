@@ -37,7 +37,7 @@ const scenario = {
       }
     }
   ],
-  coproduct_transformations: {} // transformations pour le reste
+  coproduct_scenario: {} // transformations pour le reste
 };
 ```
 
@@ -290,12 +290,6 @@ La structure des données est générée dynamiquement à partir des constantes 
 
 ## Intégration
 Le diagramme est conçu pour être facilement intégrable dans d'autres applications, notamment Bubble. Il suffit d'inclure les fichiers nécessaires et d'initialiser le diagramme avec les données appropriées.
-
-## Développement
-Pour modifier ou étendre le projet :
-1. Modifier les constantes de données ou la structure du générateur dans `data.js`
-2. Ajuster le CSS pour personnaliser l'apparence
-3. Modifier le JavaScript pour ajouter de nouvelles fonctionnalités ou dimensions
 
 ## Limitations Actuelles
 - Version prototype avec fonctionnalités avancées mais non exhaustives
