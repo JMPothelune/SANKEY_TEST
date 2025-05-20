@@ -92,14 +92,14 @@ const scenario = {
                         {
                             type: 'selectByFibre',
                             keys: ['coton'],
-                            threshold: 60,
-                            condition: 'over',
                             scenario: {
                               target: 'Buitex'
                             }
                         }
                       ],
-                      coproduct_scenario: {}
+                      coproduct_scenario: {
+                        target: 'CSR'
+                      }
                     }
                   },
                   {

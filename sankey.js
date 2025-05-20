@@ -36,6 +36,23 @@ formatValues.forEach(format => {
 const nTypes = allTypeValues.length;
 const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
 
+// Palette stable pour les fibres (toutes fibres de toutes matières de tous types de tous formats)
+const fibreSet = new Set();
+Object.values(lotType.format).forEach(formatObj => {
+  Object.values(formatObj.types).forEach(typeObj => {
+    if (typeObj.matieres) {
+      Object.values(typeObj.matieres).forEach(matiereObj => {
+        if (matiereObj.fibres) {
+          Object.keys(matiereObj.fibres).forEach(fibre => fibreSet.add(fibre));
+        }
+      });
+    }
+  });
+});
+const fibreValues = Array.from(fibreSet);
+const nFibres = fibreValues.length;
+const fibrePalette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
+
 // Palette pour les couleurs (statique)
 const couleurMap = {
     'noir': '#222',
@@ -81,7 +98,10 @@ const colorScales = {
         .range(qualitePalette),
     proprete: d3.scaleOrdinal()
         .domain(propreteValues)
-        .range(propretePalette)
+        .range(propretePalette),
+    fibre: d3.scaleOrdinal()
+        .domain(fibreValues)
+        .range(fibrePalette)
 };
 
 // Création du SVG
@@ -256,33 +276,32 @@ const stackbarComponents = {
     getStackValues: lot => {
       if (!lot.format) return {};
       const values = {};
-      let totalWithCouleur = 0;
-      Object.entries(lot.format).forEach(([formatName, formatObj]) => {
+      Object.values(lot.format).forEach(formatObj => {
         if (formatObj.types) {
-          Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
+          Object.values(formatObj.types).forEach(typeObj => {
             if (typeObj.couleurs) {
-              // Masse de ce type dans le lot
               const typePct = (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
-              totalWithCouleur += typePct;
               Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-                if (typeof couleurObj.pourcentage === 'number') {
-                  // Pondération par la masse du type
-                  const pct = (couleurObj.pourcentage / 100) * typePct * 100;
-                  values[couleur] = (values[couleur] || 0) + pct;
+                let pct = 0;
+                if (typeof couleurObj === 'object' && typeof couleurObj.pourcentage === 'number') {
+                  pct = couleurObj.pourcentage;
+                } else if (typeof couleurObj === 'number') {
+                  pct = couleurObj;
                 }
+                values[couleur] = (values[couleur] || 0) + (pct / 100) * typePct * 100;
               });
             }
           });
         }
       });
-      // Normalisation pour que la somme fasse 100% de la part du lot qui a des couleurs
+      // **Normalisation finale**
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
       if (sum > 0) {
         Object.keys(values).forEach(k => {
           values[k] = values[k] / sum * 100;
         });
       }
-      values._missing = 100 - (sum > 0 ? 100 : 0); // Pour info, part sans couleur
+      values._missing = 100 - (sum > 0 ? 100 : 0);
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -319,155 +338,304 @@ const stackbarComponents = {
   // Ajoute ici d'autres dimensions si besoin
 };
 
-// Fonction pour mettre à jour la visualisation
-function updateSankey(dimension) {
-    // Nettoyage du SVG
-    svg.selectAll('*').remove();
+function mergeLots(lots) {
+    // Fusion récursive pondérée de plusieurs lots
+    const total = lots.reduce((sum, lot) => sum + lot.total, 0);
+    if (total === 0) return {};
 
-    // Gestion spéciale pour les sous-catégories
-    let stackValues = null;
-    let typeKeys = null;
-    let palette = null;
-    let colorAccessor = null;
-
-    // Utilisation des données du scénario
-    const sankeyData = {
-        nodes: sankeyScenario.nodes,
-        links: sankeyScenario.links.map(link => {
-            const sourceNode = sankeyScenario.nodes.find(n => n.id === link.source);
-            const targetNode = sankeyScenario.nodes.find(n => n.id === link.target);
-            let dimensionData = {};
-            
-            if (dimension === 'format') {
-                // Cas spécial pour les formats qui ont une structure à deux niveaux
-                const formatData = sourceNode.lot.format;
-                Object.entries(formatData).forEach(([key, value]) => {
-                    dimensionData[key] = value.pourcentage;
+    // Fusion des formats
+    const allFormats = Array.from(new Set(lots.flatMap(lot => Object.keys(lot.format || {}))));
+    const mergedFormat = {};
+    allFormats.forEach(format => {
+        // Somme pondérée des pourcentages de ce format
+        let pctSum = 0;
+        let typeLots = [];
+        lots.forEach(lot => {
+            if (lot.format && lot.format[format]) {
+                const pct = lot.format[format].pourcentage;
+                pctSum += (lot.total * pct / 100);
+                typeLots.push({
+                    lotTotal: lot.total,
+                    formatPct: pct,
+                    types: lot.format[format].types
                 });
-            } else {
-                dimensionData = sourceNode.lot[dimension] || {};
             }
-
-            return {
-                source: sourceNode,
-                target: targetNode,
-                value: link.value,
-                dimensionData: dimensionData
+        });
+        const formatPct = (pctSum / total) * 100;
+        
+        // Fusion des types
+        const allTypes = Array.from(new Set(typeLots.flatMap(tl => Object.keys(tl.types || {}))));
+        const mergedTypes = {};
+        allTypes.forEach(type => {
+            // Somme pondérée des pourcentages de ce type
+            let typePctSum = 0;
+            let matiereLots = [];
+            let couleurLots = [];
+            typeLots.forEach(tl => {
+                if (tl.types && tl.types[type]) {
+                    const typePct = tl.types[type].pourcentage;
+                    typePctSum += (tl.lotTotal * tl.formatPct / 100) * (typePct / 100);
+                    matiereLots.push({
+                        lotTotal: tl.lotTotal,
+                        formatPct: tl.formatPct,
+                        typePct: typePct,
+                        matieres: tl.types[type].matieres,
+                        couleurs: tl.types[type].couleurs
+                    });
+                    if (tl.types[type].couleurs) {
+                        couleurLots.push({
+                            lotTotal: tl.lotTotal,
+                            formatPct: tl.formatPct,
+                            typePct: typePct,
+                            couleurs: tl.types[type].couleurs
+                        });
+                    }
+                }
+            });
+            const typePct = (typePctSum / total) * 100;
+            
+            // Fusion des matières
+            const allMatieres = Array.from(new Set(matiereLots.flatMap(ml => Object.keys(ml.matieres || {}))));
+            const mergedMatieres = {};
+            allMatieres.forEach(matiere => {
+                let matierePctSum = 0;
+                let fibreLots = [];
+                matiereLots.forEach(ml => {
+                    if (ml.matieres && ml.matieres[matiere]) {
+                        const matierePct = ml.matieres[matiere].pourcentage;
+                        matierePctSum += (ml.lotTotal * ml.formatPct / 100) * (ml.typePct / 100) * (matierePct / 100);
+                        fibreLots.push({
+                            lotTotal: ml.lotTotal,
+                            formatPct: ml.formatPct,
+                            typePct: ml.typePct,
+                            matierePct: matierePct,
+                            fibres: ml.matieres[matiere].fibres
+                        });
+                    }
+                });
+                const matierePct = (matierePctSum / total) * 100;
+                
+                // Fusion des fibres
+                const allFibres = Array.from(new Set(fibreLots.flatMap(fl => Object.keys(fl.fibres || {}))));
+                const mergedFibres = {};
+                allFibres.forEach(fibre => {
+                    let fibrePctSum = 0;
+                    fibreLots.forEach(fl => {
+                        if (fl.fibres && fl.fibres[fibre] !== undefined) {
+                            fibrePctSum += (fl.lotTotal * fl.formatPct / 100) * (fl.typePct / 100) * (fl.matierePct / 100) * (fl.fibres[fibre] / 100);
+                        }
+                    });
+                    mergedFibres[fibre] = fibrePctSum; // On ne divise pas encore par total ici
+                });
+                // **Normalisation**
+                const fibreSum = Object.values(mergedFibres).reduce((a, b) => a + b, 0);
+                if (fibreSum > 0) {
+                    Object.keys(mergedFibres).forEach(f => {
+                        mergedFibres[f] = mergedFibres[f] / fibreSum * 100;
+                    });
+                }
+                
+                mergedMatieres[matiere] = {
+                    pourcentage: matierePct,
+                    fibres: mergedFibres
+                };
+            });
+            
+            // Fusion des couleurs pour ce type
+            const allCouleurs = Array.from(new Set(couleurLots.flatMap(cl => Object.keys(cl.couleurs || {}))));
+            const mergedCouleurs = {};
+            allCouleurs.forEach(couleur => {
+                let couleurPctSum = 0;
+                couleurLots.forEach(cl => {
+                    if (cl.couleurs && cl.couleurs[couleur]) {
+                        const couleurPct = cl.couleurs[couleur].pourcentage;
+                        couleurPctSum += (cl.lotTotal * cl.formatPct / 100) * (cl.typePct / 100) * (couleurPct / 100);
+                    }
+                });
+                mergedCouleurs[couleur] = couleurPctSum; // On ne divise pas encore par total ici
+            });
+            // **Normalisation**
+            const couleurSum = Object.values(mergedCouleurs).reduce((a, b) => a + b, 0);
+            if (couleurSum > 0) {
+                Object.keys(mergedCouleurs).forEach(c => {
+                    mergedCouleurs[c] = mergedCouleurs[c] / couleurSum * 100;
+                });
+            }
+            
+            mergedTypes[type] = {
+                pourcentage: typePct,
+                matieres: mergedMatieres,
+                couleurs: mergedCouleurs
             };
-        })
+        });
+        
+        mergedFormat[format] = {
+            pourcentage: formatPct,
+            types: mergedTypes
+        };
+    });
+
+    // Fusion des qualités
+    const allQualites = Array.from(new Set(lots.flatMap(lot => Object.keys(lot.qualite || {}))));
+    const mergedQualite = {};
+    allQualites.forEach(qual => {
+        let qualSum = 0;
+        lots.forEach(lot => {
+            if (lot.qualite && lot.qualite[qual] !== undefined) {
+                const val = typeof lot.qualite[qual] === 'number' ? lot.qualite[qual] : (lot.qualite[qual].pourcentage || 0);
+                qualSum += lot.total * val / 100;
+            }
+        });
+        mergedQualite[qual] = (qualSum / total) * 100;
+    });
+
+    // Fusion des propretés
+    const allPropretes = Array.from(new Set(lots.flatMap(lot => Object.keys(lot.proprete || {}))));
+    const mergedProprete = {};
+    allPropretes.forEach(prop => {
+        let propSum = 0;
+        lots.forEach(lot => {
+            if (lot.proprete && lot.proprete[prop] !== undefined) {
+                const val = typeof lot.proprete[prop] === 'number' ? lot.proprete[prop] : (lot.proprete[prop].pourcentage || 0);
+                propSum += lot.total * val / 100;
+            }
+        });
+        mergedProprete[prop] = { pourcentage: (propSum / total) * 100 };
+    });
+
+    const mergedLot = {
+        total,
+        format: mergedFormat,
+        qualite: mergedQualite,
+        proprete: mergedProprete
     };
 
-    if (dimension === 'format_type') {
-        // On va afficher la distribution des types de format, tous formats confondus
-        const typeTotals = {};
-        let total = 0;
-        sankeyData.nodes.forEach(node => {
-            const formatData = node.lot.format;
-            Object.values(formatData).forEach(formatObj => {
-                const parentPct = formatObj.pourcentage;
-                Object.entries(formatObj.types).forEach(([type, pct]) => {
-                    const val = parentPct * pct / 100;
-                    typeTotals[type] = (typeTotals[type] || 0) + val;
-                    total += val;
-                });
-            });
-        });
-        // On normalise pour que la somme fasse la masse réelle du lot courant
-        const factor = sankeyData.nodes[0].lot.total / total;
-        Object.keys(typeTotals).forEach(type => {
-            typeTotals[type] = Math.round(typeTotals[type] * factor);
-        });
-        stackValues = typeTotals;
-        typeKeys = Object.keys(typeTotals);
-        // Palette dynamique pour les types
-        const nTypes = typeKeys.length;
-        palette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
-        colorAccessor = (key) => colorScales.type(key);
-    } else if (dimension === 'format') {
-        // Cas spécial pour les formats qui ont une structure à deux niveaux
-        colorAccessor = (key) => colorScales[dimension](key);
-    } else if (dimension === 'fibres') {
-        // Palette dynamique pour les fibres
-        const component = stackbarComponents[dimension];
-        const allFibres = new Set();
-        sankeyData.nodes.forEach(d => {
-          const vals = component.getStackValues(d.lot);
-          Object.keys(vals).forEach(f => allFibres.add(f));
-        });
-        const fibreKeys = Array.from(allFibres);
-        const nFibres = fibreKeys.length;
-        const palette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
-        colorAccessor = (key, idx) => palette[fibreKeys.indexOf(key) % palette.length];
-    } else if (dimension === 'couleur') {
-        // Utilisation directe du couleurMap pour les couleurs
-        colorAccessor = (key) => {
-            // Normalisation de la clé
-            const normalizedKey = key.toLowerCase();
-            // Gestion des cas spéciaux
-            if (normalizedKey === 'autre' || normalizedKey === 'autres') {
-                return couleurMap['inconnu'];
-            }
-            return couleurMap[normalizedKey] || '#bbb';
+    console.log('Lot fusionné :', mergedLot);
+    return mergedLot;
+}
+
+function updateSankey(dimension) {
+    // Nettoyer le SVG
+    svg.selectAll('*').remove();
+
+    // Récupérer les nœuds et liens du scénario
+    let nodes = sankeyScenario.nodes.map(n => ({ ...n, id: String(n.id) }));
+    let links = sankeyScenario.links.map(l => ({
+        ...l,
+        source: String(l.source),
+        target: String(l.target)
+    }));
+
+    // 1. Identifier les nœuds feuilles avec un target
+    const leafNodesWithTarget = nodes.filter(n =>
+        n.lot && n.lot.target &&
+        !links.some(l => l.source === n.id)
+    );
+
+    // 2. Lister tous les targets uniques
+    const uniqueTargets = [...new Set(leafNodesWithTarget.map(n => n.lot.target))];
+
+    // 3. Créer un nœud destination pour chaque target
+    const maxNodeDepth = Math.max(...nodes.map(n => n.depth || 0));
+    const targetNodes = uniqueTargets.map(target => {
+        // Récupérer tous les lots qui arrivent sur ce target
+        const lotsToMerge = leafNodesWithTarget
+            .filter(n => n.lot.target === target)
+            .map(n => n.lot);
+        
+        return {
+            id: 'target_' + target,
+            name: target,
+            isTarget: true,
+            lot: mergeLots(lotsToMerge), // On merge les lots ici
+            depth: maxNodeDepth + 1
         };
-    } else if (dimension === 'qualite') {
-        // Palette dynamique pour la qualité
-        const component = stackbarComponents[dimension];
-        const allQualites = new Set();
-        sankeyData.nodes.forEach(d => {
-          const vals = component.getStackValues(d.lot);
-          Object.keys(vals).forEach(q => allQualites.add(q));
+    });
+
+    // 4. Pour chaque feuille avec target, créer un lien vers le nœud destination
+    const newLinks = [];
+    leafNodesWithTarget.forEach(leaf => {
+        newLinks.push({
+            source: String(leaf.id),
+            target: 'target_' + leaf.lot.target,
+            value: leaf.lot.total
         });
-        const qualiteKeys = Array.from(allQualites);
-        const nQualites = qualiteKeys.length;
-        colorAccessor = (key, idx) => colorScales.qualite(key) || d3.interpolateOranges(idx / nQualites);
-    } else if (dimension === 'proprete') {
-        // Palette dynamique pour la propreté
-        const component = stackbarComponents[dimension];
-        const allPropretes = new Set();
-        sankeyData.nodes.forEach(d => {
-          const vals = component.getStackValues(d.lot);
-          Object.keys(vals).forEach(p => allPropretes.add(p));
-        });
-        const propreteKeys = Array.from(allPropretes);
-        const nPropretes = propreteKeys.length;
-        colorAccessor = (key, idx) => colorScales.proprete(key) || d3.interpolateBlues(idx / nPropretes);
-    } else if (dimension === 'matiere') {
-        colorAccessor = (key) => colorScales.matiere(key);
-    } else {
-        // fallback : couleur grise
-        colorAccessor = () => '#bbb';
-    }
+    });
+
+    // 5. Ajouter ces nœuds et liens à la structure
+    nodes = [...nodes, ...targetNodes];
+    links = [
+        ...links.filter(l => !leafNodesWithTarget.some(n => n.id === l.source)), // on retire les liens sortants des feuilles valorisées
+        ...newLinks
+    ];
 
     // Création du layout Sankey
     const stackbarWidth = 80;
     const extraBlockWidth = 30;
     const horizontalPadding = 20;
+
+    // Préserver l'ordre des liens
+    const linkOrder = new Map();
+    links.forEach((link, i) => {
+        const sourceId = String(link.source);
+        if (!linkOrder.has(sourceId)) {
+            linkOrder.set(sourceId, []);
+        }
+        linkOrder.get(sourceId).push(i);
+    });
+
     const sankey = d3.sankey()
         .nodeWidth(stackbarWidth + extraBlockWidth)
         .nodePadding(10)
-        .extent([[horizontalPadding, 0], [width - horizontalPadding, height]]);
+        .extent([[horizontalPadding, 0], [width - horizontalPadding, height]])
+        .nodeId(d => d.id)
+        .linkSort((a, b) => {
+            const sourceOrder = linkOrder.get(String(a.source.id));
+            if (sourceOrder) {
+                return sourceOrder.indexOf(a.index) - sourceOrder.indexOf(b.index);
+            }
+            return 0;
+        });
 
     // Application du layout
-    const { nodes, links } = sankey(sankeyData);
+    const { nodes: sankeyNodes, links: sankeyLinks } = sankey({ nodes, links });
 
     // Calcul du nombre de colonnes (niveaux)
-    const maxDepth = Math.max(...sankeyScenario.nodes.map(n => n.depth || 0));
+    const maxDepth = Math.max(...nodes.map(n => n.depth || 0));
     const minWidth = 300; // largeur minimale pour ne pas écraser
     const dynamicWidth = Math.max(minWidth, (stackbarWidth + extraBlockWidth) * (maxDepth + 1) + 40);
     svg.attr('width', Math.min(width + margin.left + margin.right, dynamicWidth));
 
     // Calcul des totaux par target
     const targetTotals = {};
-    sankeyScenario.nodes.forEach(node => {
+    nodes.forEach(node => {
         if (node.lot && node.lot.target) {
             targetTotals[node.lot.target] = (targetTotals[node.lot.target] || 0) + node.lot.total;
         }
     });
 
+    // Choix de la palette de couleurs selon la dimension
+    let colorAccessor = d => '#bbb';
+    if (dimension === 'qualite') {
+        colorAccessor = d => colorScales.qualite(d);
+    } else if (dimension === 'proprete') {
+        colorAccessor = d => colorScales.proprete(d);
+    } else if (dimension === 'matiere') {
+        colorAccessor = d => colorScales.matiere(d);
+    } else if (dimension === 'format') {
+        colorAccessor = d => colorScales.format(d);
+    } else if (dimension === 'type' || dimension === 'format_type') {
+        colorAccessor = d => colorScales.type(d);
+    } else if (dimension === 'fibres') {
+        colorAccessor = d => colorScales.fibre(d);
+    } else if (dimension === 'couleur') {
+        colorAccessor = d => colorScales.couleur(d);
+    }
+
     // Création des liens
     svg.append('g')
         .selectAll('path')
-        .data(links)
+        .data(sankeyLinks)
         .join('path')
         .attr('class', 'link')
         .attr('d', d3.sankeyLinkHorizontal())
@@ -692,7 +860,7 @@ function updateSankey(dimension) {
     // Création des nœuds
     const node = svg.append('g')
         .selectAll('g')
-        .data(nodes)
+        .data(sankeyNodes)
         .join('g')
         .attr('transform', d => `translate(${d.x0},${d.y0})`);
 
@@ -713,11 +881,14 @@ function updateSankey(dimension) {
         // Stackbars pour la dimension sélectionnée
         let yOffset = 0;
         const component = stackbarComponents[dimension];
+        
+        // On affiche les stackbars pour tous les nœuds, y compris les targets
         const dimensionValues = component ? component.getStackValues(d.lot) : {};
         const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
         const sortedEntries = Object.entries(dimensionValues)
-          .filter(([key]) => !key.startsWith('_'))
-          .sort((a, b) => b[1] - a[1]);
+            .filter(([key]) => !key.startsWith('_'))
+            .sort((a, b) => b[1] - a[1]);
+
         // Si la stackbar est vide, afficher un fond dashed
         if (sortedEntries.length === 0) {
             nodeGroup.append('rect')
@@ -732,13 +903,14 @@ function updateSankey(dimension) {
                 .style('stroke-width', '1px')
                 .style('opacity', 1);
         }
-        sortedEntries.forEach(([key, value], idx) => {
+
+        sortedEntries.forEach(([key, value]) => {
             const height = sum > 0 ? (value / sum) * nodeHeight : 0;
-            const fillColor = d3.color(colorAccessor(key, idx));
+            const fillColor = d3.color(colorAccessor(key));
             const fillColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.6)`;
             const strokeColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
-            // Vérifier si c'est une matière "inconnu" ou une fibre "autre"
             const isUnknown = key.toLowerCase() === 'inconnu' || key.toLowerCase() === 'autre';
+            
             nodeGroup.append('rect')
                 .attr('x', 0)
                 .attr('y', yOffset)
@@ -755,11 +927,8 @@ function updateSankey(dimension) {
                     tooltip.transition()
                         .duration(200)
                         .style('opacity', .9);
-                    // Positionner le tooltip au coin haut gauche de la stackbar
                     const svgRect = svg.node().ownerSVGElement.getBoundingClientRect();
-                    // Position du rectangle dans le SVG
                     const rect = this.getBoundingClientRect();
-                    // Décalage du SVG dans la page
                     const offsetX = rect.left - svgRect.left;
                     const offsetY = rect.top - svgRect.top;
                     tooltip.html(tooltipContent)
@@ -788,38 +957,51 @@ function updateSankey(dimension) {
             .style('opacity', 1)
             .on('mouseover', function(event) {
                 const component = stackbarComponents[dimension];
-                const dimensionValues = component ? component.getStackValues(d.lot) : {};
-                const sumPct = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
-                const missingPct = dimensionValues._missing || 0;
-                let missingInfo = '';
-                if (missingPct > 0.1) {
-                    missingInfo = `<br/><span style='font-size:12px;color:#c00;'>Donnée couleur manquante pour ${missingPct.toFixed(1)}%</span>`;
+                // Vérifier si c'est un nœud target
+                if (d.isTarget) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`
+                        <strong>${d.name}</strong><br/>
+                        <span style='font-size:12px;color:#666;'>Nœud destination</span>
+                    `)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                } else {
+                    const dimensionValues = component ? component.getStackValues(d.lot) : {};
+                    const sumPct = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
+                    const missingPct = dimensionValues._missing || 0;
+                    let missingInfo = '';
+                    if (missingPct > 0.1) {
+                        missingInfo = `<br/><span style='font-size:12px;color:#c00;'>Donnée couleur manquante pour ${missingPct.toFixed(1)}%</span>`;
+                    }
+                    
+                    // Ajout des informations sur la target
+                    let targetInfo = '';
+                    if (d.lot && d.lot.target) {
+                        targetInfo = `
+                            <br/>
+                            <div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'>
+                                <strong style='color:#4CAF50;'>✓ Destination validée</strong><br/>
+                                <span style='font-size:12px;'>Target: ${d.lot.target}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`
+                        <strong>${d.name}</strong><br/>
+                        Poids du lot : ${Math.round(d.lot.total)} kg<br/>
+                        <span style='font-size:12px;color:#666;'>Somme des % stackbar : ${sumPct.toFixed(1)}%</span>
+                        ${missingInfo}
+                        ${targetInfo}
+                    `)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
                 }
-                
-                // Ajout des informations sur la target
-                let targetInfo = '';
-                if (d.lot && d.lot.target) {
-                    targetInfo = `
-                        <br/>
-                        <div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'>
-                            <strong style='color:#4CAF50;'>✓ Destination validée</strong><br/>
-                            <span style='font-size:12px;'>Target: ${d.lot.target}</span>
-                        </div>
-                    `;
-                }
-                
-                tooltip.transition()
-                    .duration(200)
-                    .style('opacity', .9);
-                tooltip.html(`
-                    <strong>${d.name}</strong><br/>
-                    Poids du lot : ${Math.round(d.lot.total)} kg<br/>
-                    <span style='font-size:12px;color:#666;'>Somme des % stackbar : ${sumPct.toFixed(1)}%</span>
-                    ${missingInfo}
-                    ${targetInfo}
-                `)
-                    .style('left', (event.pageX + 10) + 'px')
-                    .style('top', (event.pageY - 28) + 'px');
             })
             .on('mouseout', function() {
                 tooltip.transition()
@@ -828,7 +1010,7 @@ function updateSankey(dimension) {
             });
 
         // 1. Icônes pour les liens sortants (fork)
-        const outgoingLinks = links.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
+        const outgoingLinks = sankeyLinks.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
         outgoingLinks.forEach((link, idx) => {
             const linkY = link.y0 - d.y0;
             nodeGroup.append('rect')
@@ -863,7 +1045,7 @@ function updateSankey(dimension) {
         });
 
         // 2. Icône + sur le lien "Reste" (coproduit)
-        const resteLinks = links.filter(l => l.source.id === d.id && l.target.name.startsWith('Reste'));
+        const resteLinks = sankeyLinks.filter(l => l.source.id === d.id && l.target.name.startsWith('Reste'));
         resteLinks.forEach((link, idx) => {
             const linkY = link.y0 - d.y0;
             nodeGroup.append('rect')
@@ -898,7 +1080,7 @@ function updateSankey(dimension) {
         });
 
         // 3. Icône + sur les nœuds feuilles sans target (aucun lien sortant)
-        const hasOutgoing = links.some(l => l.source.id === d.id);
+        const hasOutgoing = sankeyLinks.some(l => l.source.id === d.id);
         if (!hasOutgoing && !(d.lot && d.lot.target)) {
             const yPlus = nodeHeight / 2 - 12;
             nodeGroup.append('rect')
@@ -998,10 +1180,8 @@ updateSankey('format');
 window.addEventListener('resize', function() {
     width = document.getElementById('sankey-container').offsetWidth - margin.left - margin.right;
     height = document.getElementById('sankey-container').offsetHeight - margin.top - margin.bottom;
-    
     svg.attr('width', width + margin.left + margin.right)
        .attr('height', height + margin.top + margin.bottom);
-    
     updateSankey(document.getElementById('dimension-selector').value);
 });
 
