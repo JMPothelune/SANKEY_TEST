@@ -824,7 +824,112 @@ function updateSankey(dimension) {
                     .style('opacity', 0);
             });
 
-        // Si le lot a une target, ajouter l'icône de validation
+        // 1. Icônes pour les liens sortants (fork)
+        const outgoingLinks = links.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
+        outgoingLinks.forEach((link, idx) => {
+            const linkY = link.y0 - d.y0;
+            nodeGroup.append('rect')
+                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+                .attr('y', linkY - 12)
+                .attr('width', 24)
+                .attr('height', 24)
+                .attr('rx', 6)
+                .attr('ry', 6)
+                .style('fill', '#999')
+                .style('opacity', 1)
+                .on('mouseover', function(event) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`<strong>${link.target.name}</strong>`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
+            nodeGroup.append('image')
+                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
+                .attr('y', linkY - 10)
+                .attr('width', 20)
+                .attr('height', 20)
+                .attr('href', 'assets/svg/arrows-split.svg')
+                .style('pointer-events', 'none');
+        });
+
+        // 2. Icône + sur le lien "Reste" (coproduit)
+        const resteLinks = links.filter(l => l.source.id === d.id && l.target.name.startsWith('Reste'));
+        resteLinks.forEach((link, idx) => {
+            const linkY = link.y0 - d.y0;
+            nodeGroup.append('rect')
+                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+                .attr('y', linkY - 12)
+                .attr('width', 24)
+                .attr('height', 24)
+                .attr('rx', 6)
+                .attr('ry', 6)
+                .style('fill', '#999')
+                .style('opacity', 1)
+                .on('mouseover', function(event) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`<strong>Ajouter une transformation</strong>`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
+            nodeGroup.append('image')
+                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
+                .attr('y', linkY - 10)
+                .attr('width', 20)
+                .attr('height', 20)
+                .attr('href', 'assets/svg/plus.svg')
+                .style('pointer-events', 'none');
+        });
+
+        // 3. Icône + sur les nœuds feuilles sans target (aucun lien sortant)
+        const hasOutgoing = links.some(l => l.source.id === d.id);
+        if (!hasOutgoing && !(d.lot && d.lot.target)) {
+            const yPlus = nodeHeight / 2 - 12;
+            nodeGroup.append('rect')
+                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+                .attr('y', yPlus)
+                .attr('width', 24)
+                .attr('height', 24)
+                .attr('rx', 6)
+                .attr('ry', 6)
+                .style('fill', '#999')
+                .style('opacity', 1)
+                .on('mouseover', function(event) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`<strong>Ajouter une transformation</strong>`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
+            nodeGroup.append('image')
+                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
+                .attr('y', yPlus + 2)
+                .attr('width', 20)
+                .attr('height', 20)
+                .attr('href', 'assets/svg/plus.svg')
+                .style('pointer-events', 'none');
+        }
+
+        // 4. Icône check sur les nœuds valorisés
         if (d.lot && d.lot.target) {
             const yCheck = nodeHeight / 2 - 12;
             nodeGroup.append('rect')
@@ -856,51 +961,12 @@ function updateSankey(dimension) {
                         .duration(500)
                         .style('opacity', 0);
                 });
-            
-            // Ajout de l'icône check-circle existante
             nodeGroup.append('image')
                 .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
                 .attr('y', yCheck + 2)
                 .attr('width', 20)
                 .attr('height', 20)
                 .attr('href', 'assets/svg/check-circle.svg')
-                .style('pointer-events', 'none');
-        }
-
-        // Ajout de l'icône + sur les nœuds feuilles (aucun lien sortant sauf 'Reste')
-        const outgoingNonReste = links.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
-        // Ne pas afficher le + si le lot a une target
-        if (outgoingNonReste.length === 0 && !d.lot.target) {
-            // Position : en bas du bloc extraBlockWidth, centré
-            const yPlus = nodeHeight / 2 - 12; // centré verticalement
-            nodeGroup.append('rect')
-                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
-                .attr('y', yPlus)
-                .attr('width', 24)
-                .attr('height', 24)
-                .attr('rx', 6)
-                .attr('ry', 6)
-                .style('fill', '#999')
-                .style('opacity', 1)
-                .on('mouseover', function(event) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style('opacity', .9);
-                    tooltip.html(`<strong>Ajouter une transformation</strong>`)
-                        .style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 28) + 'px');
-                })
-                .on('mouseout', function() {
-                    tooltip.transition()
-                        .duration(500)
-                        .style('opacity', 0);
-                });
-            nodeGroup.append('image')
-                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
-                .attr('y', yPlus + 2)
-                .attr('width', 20)
-                .attr('height', 20)
-                .attr('href', 'assets/svg/plus.svg')
                 .style('pointer-events', 'none');
         }
     });
