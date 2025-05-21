@@ -4,12 +4,14 @@ function processLavage(lot, keys = [], params = {}) {
   const newLot = JSON.parse(JSON.stringify(lot));
   newLot.proprete = { propre: 100 };
   newLot.total = lot.total * yieldPct;
+  // SUPPRIMER le titre si présent
+  delete newLot.titre;
   // Pas de coproduit si yield = 1
   let coProductLot = null;
   if (yieldPct < 1) {
     coProductLot = JSON.parse(JSON.stringify(lot));
     coProductLot.total = lot.total * (1 - yieldPct);
-    // Optionnel : marquer comme "pertes"
+    delete coProductLot.titre;
   }
   return { targetLot: newLot, coProductLot };
 }
@@ -124,6 +126,9 @@ function processDelissage(lot, keys = [], params = {}) {
     });
     coProductLot.format["tissu"].types["points durs"].couleurs = couleursPct;
   }
+
+  delete mainLot.titre;
+  if (coProductLot) delete coProductLot.titre;
 
   return { targetLot: mainLot, coProductLot };
 }

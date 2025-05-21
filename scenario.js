@@ -120,7 +120,6 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     } else if (type === 'selectByProprete') {
       result = selectByProprete(resteLot, keys);
     } else if (window.processes && window.processes[type]) {
-      // On passe le yield du scénario dans params
       const params = { yield: transfo.yield };
       const { targetLot, coProductLot } = window.processes[type](resteLot, keys, params);
       result = { targetLot, coProductLot };
