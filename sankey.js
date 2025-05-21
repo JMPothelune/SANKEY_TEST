@@ -1,6 +1,6 @@
 // Configuration
-const margin = { top: 20, right: 20, bottom: 20, left: 20 };
-let width = document.getElementById('sankey-container').offsetWidth - margin.left - margin.right;
+const margin = { top: 20, right: 40, bottom: 20, left: 40 };
+let width = window.innerWidth - margin.left - margin.right;
 let height = document.getElementById('sankey-container').offsetHeight - margin.top - margin.bottom;
 
 
@@ -615,9 +615,9 @@ function updateSankey(dimension) {
 
     // Calcul du nombre de colonnes (niveaux)
     const maxDepth = Math.max(...nodes.map(n => n.depth || 0));
-    const minWidth = 300; // largeur minimale pour ne pas écraser
+    const minWidth = width; // On utilise la largeur de la fenêtre comme minimum
     const dynamicWidth = Math.max(minWidth, (stackbarWidth + extraBlockWidth) * (maxDepth + 1) + 40);
-    svg.attr('width', Math.min(width + margin.left + margin.right, dynamicWidth));
+    svg.attr('width', dynamicWidth);
 
     // Calcul des totaux par target
     const targetTotals = {};
@@ -1277,7 +1277,7 @@ if (window.sankeyScenario) {
 
 // Gestion du redimensionnement
 window.addEventListener('resize', function() {
-    width = document.getElementById('sankey-container').offsetWidth - margin.left - margin.right;
+    width = window.innerWidth - margin.left - margin.right;
     height = document.getElementById('sankey-container').offsetHeight - margin.top - margin.bottom;
     svg.attr('width', width + margin.left + margin.right)
        .attr('height', height + margin.top + margin.bottom);
