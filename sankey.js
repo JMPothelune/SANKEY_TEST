@@ -1,5 +1,5 @@
 // Configuration
-const margin = { top: 20, right: 40, bottom: 20, left: 40 };
+const margin = { top: 20, right: 40, bottom: 20, left: 0 };
 let width = window.innerWidth - margin.left - margin.right;
 let height = document.getElementById('sankey-container').offsetHeight - margin.top - margin.bottom;
 
@@ -20,12 +20,15 @@ let matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCoo
 // Mélanger l'ordre des couleurs
 matierePalette = d3.shuffle(matierePalette);
 
-// Pour les formats, on prend les clés de lotType.format (ordre dynamique)
-const formatValues = Object.keys(window.lotType.format);
+// Pour les formats, on prend les clés de lotType.format (ordre dynamique) + moreFormats
+const formatValues = [
+  ...Object.keys(window.lotType.format),
+  ...(window.moreFormats || [])
+].filter((v, i, arr) => arr.indexOf(v) === i); // unicité
 const nFormats = formatValues.length;
 const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
 
-// Palette stable pour les types (tous types de tous formats)
+// Palette stable pour les types (tous types de tous formats) + moreTypes
 const allTypeValues = [];
 formatValues.forEach(format => {
   const types = Object.keys(window.lotType.format[format]?.types || {});
@@ -33,6 +36,11 @@ formatValues.forEach(format => {
     if (!allTypeValues.includes(type)) allTypeValues.push(type);
   });
 });
+if (window.moreTypes) {
+  window.moreTypes.forEach(type => {
+    if (!allTypeValues.includes(type)) allTypeValues.push(type);
+  });
+}
 const nTypes = allTypeValues.length;
 const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
 
@@ -361,171 +369,6 @@ const stackbarComponents = {
   },
   // Ajoute ici d'autres dimensions si besoin
 };
-
-function mergeLots(lots) {
-    // 1. Calculer le total global
-    const total = lots.reduce((sum, lot) => sum + lot.total, 0);
-    if (total === 0) return {};
-
-    // 2. Structure pour stocker les masses réelles à chaque niveau
-    const masses = {
-        formats: {},
-        types: {},
-        matieres: {},
-        fibres: {},
-        couleurs: {}
-    };
-
-    // 3. Première passe : collecter toutes les masses réelles
-    lots.forEach(lot => {
-        if (!lot.format) return;
-        
-        Object.entries(lot.format).forEach(([format, formatObj]) => {
-            // Masse du format
-            const formatMasse = lot.total * (formatObj.pourcentage / 100);
-            masses.formats[format] = (masses.formats[format] || 0) + formatMasse;
-
-            if (!formatObj.types) return;
-            Object.entries(formatObj.types).forEach(([type, typeObj]) => {
-                // Masse du type
-                const typeMasse = formatMasse * (typeObj.pourcentage / 100);
-                masses.types[type] = (masses.types[type] || 0) + typeMasse;
-
-                if (!typeObj.matieres) return;
-                Object.entries(typeObj.matieres).forEach(([matiere, matiereObj]) => {
-                    // Masse de la matière
-                    const matiereMasse = typeMasse * (matiereObj.pourcentage / 100);
-                    masses.matieres[matiere] = (masses.matieres[matiere] || 0) + matiereMasse;
-
-                    if (!matiereObj.fibres) return;
-                    Object.entries(matiereObj.fibres).forEach(([fibre, fibrePct]) => {
-                        // Masse de la fibre
-                        const fibreMasse = matiereMasse * (fibrePct / 100);
-                        masses.fibres[fibre] = (masses.fibres[fibre] || 0) + fibreMasse;
-                    });
-                });
-
-                if (!typeObj.couleurs) return;
-                Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-                    // Masse de la couleur
-                    const couleurPct = typeof couleurObj === 'number' ? couleurObj : couleurObj.pourcentage;
-                    const couleurMasse = typeMasse * (couleurPct / 100);
-                    masses.couleurs[couleur] = (masses.couleurs[couleur] || 0) + couleurMasse;
-                });
-            });
-        });
-    });
-
-    // 4. Deuxième passe : reconstruire la structure avec les pourcentages calculés
-    const result = {
-        total,
-        format: {}
-    };
-
-    // Formats
-    Object.entries(masses.formats).forEach(([format, masse]) => {
-        result.format[format] = {
-            pourcentage: (masse / total) * 100,
-            types: {}
-        };
-
-        // Types pour ce format
-        const typesInFormat = new Set();
-        lots.forEach(lot => {
-            if (lot.format && lot.format[format] && lot.format[format].types) {
-                Object.keys(lot.format[format].types).forEach(type => typesInFormat.add(type));
-            }
-        });
-
-        typesInFormat.forEach(type => {
-            if (!masses.types[type]) return;
-            result.format[format].types[type] = {
-                pourcentage: (masses.types[type] / masse) * 100,
-                matieres: {},
-                couleurs: {}
-            };
-
-            // Matières pour ce type
-            const matieresInType = new Set();
-            lots.forEach(lot => {
-                if (lot.format && lot.format[format] && lot.format[format].types[type] && lot.format[format].types[type].matieres) {
-                    Object.keys(lot.format[format].types[type].matieres).forEach(matiere => matieresInType.add(matiere));
-                }
-            });
-
-            matieresInType.forEach(matiere => {
-                if (!masses.matieres[matiere]) return;
-                result.format[format].types[type].matieres[matiere] = {
-                    pourcentage: (masses.matieres[matiere] / masses.types[type]) * 100,
-                    fibres: {}
-                };
-
-                // Fibres pour cette matière
-                const fibresInMatiere = new Set();
-                lots.forEach(lot => {
-                    if (lot.format && lot.format[format] && lot.format[format].types[type] && lot.format[format].types[type].matieres[matiere] && lot.format[format].types[type].matieres[matiere].fibres) {
-                        Object.keys(lot.format[format].types[type].matieres[matiere].fibres).forEach(fibre => fibresInMatiere.add(fibre));
-                    }
-                });
-
-                fibresInMatiere.forEach(fibre => {
-                    if (!masses.fibres[fibre]) return;
-                    result.format[format].types[type].matieres[matiere].fibres[fibre] = 
-                        (masses.fibres[fibre] / masses.matieres[matiere]) * 100;
-                });
-            });
-
-            // Couleurs pour ce type
-            const couleursInType = new Set();
-            lots.forEach(lot => {
-                if (lot.format && lot.format[format] && lot.format[format].types[type] && lot.format[format].types[type].couleurs) {
-                    Object.keys(lot.format[format].types[type].couleurs).forEach(couleur => couleursInType.add(couleur));
-                }
-            });
-
-            couleursInType.forEach(couleur => {
-                if (!masses.couleurs[couleur]) return;
-                result.format[format].types[type].couleurs[couleur] = 
-                    (masses.couleurs[couleur] / masses.types[type]) * 100;
-            });
-        });
-    });
-
-    // 5. Fusion des qualités et propretés (inchangé)
-    const allQualites = Array.from(new Set(lots.flatMap(lot => Object.keys(lot.qualite || {}))));
-    const mergedQualite = {};
-    allQualites.forEach(qual => {
-        let qualSum = 0;
-        lots.forEach(lot => {
-            if (lot.qualite && lot.qualite[qual] !== undefined) {
-                const val = typeof lot.qualite[qual] === 'number' ? lot.qualite[qual] : (lot.qualite[qual].pourcentage || 0);
-                qualSum += lot.total * val / 100;
-            }
-        });
-        mergedQualite[qual] = (qualSum / total) * 100;
-    });
-
-    const allPropretes = Array.from(new Set(lots.flatMap(lot => Object.keys(lot.proprete || {}))));
-    const mergedProprete = {};
-    allPropretes.forEach(prop => {
-        let propSum = 0;
-        lots.forEach(lot => {
-            if (lot.proprete && lot.proprete[prop] !== undefined) {
-                const val = typeof lot.proprete[prop] === 'number' ? lot.proprete[prop] : (lot.proprete[prop].pourcentage || 0);
-                propSum += lot.total * val / 100;
-            }
-        });
-        mergedProprete[prop] = { pourcentage: (propSum / total) * 100 };
-    });
-
-    result.qualite = mergedQualite;
-    result.proprete = mergedProprete;
-
-    // 6. Log du résultat pour vérification
-    console.log('Lot fusionné:', result);
-
-    return result;
-}
 
 function updateSankey(dimension) {
     // Nettoyer le SVG

@@ -178,6 +178,45 @@ const scenario = {
   coproduct_scenario: {}
 }; 
 
+// Définition du scénario principal (modifiez ici pour changer le scénario)
+const scenario3 = {
+  transformations: [
+    {
+      title: 'Vêtements',
+      type: ['selectByFormat'],
+      keys: [['vêtements']],
+      scenario: {
+        transformations: [
+          {
+            title: 'Nettoyage',
+            type: ['lavage'],
+            keys: [[]],
+            yield: 1,
+            scenario: {
+              transformations: [
+                {
+                  title: 'Délissage',
+                  type: ['delissage'],
+                  yield: 0.8,
+                  keys: [[]],
+                }
+              ],
+              coproduct_scenario: {
+                title: 'Points durs',
+                target: 'CSR'
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  coproduct_scenario: {
+    title: 'Reste',
+  }
+};
+
+
 // Puis l'array des scénarios, sur window pour accessibilité globale
 window.scenarios = [
   {
@@ -187,5 +226,9 @@ window.scenarios = [
   {
     title: 'Après',
     scenario: scenario
+  },
+  {
+    title: 'Test processes',
+    scenario: scenario3
   }
 ];

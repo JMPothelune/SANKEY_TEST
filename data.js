@@ -11,6 +11,15 @@ window.dimensionTree = {
   selectByProprete: null
 };
 
+window.moreFormats = [
+  "tissu"
+]
+
+window.moreTypes = [
+  "morceaux de tissu",
+  "points durs"
+]
+
 const formats_types = {
   "vêtements": {
     "pourcentage": 72.4,
