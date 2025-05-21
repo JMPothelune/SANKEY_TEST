@@ -91,7 +91,20 @@ const scenario = {
       type: ['selectByFormat'],
       keys: [['non TLC']],
       scenario: {
-        target: 'CT2'
+        transformations: [
+          {
+            title: 'BRIC pour réemploi',
+            type: ['selectByQualite'],
+            keys: [['neuf étiqueté', 'parfait état', 'bon état']],
+            scenario: {
+              target: 'CT2'
+            }
+          }
+        ],
+        coproduct_scenario: {
+          title: 'BRIC pour CSR',
+          target: 'CSR'
+        }
       }
     },
     {
