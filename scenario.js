@@ -64,26 +64,30 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
 
   (scenario.transformations || []).forEach((transfo, idx) => {
     let result;
-    if (transfo.type === 'selectByFormat') {
-      result = selectByFormat(resteLot, transfo.keys);
-    } else if (transfo.type === 'selectByType') {
-      result = selectByType(resteLot, transfo.keys);
-    } else if (transfo.type === 'selectByMatiere') {
-      result = selectByMatiere(resteLot, transfo.keys);
-    } else if (transfo.type === 'selectByQualite') {
-      result = selectByQualite(resteLot, transfo.keys);
-    } else if (transfo.type === 'selectByCouleur') {
-      result = selectByCouleur(resteLot, transfo.keys);
-    } else if (transfo.type === 'selectByFibre') {
+    // Support nouvelle structure : type et keys sont des tableaux
+    const type = Array.isArray(transfo.type) ? transfo.type[0] : transfo.type;
+    const keys = Array.isArray(transfo.keys) ? transfo.keys[0] : transfo.keys;
+
+    if (type === 'selectByFormat') {
+      result = selectByFormat(resteLot, keys);
+    } else if (type === 'selectByType') {
+      result = selectByType(resteLot, keys);
+    } else if (type === 'selectByMatiere') {
+      result = selectByMatiere(resteLot, keys);
+    } else if (type === 'selectByQualite') {
+      result = selectByQualite(resteLot, keys);
+    } else if (type === 'selectByCouleur') {
+      result = selectByCouleur(resteLot, keys);
+    } else if (type === 'selectByFibre') {
       if ('threshold' in transfo && 'condition' in transfo) {
-        result = selectByFibre(resteLot, transfo.keys, transfo.threshold, transfo.condition);
+        result = selectByFibre(resteLot, keys, transfo.threshold, transfo.condition);
       } else {
-        result = selectByFibre(resteLot, transfo.keys);
+        result = selectByFibre(resteLot, keys);
       }
-    } else if (transfo.type === 'selectByProprete') {
-      result = selectByProprete(resteLot, transfo.keys);
+    } else if (type === 'selectByProprete') {
+      result = selectByProprete(resteLot, keys);
     } else {
-      throw new Error('Type de transformation non géré : ' + transfo.type);
+      throw new Error('Type de transformation non géré : ' + type);
     }
     const { targetLot, coProductLot } = result;
     if (!targetLot) return;
@@ -93,8 +97,8 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
       targetLot.target = transfo.scenario.target;
     }
 
-    // Génération du titre unique basé sur le chemin complet
-    const titre = `${pathNum}.${idx + 1}`;
+    // Utiliser le title de la transformation s'il existe, sinon générer un titre unique
+    const titre = transfo.title || `${pathNum}.${idx + 1}`;
     targetLot.titre = titre;
     console.log('Création lot:', targetLot);
     const nodeId = `${idGenObj.id++}`;
@@ -102,8 +106,11 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     
     // Ajout du nom de la target dans le nom du nœud si elle existe
     const nodeName = targetLot.target 
-      ? `${transfo.type}: ${transfo.keys.join(' + ')} → ${targetLot.target}`
-      : `${transfo.type}: ${transfo.keys.join(' + ')}`;
+      ? `${type}: ${keys.join(' + ')} → ${targetLot.target}`
+      : `${type}: ${keys.join(' + ')}`;
+    
+    // Ajout de l'ID au lot
+    targetLot.id = nodeId;
     
     nodes.push({ 
       id: nodeId, 
@@ -125,7 +132,8 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
 
   // Gestion du coproduit (reste)
   if (resteLot && resteLot.total > 0.1) {
-    const titre = `${pathNum}.${(scenario.transformations || []).length + 1}`;
+    // Utiliser le title du coproduct s'il existe, sinon générer un titre unique
+    const titre = scenario.coproduct_scenario?.title || `${pathNum}.${(scenario.transformations || []).length + 1}`;
     resteLot.titre = titre;
     
     // Ajout de la target au coproduit si elle existe
@@ -135,6 +143,9 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     
     console.log('Création lot:', resteLot);
     const coproductNodeId = `${idGenObj.id++}`;
+    
+    // Ajout de l'ID au lot coproduit
+    resteLot.id = coproductNodeId;
     
     // Ajout du nom de la target dans le nom du nœud du coproduit si elle existe
     const nodeName = resteLot.target 

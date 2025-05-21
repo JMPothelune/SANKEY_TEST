@@ -82,4 +82,16 @@ select {
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px solid #eee;
+}
+
+text.lot-title {
+    /* Pour SVG, le z-index ne fonctionne que si le texte est après les autres éléments dans le DOM.
+       Mais on peut améliorer la lisibilité et forcer le texte à être devant visuellement. */
+    paint-order: stroke fill markers;
+    stroke: #fff;
+    stroke-width: 2px;
+    stroke-linejoin: round;
+    font-weight: bold;
+    /* Optionnel : ombre portée pour le contraste */
+    filter: drop-shadow(0 1px 1px #fff);
 } 

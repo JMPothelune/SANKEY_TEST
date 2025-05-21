@@ -15,99 +15,113 @@ const scenario2 = {
     },
     ],
     coproduct_scenario: {}
-  }; 
-  
+}; 
   
 
 // Définition du scénario principal (modifiez ici pour changer le scénario)
 const scenario = {
   transformations: [
     {
-      type: 'selectByProprete',
-      keys: ['contaminé'],
+      title: 'Séparation des contaminants',
+      type: ['selectByProprete'],
+      keys: [['contaminé']],
       scenario: {
         target: 'CSR'
       }
     },
     {
-        type: 'selectByFormat',
-        keys: ['chaussures et bottes'],
-        scenario: {
+      title: 'Séparation des chaussures',
+      type: ['selectByFormat'],
+      keys: [['chaussures et bottes']],
+      scenario: {
             transformations: [
                 {
-                type: 'selectByQualite',
-                keys: ['neuf étiqueté', 'parfait état', 'bon état'],
+                title: 'Sélection des chaussures pour réemploi',
+                type: ['selectByQualite'],
+                keys: [['neuf étiqueté', 'parfait état', 'bon état']],
                 scenario: {
                   target: 'CT2'
                 }
                 }
             ],
             coproduct_scenario: {
-              target: 'CSR'
+              title: 'Chaussures pour recyclage',
+              target: 'The 8 impact'
             }
         }
     },
     {
-        type: 'selectByFormat',
-        keys: ['linges et rideaux'],
+      title: 'linges et rideaux',
+      type: ['selectByFormat'],
+      keys: [['linges et rideaux']],
         scenario: {
           transformations: [
             {
-              type: 'selectByMatiere',
-              keys: ['100% coton'],
+              title: 'Draps coton pour Buitex',
+              type: ['selectByMatiere'],
+              keys: [['100% coton']],
               scenario: {
                 target: 'Buitex'
               }
             }
           ],
           coproduct_scenario: {
+            title: 'Reste des draps pour CSR',
             target: 'CSR'
           }
         }
     },
     {
-        type: 'selectByFormat',
-        keys: ['non TLC'],
-        scenario: {
-          target: 'CT2'
-        }
+      title: 'BRIC',
+      type: ['selectByFormat'],
+      keys: [['non TLC']],
+      scenario: {
+        target: 'CT2'
+      }
     },
     {
-      type: 'selectByFormat',
-      keys: ['vêtements'],
+      title: 'Vêtements',
+      type: ['selectByFormat'],
+      keys: [['vêtements']],
       scenario: {
         transformations: [
             {
-                type: 'selectByQualite',
-                keys: ['neuf étiqueté', 'parfait état', 'bon état'],
+                title: 'Vêtements pour réemploi',
+                type: ['selectByQualite'],
+                keys: [['neuf étiqueté', 'parfait état', 'bon état']],
                 scenario: {
                   target: 'CT2'
                 }
             }
         ],
         coproduct_scenario: {
+            title: 'Vêtements hors réemploi',
             transformations: [
                 {
-                    type: 'selectByType',
-                    keys: ['pantalons en jean'],
+                    title: 'Pantalons en jean',
+                    type: ['selectByType'],
+                    keys: [['pantalons en jean']],
                     scenario: {
                       transformations: [
                         {
-                            type: 'selectByFibre',
-                            keys: ['coton'],
+                            title: 'Jeans pour Buitex',
+                            type: ['selectByFibre'],
+                            keys: [['coton']],
                             scenario: {
                               target: 'Buitex'
                             }
                         }
                       ],
                       coproduct_scenario: {
+                        title: 'Reste des jeans pour CSR',
                         target: 'CSR'
                       }
                     }
                   },
                   {
-                    type: 'selectByFibre',
-                    keys: ['coton'],
+                    title: 'Reste des vêtements coton',
+                    type: ['selectByFibre'],
+                    keys: [['coton']],
                     threshold: 100,
                     condition: 'over',
                     scenario: {
@@ -115,20 +129,23 @@ const scenario = {
                     }
                   },
                   {
-                    type: 'selectByMatiere',
-                    keys: ['100% polyester', 'coton/polyester', 'polyester/élasthanne', 'polyester/polyamide'],
+                    title: 'Reste des vêtements polyester',
+                    type: ['selectByMatiere'],
+                    keys: [['100% polyester', 'coton/polyester', 'polyester/élasthanne', 'polyester/polyamide']],
                     scenario: {
                       target: 'RecycElit'
                     }
                   },
                   {
-                    type: 'selectByType',
-                    keys: ['hauts type pull'],
+                    title: 'Pulls',
+                    type: ['selectByType'],
+                    keys: [['hauts type pull']],
                     scenario: {
                       transformations: [
                         {
-                            type: 'selectByCouleur',
-                            keys: ['rouge', 'vert'],
+                            title: 'Pulls couleur pour recyclage',
+                            type: ['selectByCouleur'],
+                            keys: [['rouge', 'vert']],
                             scenario: {}
                         }
                       ],

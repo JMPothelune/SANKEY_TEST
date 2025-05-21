@@ -1185,15 +1185,20 @@ function updateSankey(dimension) {
         }
     });
 
-    // Ajout du nom du lot au-dessus du nœud (centré sur la stackbar)
-    node.append('text')
-        .attr('x', stackbarWidth / 2)
-        .attr('y', -8) // 8px au-dessus du nœud
-        .attr('text-anchor', 'middle')
-        .text(d => d.lot && d.lot.titre ? d.lot.titre : d.id)
-        .style('font-size', '11px')
-        .style('fill', '#666')
-        .style('pointer-events', 'none');
+    // Ajout d'un calque dédié pour les titres, après tous les nœuds
+    svg.selectAll('.titles-layer').remove();
+    const titlesLayer = svg.append('g').attr('class', 'titles-layer');
+    sankeyNodes.forEach(d => {
+        titlesLayer.append('text')
+            .attr('class', 'lot-title')
+            .attr('x', (d.x0 + d.x1) / 2 - extraBlockWidth / 2)
+            .attr('y', d.y0 - 8)
+            .attr('text-anchor', 'middle')
+            .text(d.lot && d.lot.titre ? d.lot.titre : d.id)
+            .style('font-size', '11px')
+            .style('fill', '#666')
+            .style('pointer-events', 'none');
+    });
 }
 
 // Gestion du changement de dimension
