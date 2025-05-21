@@ -1,4 +1,3 @@
-
 function getAllDescendants(tree) {
   let descendants = [];
   for (const key in tree) {
@@ -214,7 +213,7 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
 }
 
 // Générer les données pour le Sankey
-const sankeyScenario = applyScenario(lotType, scenario);
+// const sankeyScenario = applyScenario(lotType, scenario); // Désactivé pour laisser le contrôle au dropdown
 // sankeyScenario.nodes et sankeyScenario.links sont à utiliser dans sankey.js 
 
 
@@ -728,6 +727,34 @@ function selectByProprete(lot, selectedProprete) {
     
     return { targetLot, coProductLot };
 }
+
+// Remplissage dynamique du dropdown de scénarios et gestion du changement
+window.addEventListener('DOMContentLoaded', function() {
+  if (window.scenarios && Array.isArray(window.scenarios)) {
+    const select = document.getElementById('scenario-selector');
+    select.innerHTML = '';
+    window.scenarios.forEach((sc, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = sc.title;
+      select.appendChild(opt);
+    });
+    // Sélectionne 'Avant' par défaut
+    select.selectedIndex = 0;
+    // Initialise le Sankey avec le scénario 'Avant'
+    window.sankeyScenario = applyScenario(window.lotType, window.scenarios[0].scenario);
+    if (typeof updateSankey === 'function') updateSankey();
+    // Met à jour le Sankey quand on change de scénario
+    select.addEventListener('change', function() {
+      const idx = parseInt(this.value, 10);
+      window.sankeyScenario = applyScenario(window.lotType, window.scenarios[idx].scenario);
+      // On récupère la dimension actuellement sélectionnée
+      const currentDimension = document.getElementById('dimension-selector').value;
+      if (typeof updateSankey === 'function') updateSankey(currentDimension);
+    });
+    window.dispatchEvent(new Event('sankeyScenarioReady'));
+  }
+});
 
 
 

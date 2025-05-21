@@ -655,7 +655,7 @@ const repartitionParType = {
 
 // Génération de l'objet lotType au chargement
 const total = 1000;
-const lotType = {
+window.lotType = {
   total,
   format: {},
   qualite: qualiteDistrib,

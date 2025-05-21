@@ -2,19 +2,30 @@
 const scenario2 = {
     transformations: [
       {
-          type: 'selectByFormat',
-          keys: ['non TLC'],
+        type: ['selectByProprete'],
+        keys: [['contaminé']],
+        scenario: {
+          target: 'Enfouissement'
+        }
+      },
+      {
+          type: ['selectByFormat'],
+          keys: [['non TLC', 'linges et rideaux']],
           scenario: {
+            target: 'Enfouissement'
           }
       },
       {
-        type: 'selectByQualite',
-        keys: ['neuf étiqueté', 'parfait état', 'bon état'],
+        type: ['selectByQualite'],
+        keys: [['neuf étiqueté', 'parfait état', 'bon état']],
         scenario: {
+          target: 'Réemploi'
         }
     },
     ],
-    coproduct_scenario: {}
+    coproduct_scenario: {
+      target: 'Export'
+    }
 }; 
   
 
@@ -163,3 +174,14 @@ const scenario = {
   coproduct_scenario: {}
 }; 
 
+// Puis l'array des scénarios, sur window pour accessibilité globale
+window.scenarios = [
+  {
+    title: 'Avant',
+    scenario: scenario2
+  },
+  {
+    title: 'Après',
+    scenario: scenario
+  }
+];

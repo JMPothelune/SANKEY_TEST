@@ -6,7 +6,7 @@ let height = document.getElementById('sankey-container').offsetHeight - margin.t
 
 // Palette harmonieuse pour les matières (dégradé, plage centrale, ordre mélangé)
 const matiereSet = new Set();
-Object.values(lotType.format).forEach(formatObj => {
+Object.values(window.lotType.format).forEach(formatObj => {
   Object.values(formatObj.types).forEach(typeObj => {
     if (typeObj.matieres) {
       Object.keys(typeObj.matieres).forEach(matiere => matiereSet.add(matiere));
@@ -21,14 +21,14 @@ let matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCoo
 matierePalette = d3.shuffle(matierePalette);
 
 // Pour les formats, on prend les clés de lotType.format (ordre dynamique)
-const formatValues = Object.keys(lotType.format);
+const formatValues = Object.keys(window.lotType.format);
 const nFormats = formatValues.length;
 const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
 
 // Palette stable pour les types (tous types de tous formats)
 const allTypeValues = [];
 formatValues.forEach(format => {
-  const types = Object.keys(lotType.format[format]?.types || {});
+  const types = Object.keys(window.lotType.format[format]?.types || {});
   types.forEach(type => {
     if (!allTypeValues.includes(type)) allTypeValues.push(type);
   });
@@ -38,7 +38,7 @@ const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(
 
 // Palette stable pour les fibres (toutes fibres de toutes matières de tous types de tous formats)
 const fibreSet = new Set();
-Object.values(lotType.format).forEach(formatObj => {
+Object.values(window.lotType.format).forEach(formatObj => {
   Object.values(formatObj.types).forEach(typeObj => {
     if (typeObj.matieres) {
       Object.values(typeObj.matieres).forEach(matiereObj => {
@@ -532,8 +532,8 @@ function updateSankey(dimension) {
     svg.selectAll('*').remove();
 
     // Récupérer les nœuds et liens du scénario
-    let nodes = sankeyScenario.nodes.map(n => ({ ...n, id: String(n.id) }));
-    let links = sankeyScenario.links.map(l => ({
+    let nodes = window.sankeyScenario.nodes.map(n => ({ ...n, id: String(n.id) }));
+    let links = window.sankeyScenario.links.map(l => ({
         ...l,
         source: String(l.source),
         target: String(l.target)
@@ -1208,7 +1208,15 @@ document.getElementById('dimension-selector').addEventListener('change', functio
 
 // Initialisation avec la première dimension
 document.getElementById('dimension-selector').value = 'format';
-updateSankey('format');
+
+if (window.sankeyScenario) {
+    updateSankey('format');
+} else {
+    // On attend que le scénario soit prêt (événement custom dispatché dans scenario.js)
+    window.addEventListener('sankeyScenarioReady', function() {
+        updateSankey('format');
+    }, { once: true });
+}
 
 // Gestion du redimensionnement
 window.addEventListener('resize', function() {
