@@ -2,6 +2,7 @@
 const scenario2 = {
     transformations: [
       {
+        title: 'Séparation des contaminants',
         type: ['selectByProprete'],
         keys: [['contaminé']],
         scenario: {
@@ -9,13 +10,15 @@ const scenario2 = {
         }
       },
       {
-          type: ['selectByFormat'],
-          keys: [['non TLC', 'linges et rideaux']],
-          scenario: {
+        title: 'Séparation des chaussures',
+        type: ['selectByFormat'],
+        keys: [['non TLC', 'linges et rideaux']],
+        scenario: {
             target: 'Enfouissement'
           }
       },
       {
+        title: 'Crème',
         type: ['selectByQualite'],
         keys: [['neuf étiqueté', 'parfait état', 'bon état']],
         scenario: {
@@ -24,6 +27,7 @@ const scenario2 = {
     },
     ],
     coproduct_scenario: {
+      title: 'Export',
       target: 'Export'
     }
 }; 
@@ -113,20 +117,7 @@ const scenario = {
                     type: ['selectByType'],
                     keys: [['pantalons en jean']],
                     scenario: {
-                      transformations: [
-                        {
-                            title: 'Jeans pour Buitex',
-                            type: ['selectByFibre'],
-                            keys: [['coton']],
-                            scenario: {
-                              target: 'Buitex'
-                            }
-                        }
-                      ],
-                      coproduct_scenario: {
-                        title: 'Reste des jeans pour CSR',
-                        target: 'CSR'
-                      }
+                      target: 'Buitex'
                     }
                   },
                   {
