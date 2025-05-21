@@ -1251,7 +1251,11 @@ function updateSankey(dimension) {
             .attr('x', (d.x0 + d.x1) / 2 - extraBlockWidth / 2)
             .attr('y', d.y0 - 8)
             .attr('text-anchor', 'middle')
-            .text(d.lot && d.lot.titre ? d.lot.titre : d.id)
+            .text(
+                d.isTarget
+                    ? d.name // Pour les merged, juste le nom du target
+                    : (d.lot && d.lot.titre ? d.lot.titre : d.name)
+            )
             .style('font-size', '11px')
             .style('fill', '#666')
             .style('pointer-events', 'none');
