@@ -931,6 +931,9 @@ function updateSankey(dimension) {
                 .attr('width', stackbarWidth)
                 .attr('rx', 4)
                 .attr('ry', 4)
+                .attr('class', 'stackbar-segment')
+                .attr('data-key', key)
+                .attr('data-dimension', dimension)
                 .style('fill', isUnknown ? 'url(#dashed-bg)' : fillColorStr)
                 .style('stroke', isUnknown ? '#999' : strokeColorStr)
                 .style('stroke-width', '1px')
@@ -947,11 +950,65 @@ function updateSankey(dimension) {
                     tooltip.html(tooltipContent)
                         .style('left', (svgRect.left + offsetX) + 'px')
                         .style('top', (svgRect.top + offsetY) + 'px');
+                    // Highlight links
+                    svg.selectAll('.link')
+                        .transition().duration(100)
+                        .style('stroke-opacity', l => {
+                            // Si le target est un nœud merged (isTarget), on regarde le lot source
+                            const isMergedTarget = l.target.isTarget;
+                            const lotToCheck = isMergedTarget ? (l.source.lot || {}) : (l.target.lot || {});
+                            if (dimension === 'format') {
+                                return (lotToCheck.format && Object.keys(lotToCheck.format).includes(key)) ? 0.7 : 0.18;
+                            }
+                            if (dimension === 'format_type' || dimension === 'type') {
+                                const hasType = lot => Object.values(lot.format || {}).some(f =>
+                                    f.types && Object.keys(f.types).includes(key)
+                                );
+                                return hasType(lotToCheck) ? 0.7 : 0.18;
+                            }
+                            if (dimension === 'matiere') {
+                                const hasMatiere = lot => Object.values(lot.format || {}).some(f =>
+                                    f.types && Object.values(f.types).some(t =>
+                                        t.matieres && Object.keys(t.matieres).includes(key)
+                                    )
+                                );
+                                return hasMatiere(lotToCheck) ? 0.7 : 0.18;
+                            }
+                            if (dimension === 'fibres') {
+                                const hasFibre = lot => Object.values(lot.format || {}).some(f =>
+                                    f.types && Object.values(f.types).some(t =>
+                                        t.matieres && Object.values(t.matieres).some(m =>
+                                            m.fibres && Object.keys(m.fibres).includes(key)
+                                        )
+                                    )
+                                );
+                                return hasFibre(lotToCheck) ? 0.7 : 0.18;
+                            }
+                            if (dimension === 'couleur') {
+                                const hasCouleur = lot => Object.values(lot.format || {}).some(f =>
+                                    f.types && Object.values(f.types).some(t =>
+                                        t.couleurs && Object.keys(t.couleurs).includes(key)
+                                    )
+                                );
+                                return hasCouleur(lotToCheck) ? 0.7 : 0.18;
+                            }
+                            if (dimension === 'qualite') {
+                                return (lotToCheck.qualite && Object.keys(lotToCheck.qualite).includes(key)) ? 0.7 : 0.18;
+                            }
+                            if (dimension === 'proprete') {
+                                return (lotToCheck.proprete && Object.keys(lotToCheck.proprete).includes(key)) ? 0.7 : 0.18;
+                            }
+                            return 0.18;
+                        });
                 })
                 .on('mouseout', function() {
                     tooltip.transition()
                         .duration(500)
                         .style('opacity', 0);
+                    // Reset links
+                    svg.selectAll('.link')
+                        .transition().duration(100)
+                        .style('stroke-opacity', 0.18);
                 });
             yOffset += height;
         });
