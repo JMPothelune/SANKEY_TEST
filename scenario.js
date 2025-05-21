@@ -1,3 +1,37 @@
+
+function getAllDescendants(tree) {
+  let descendants = [];
+  for (const key in tree) {
+    descendants.push(key);
+    if (tree[key]) {
+      descendants = descendants.concat(getAllDescendants(tree[key]));
+    }
+  }
+  return descendants;
+}
+
+function generateAllBinomeChains(tree, result = []) {
+  for (const key in tree) {
+    // Fonction seule
+    result.push([key]);
+    if (tree[key]) {
+      // Pour chaque descendant (à n'importe quelle profondeur)
+      const descendants = getAllDescendants(tree[key]);
+      for (const desc of descendants) {
+        result.push([key, desc]);
+      }
+      // Appel récursif sur le sous-arbre
+      generateAllBinomeChains(tree[key], result);
+    }
+  }
+  return result;
+}
+
+// Exemple d'utilisation :
+window.validChains = generateAllBinomeChains(window.dimensionTree);
+console.log(window.validChains);
+
+
 // Fonction pour cloner un lot (deep copy)
 function cloneLot(lot) {
   return JSON.parse(JSON.stringify(lot));

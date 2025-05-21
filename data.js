@@ -1,3 +1,16 @@
+window.dimensionTree = {
+  selectByFormat: {
+    selectByType: {
+      selectByMatiere: {
+        selectByFibre: null
+      },
+      selectByCouleur: null
+    }
+  },
+  selectByQualite: null,
+  selectByProprete: null
+};
+
 const formats_types = {
   "vêtements": {
     "pourcentage": 72.4,
