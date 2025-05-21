@@ -17,7 +17,8 @@ window.moreFormats = [
 
 window.moreTypes = [
   "morceaux de tissu",
-  "points durs"
+  "points durs",
+  "matrice"
 ]
 
 const formats_types = {

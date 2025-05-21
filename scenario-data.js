@@ -188,6 +188,19 @@ const scenario3 = {
       scenario: {
         transformations: [
           {
+            title: 'Polyester/élasthanne',
+            type: ['selectByMatiere'],
+            keys: [['polyester/élasthanne']],
+            scenario: {
+              transformations: [
+                {
+                  type: ['separation'],
+                  keys: [[]]
+                }
+              ]
+            }
+          },
+          {
             title: 'Nettoyage',
             type: ['lavage'],
             keys: [[]],

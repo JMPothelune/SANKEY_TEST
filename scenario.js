@@ -137,7 +137,7 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
 
     // Utiliser le title de la transformation s'il existe, sinon générer un titre unique
     const titre = transfo.title || `${pathNum}.${idx + 1}`;
-    targetLot.titre = titre;
+    if (!targetLot.titre) targetLot.titre = titre;
     console.log('Création lot:', targetLot);
     const nodeId = `${idGenObj.id++}`;
     const newTransformations = [...transformations_appliquees, transfo];
@@ -172,8 +172,7 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
   if (resteLot && resteLot.total > 0.1) {
     // Utiliser le title du coproduct s'il existe, sinon générer un titre unique
     const titre = scenario.coproduct_scenario?.title || `${pathNum}.${(scenario.transformations || []).length + 1}`;
-    resteLot.titre = titre;
-    
+    if (!resteLot.titre) resteLot.titre = titre;
     // Ajout de la target au coproduit si elle existe
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.target) {
       resteLot.target = scenario.coproduct_scenario.target;

@@ -128,8 +128,80 @@ function processDelissage(lot, keys = [], params = {}) {
   return { targetLot: mainLot, coProductLot };
 }
 
+function processSeparation(lot, keys = [], params = {}) {
+  const total = lot.total || 0;
+  const fibreLots = {};
+
+  Object.entries(lot.format || {}).forEach(([formatKey, formatObj]) => {
+    Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
+      const typeMass = total * (formatObj.pourcentage / 100) * (typeObj.pourcentage / 100);
+      const matieres = Object.entries(typeObj.matieres || {});
+      if (matieres.length !== 1) return; // On ne traite que les types à une seule matière
+      const [matiereKey, matiereObj] = matieres[0];
+      const fibres = Object.entries(matiereObj.fibres || {});
+      if (fibres.length !== 2) return; // On ne traite que les matières à 2 fibres
+      fibres.forEach(([fibre, fibrePct]) => {
+        const fibreMass = typeMass * (fibrePct / 100);
+        if (!fibreLots[fibre]) fibreLots[fibre] = [];
+        // Création du sous-lot pour cette fibre
+        const lotFibre = {
+          total: fibreMass,
+          format: {
+            "tissu": {
+              pourcentage: 100,
+              types: {
+                "matrice": {
+                  pourcentage: 100,
+                  matieres: {
+                    [matiereKey]: {
+                      pourcentage: 100,
+                      fibres: { [fibre]: 100 }
+                    }
+                  },
+                  couleurs: JSON.parse(JSON.stringify(typeObj.couleurs || {}))
+                }
+              }
+            }
+          },
+          qualite: JSON.parse(JSON.stringify(lot.qualite || {})),
+          proprete: JSON.parse(JSON.stringify(lot.proprete || {})),
+          titre: fibre
+        };
+        fibreLots[fibre].push(lotFibre);
+      });
+    });
+  });
+
+  // Fusionne tous les lots par fibre (si plusieurs types d'origine)
+  const resultLots = Object.entries(fibreLots).map(([fibre, lots]) => {
+    if (lots.length === 1) return lots[0];
+    // Fusionne les masses et les couleurs (autres propriétés sont identiques)
+    const totalFibreMass = lots.reduce((sum, l) => sum + l.total, 0);
+    const couleursFusion = {};
+    lots.forEach(l => {
+      Object.entries(l.format.tissu.types.matrice.couleurs || {}).forEach(([c, pct]) => {
+        couleursFusion[c] = (couleursFusion[c] || 0) + pct * l.total / totalFibreMass;
+      });
+    });
+    // Normalise les couleurs
+    Object.keys(couleursFusion).forEach(c => {
+      couleursFusion[c] = Number(couleursFusion[c].toFixed(2));
+    });
+    // On prend la structure du premier lot, on met à jour total, couleurs et titre
+    const merged = JSON.parse(JSON.stringify(lots[0]));
+    merged.total = totalFibreMass;
+    merged.format.tissu.types.matrice.couleurs = couleursFusion;
+    merged.titre = fibre;
+    return merged;
+  });
+
+  // Retourne les deux lots comme targetLot et coProductLot
+  return { targetLot: resultLots[0], coProductLot: resultLots[1] };
+}
+
 window.processes = {
   lavage: processLavage,
-  delissage: processDelissage
+  delissage: processDelissage,
+  separation: processSeparation
 };
 
