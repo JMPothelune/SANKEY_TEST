@@ -12,11 +12,8 @@ function afficherStackbars(lot, chemin) {
   // Affiche le poids total du lot en haut
   if (lot.total) {
     const totalDiv = document.createElement('div');
-    totalDiv.className = 'lot-total';
-    totalDiv.innerHTML = `<strong>Poids total du lot :</strong> ${Math.round(lot.total)} kg`;
-    totalDiv.style.fontSize = '1.18rem';
-    totalDiv.style.margin = '0 0 18px 0';
-    totalDiv.style.fontWeight = 'bold';
+    totalDiv.className = 'lot-total text-2xl font-bold mb-5';
+    totalDiv.innerHTML = `<span>Poids total du lot :</span> <span class="text-black">${Math.round(lot.total)} kg</span>`;
     container.appendChild(totalDiv);
   }
 
@@ -46,11 +43,8 @@ function afficherStackbars(lot, chemin) {
       const pct = formatObj.pourcentage;
       const poids = lot.total ? Math.round(lot.total * pct / 100) : '';
       const titreFormat = document.createElement('div');
-      titreFormat.className = 'stackbar-parent-title';
-      titreFormat.innerHTML = `<strong>${formatKey}</strong> <span style="color:#888;font-weight:normal;">${pct.toFixed(1)}%${poids ? ` – ${poids} kg` : ''}</span>`;
-      titreFormat.style.margin = '8px 0 2px 0';
-      titreFormat.style.fontSize = '1.15rem';
-      titreFormat.style.fontWeight = 'bold';
+      titreFormat.className = 'stackbar-parent-title font-bold text-lg mt-2 mb-1';
+      titreFormat.innerHTML = `<span>${formatKey}</span> <span class="text-gray-500 font-normal">${pct.toFixed(1)}%${poids ? ` – ${poids} kg` : ''}</span>`;
       container.appendChild(titreFormat);
 
       // Stackbar types
@@ -78,11 +72,8 @@ function afficherStackbars(lot, chemin) {
           const pctType = typeObj.pourcentage;
           const poidsType = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * pctType / 100) : '';
           const titreType = document.createElement('div');
-          titreType.className = 'stackbar-parent-title';
-          titreType.innerHTML = `<strong>${typeKey}</strong> <span style="color:#888;font-weight:normal;">${pctType.toFixed(1)}%${poidsType ? ` – ${poidsType} kg` : ''}</span>`;
-          titreType.style.margin = '8px 0 2px 0';
-          titreType.style.fontSize = '1.08rem';
-          titreType.style.fontWeight = 'bold';
+          titreType.className = 'stackbar-parent-title font-bold text-base mt-2 mb-1';
+          titreType.innerHTML = `<span>${typeKey}</span> <span class="text-gray-500 font-normal">${pctType.toFixed(1)}%${poidsType ? ` – ${poidsType} kg` : ''}</span>`;
           container.appendChild(titreType);
 
           // Stackbar matières
@@ -110,11 +101,8 @@ function afficherStackbars(lot, chemin) {
               const pctMat = matiereObj.pourcentage || 0;
               const poidsMat = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * typeObj.pourcentage / 100 * pctMat / 100) : '';
               const titreMatiere = document.createElement('div');
-              titreMatiere.className = 'stackbar-parent-title';
-              titreMatiere.innerHTML = `<strong>${matiereKey}</strong> <span style="color:#888;font-weight:normal;">${pctMat.toFixed(1)}%${poidsMat ? ` – ${poidsMat} kg` : ''}</span>`;
-              titreMatiere.style.margin = '8px 0 2px 0';
-              titreMatiere.style.fontSize = '1.02rem';
-              titreMatiere.style.fontWeight = 'bold';
+              titreMatiere.className = 'stackbar-parent-title font-bold text-base mt-2 mb-1';
+              titreMatiere.innerHTML = `<span>${matiereKey}</span> <span class="text-gray-500 font-normal">${pctMat.toFixed(1)}%${poidsMat ? ` – ${poidsMat} kg` : ''}</span>`;
               container.appendChild(titreMatiere);
 
               // Stackbar fibres
@@ -149,14 +137,7 @@ function clampPercent(val, min = 1, max = 100) {
 function renderStackbar(repartition, colorMap, dimension, parentKey, container, selectedKey) {
   const stackbar = document.createElement('div');
   stackbar.id = `stackbar-${dimension}` + (parentKey ? `-${parentKey}` : '');
-  stackbar.style.display = 'flex';
-  stackbar.style.width = '100%';
-  stackbar.style.height = '64px';
-  stackbar.style.overflow = 'hidden';
-  stackbar.style.borderRadius = '10px';
-  stackbar.style.boxShadow = '0 1px 4px #0001';
-  stackbar.style.marginBottom = '18px';
-  stackbar.style.position = 'relative';
+  stackbar.className = 'flex w-full h-16 overflow-hidden rounded-xl shadow-sm mb-5 relative';
 
   // On travaille sur une copie pour pouvoir modifier les valeurs
   let repartitionState = repartition.map(r => ({ ...r }));
@@ -167,9 +148,7 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       const seg = stackbar.querySelector(`.stackbar-segment[data-idx='${i}']`);
       if (seg) seg.style.width = repartitionState[i].percent + '%';
       const label = seg.querySelector('.stackbar-label');
-      if (label) label.innerHTML = repartitionState[i].name;
-      const pct = seg.querySelector('.stackbar-pct');
-      if (pct) pct.innerHTML = `${repartitionState[i].percent.toFixed(1)}%`;
+      if (label) label.innerHTML = `<span class="font-bold">${repartitionState[i].name}</span><br><span class="stackbar-pct text-white font-bold" style="font-size:0.95rem;">${repartitionState[i].percent.toFixed(1)}%</span>`;
     }
   }
 
@@ -202,31 +181,23 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
   for (let i = 0; i < repartitionState.length; i++) {
     const item = repartitionState[i];
     const segment = document.createElement('div');
-    segment.classList.add('stackbar-segment');
+    segment.className = 'stackbar-segment flex items-center justify-center relative font-bold text-base transition-all duration-200';
     segment.setAttribute('data-idx', i);
     segment.style.background = colorMap[item.name];
     segment.style.width = item.percent + '%';
-    segment.style.display = 'flex';
-    segment.style.alignItems = 'center';
-    segment.style.justifyContent = 'center';
-    segment.style.position = 'relative';
-    segment.style.transition = 'all 0.2s';
-    segment.style.fontWeight = 'bold';
-    segment.style.fontSize = '1.1rem';
     segment.style.letterSpacing = '0.5px';
-    if (i === 0) segment.style.borderRadius = '10px 0 0 10px';
-    if (i === repartitionState.length - 1) segment.style.borderRadius = '0 10px 10px 0';
+    if (i === 0) segment.classList.add('rounded-l-xl');
+    if (i === repartitionState.length - 1) segment.classList.add('rounded-r-xl');
     if (selectedKey === item.name) {
-      segment.classList.add('selected');
+      segment.classList.add('selected', 'ring-4', 'ring-black', 'z-10');
       segment.style.border = '3px solid #000';
       segment.style.boxShadow = '0 0 0 2px #fff';
       segment.style.zIndex = '1';
     }
     // Label
     const label = document.createElement('div');
-    label.innerHTML = `<span class=\"stackbar-label\">${item.name}</span><br><span class=\"stackbar-pct\" style=\"font-size:0.95rem;color:#fff;\">${item.percent.toFixed(1)}%</span>`;
-    label.style.textAlign = 'center';
-    label.style.width = '100%';
+    label.className = 'stackbar-label w-full text-center';
+    label.innerHTML = `<span class=\"font-bold\">${item.name}</span><br><span class=\"stackbar-pct text-white font-bold\" style=\"font-size:0.95rem;\">${item.percent.toFixed(1)}%</span>`;
     segment.appendChild(label);
     // Sélection
     segment.style.cursor = 'pointer';
@@ -243,17 +214,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     // Handle (sauf après le dernier segment)
     if (i < repartitionState.length - 1) {
       const handle = document.createElement('div');
-      handle.className = 'stackbar-handle';
-      handle.style.position = 'absolute';
-      handle.style.right = '-8px';
-      handle.style.top = '0';
-      handle.style.width = '16px';
-      handle.style.height = '100%';
-      handle.style.cursor = 'ew-resize';
-      handle.style.zIndex = '10';
-      handle.style.display = 'flex';
-      handle.style.alignItems = 'center';
-      handle.innerHTML = '<div style="width:4px;height:40px;margin:auto;background:#888;border-radius:2px;"></div>';
+      handle.className = 'stackbar-handle absolute right-[-8px] top-0 w-4 h-full flex items-center justify-center cursor-ew-resize z-20';
+      handle.innerHTML = '<div class="w-1 h-10 bg-gray-500 rounded"></div>';
       // Drag logic
       let startX = 0;
       let startPctL = 0;
