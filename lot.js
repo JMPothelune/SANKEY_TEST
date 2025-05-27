@@ -338,6 +338,14 @@ function supprimerNoeudEtRepartir(niveau) {
 function creerTitreStackbar(niveau, nom, pct, kg) {
   const titre = document.createElement('div');
   titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
+
+  // Détermination du label de dimension (niveau+1)
+  let labelText = '';
+  if (niveau + 1 === 0) labelText = 'Format';
+  else if (niveau + 1 === 1) labelText = 'Type';
+  else if (niveau + 1 === 2) labelText = 'Matière';
+  else if (niveau + 1 === 3) labelText = 'Fibre';
+
   titre.innerHTML = `
     <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
       <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
@@ -349,6 +357,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
       <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center">${nom}</span>
       <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
       <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
+      <span class="border-l border-gray-300 px-3 h-full text-sm text-black font-normal flex items-center">${labelText}</span>
     </div>
     <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
       <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300" aria-label="Ajouter">
