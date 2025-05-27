@@ -158,125 +158,52 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
   stackbar.style.marginBottom = '18px';
   stackbar.style.position = 'relative';
 
-  // Pour la stackbar des formats, on ajoute les handles
-  if (dimension === 'format' && repartition.length > 1) {
-    // On travaille sur une copie pour pouvoir modifier les valeurs
-    let repartitionState = repartition.map(r => ({ ...r }));
+  // On travaille sur une copie pour pouvoir modifier les valeurs
+  let repartitionState = repartition.map(r => ({ ...r }));
 
-    // Fonction pour mettre à jour l'affichage et les valeurs
-    function updateSegments() {
-      // Met à jour les largeurs et les labels
-      for (let i = 0; i < repartitionState.length; i++) {
-        const seg = stackbar.querySelector(`.stackbar-segment[data-idx='${i}']`);
-        if (seg) seg.style.width = repartitionState[i].percent + '%';
-        const label = seg.querySelector('.stackbar-label');
-        if (label) label.innerHTML = repartitionState[i].name;
-        const pct = seg.querySelector('.stackbar-pct');
-        if (pct) pct.innerHTML = `${repartitionState[i].percent.toFixed(1)}%`;
-      }
-    }
-
-    // Création des segments et handles
+  // Fonction pour mettre à jour l'affichage et les valeurs
+  function updateSegments() {
     for (let i = 0; i < repartitionState.length; i++) {
-      const item = repartitionState[i];
-      const segment = document.createElement('div');
-      segment.classList.add('stackbar-segment');
-      segment.setAttribute('data-idx', i);
-      segment.style.background = colorMap[item.name];
-      segment.style.width = item.percent + '%';
-      segment.style.display = 'flex';
-      segment.style.alignItems = 'center';
-      segment.style.justifyContent = 'center';
-      segment.style.position = 'relative';
-      segment.style.transition = 'all 0.2s';
-      segment.style.fontWeight = 'bold';
-      segment.style.fontSize = '1.1rem';
-      segment.style.letterSpacing = '0.5px';
-      if (i === 0) segment.style.borderRadius = '10px 0 0 10px';
-      if (i === repartitionState.length - 1) segment.style.borderRadius = '0 10px 10px 0';
-      if (selectedKey === item.name) {
-        segment.classList.add('selected');
-        segment.style.border = '3px solid #000';
-        segment.style.boxShadow = '0 0 0 2px #fff';
-        segment.style.zIndex = '1';
-      }
-      // Label
-      const label = document.createElement('div');
-      label.innerHTML = `<span class=\"stackbar-label\">${item.name}</span><br><span class=\"stackbar-pct\" style=\"font-size:0.95rem;color:#fff;\">${item.percent.toFixed(1)}%</span>`;
-      label.style.textAlign = 'center';
-      label.style.width = '100%';
-      segment.appendChild(label);
-      // Sélection
-      segment.style.cursor = 'pointer';
-      segment.addEventListener('click', () => {
-        let newChemin = [item.name];
-        cheminSelection = newChemin;
-        afficherStackbars(lotCourant, cheminSelection);
-      });
-      stackbar.appendChild(segment);
-      // Handle (sauf après le dernier segment)
-      if (i < repartitionState.length - 1) {
-        const handle = document.createElement('div');
-        handle.className = 'stackbar-handle';
-        handle.style.position = 'absolute';
-        handle.style.right = '-8px';
-        handle.style.top = '0';
-        handle.style.width = '16px';
-        handle.style.height = '100%';
-        handle.style.cursor = 'ew-resize';
-        handle.style.zIndex = '10';
-        handle.style.display = 'flex';
-        handle.style.alignItems = 'center';
-        handle.innerHTML = '<div style="width:4px;height:40px;margin:auto;background:#888;border-radius:2px;"></div>';
-        // Drag logic
-        let startX = 0;
-        let startPctL = 0;
-        let startPctR = 0;
-        handle.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          startX = e.clientX;
-          startPctL = repartitionState[i].percent;
-          startPctR = repartitionState[i+1].percent;
-          document.body.style.userSelect = 'none';
-          function onMove(ev) {
-            const dx = ev.clientX - startX;
-            const totalWidth = stackbar.offsetWidth;
-            const dPct = dx / totalWidth * 100;
-            let newPctL = clampPercent(startPctL + dPct, 1, startPctL + startPctR - 1);
-            let newPctR = clampPercent(startPctR - dPct, 1, startPctL + startPctR - 1);
-            // Correction pour ne pas dépasser le total
-            if (newPctL + newPctR > startPctL + startPctR) {
-              const excess = newPctL + newPctR - (startPctL + startPctR);
-              newPctL -= excess/2;
-              newPctR -= excess/2;
-            }
-            repartitionState[i].percent = newPctL;
-            repartitionState[i+1].percent = newPctR;
-            updateSegments();
-          }
-          function onUp() {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-            document.body.style.userSelect = '';
-            for (let i = 0; i < repartitionState.length; i++) {
-              lotCourant.format[repartitionState[i].name].pourcentage = repartitionState[i].percent;
-            }
-            afficherStackbars(lotCourant, cheminSelection);
-          }
-          document.addEventListener('mousemove', onMove);
-          document.addEventListener('mouseup', onUp);
-        });
-        segment.appendChild(handle);
-      }
+      const seg = stackbar.querySelector(`.stackbar-segment[data-idx='${i}']`);
+      if (seg) seg.style.width = repartitionState[i].percent + '%';
+      const label = seg.querySelector('.stackbar-label');
+      if (label) label.innerHTML = repartitionState[i].name;
+      const pct = seg.querySelector('.stackbar-pct');
+      if (pct) pct.innerHTML = `${repartitionState[i].percent.toFixed(1)}%`;
     }
-    container.appendChild(stackbar);
-    return;
   }
 
-  // --- Comportement inchangé pour les autres niveaux ---
-  repartition.forEach((item, i) => {
+  // Fonction pour mettre à jour lotCourant selon le niveau
+  function updateLotCourant() {
+    if (dimension === 'format') {
+      for (let i = 0; i < repartitionState.length; i++) {
+        lotCourant.format[repartitionState[i].name].pourcentage = repartitionState[i].percent;
+      }
+    } else if (dimension === 'type') {
+      const formatKey = parentKey;
+      for (let i = 0; i < repartitionState.length; i++) {
+        lotCourant.format[formatKey].types[repartitionState[i].name].pourcentage = repartitionState[i].percent;
+      }
+    } else if (dimension === 'matiere') {
+      const [formatKey, typeKey] = parentKey.split('||');
+      for (let i = 0; i < repartitionState.length; i++) {
+        lotCourant.format[formatKey].types[typeKey].matieres[repartitionState[i].name].pourcentage = repartitionState[i].percent;
+      }
+    } else if (dimension === 'fibre') {
+      // parentKey = matiereKey, il faut retrouver le chemin complet
+      // On le retrouve via cheminSelection
+      const [formatKey, typeKey, matiereKey] = cheminSelection;
+      for (let i = 0; i < repartitionState.length; i++) {
+        lotCourant.format[formatKey].types[typeKey].matieres[matiereKey].fibres[repartitionState[i].name] = repartitionState[i].percent;
+      }
+    }
+  }
+
+  for (let i = 0; i < repartitionState.length; i++) {
+    const item = repartitionState[i];
     const segment = document.createElement('div');
     segment.classList.add('stackbar-segment');
+    segment.setAttribute('data-idx', i);
     segment.style.background = colorMap[item.name];
     segment.style.width = item.percent + '%';
     segment.style.display = 'flex';
@@ -288,20 +215,20 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     segment.style.fontSize = '1.1rem';
     segment.style.letterSpacing = '0.5px';
     if (i === 0) segment.style.borderRadius = '10px 0 0 10px';
-    if (i === repartition.length - 1) segment.style.borderRadius = '0 10px 10px 0';
+    if (i === repartitionState.length - 1) segment.style.borderRadius = '0 10px 10px 0';
     if (selectedKey === item.name) {
       segment.classList.add('selected');
       segment.style.border = '3px solid #000';
       segment.style.boxShadow = '0 0 0 2px #fff';
       segment.style.zIndex = '1';
     }
-    // Texte centré
+    // Label
     const label = document.createElement('div');
-    label.innerHTML = `<span class=\"stackbar-label\">${item.name}</span><br><span style=\"font-size:0.95rem;color:#fff;\">${item.percent.toFixed(1)}%</span>`;
+    label.innerHTML = `<span class=\"stackbar-label\">${item.name}</span><br><span class=\"stackbar-pct\" style=\"font-size:0.95rem;color:#fff;\">${item.percent.toFixed(1)}%</span>`;
     label.style.textAlign = 'center';
     label.style.width = '100%';
     segment.appendChild(label);
-    // Gestion du clic pour navigation
+    // Sélection
     segment.style.cursor = 'pointer';
     segment.addEventListener('click', () => {
       let newChemin = [];
@@ -313,7 +240,59 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       afficherStackbars(lotCourant, cheminSelection);
     });
     stackbar.appendChild(segment);
-  });
+    // Handle (sauf après le dernier segment)
+    if (i < repartitionState.length - 1) {
+      const handle = document.createElement('div');
+      handle.className = 'stackbar-handle';
+      handle.style.position = 'absolute';
+      handle.style.right = '-8px';
+      handle.style.top = '0';
+      handle.style.width = '16px';
+      handle.style.height = '100%';
+      handle.style.cursor = 'ew-resize';
+      handle.style.zIndex = '10';
+      handle.style.display = 'flex';
+      handle.style.alignItems = 'center';
+      handle.innerHTML = '<div style="width:4px;height:40px;margin:auto;background:#888;border-radius:2px;"></div>';
+      // Drag logic
+      let startX = 0;
+      let startPctL = 0;
+      let startPctR = 0;
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startX = e.clientX;
+        startPctL = repartitionState[i].percent;
+        startPctR = repartitionState[i+1].percent;
+        document.body.style.userSelect = 'none';
+        function onMove(ev) {
+          const dx = ev.clientX - startX;
+          const totalWidth = stackbar.offsetWidth;
+          const dPct = dx / totalWidth * 100;
+          let newPctL = clampPercent(startPctL + dPct, 1, startPctL + startPctR - 1);
+          let newPctR = clampPercent(startPctR - dPct, 1, startPctL + startPctR - 1);
+          // Correction pour ne pas dépasser le total
+          if (newPctL + newPctR > startPctL + startPctR) {
+            const excess = newPctL + newPctR - (startPctL + startPctR);
+            newPctL -= excess/2;
+            newPctR -= excess/2;
+          }
+          repartitionState[i].percent = newPctL;
+          repartitionState[i+1].percent = newPctR;
+          updateSegments();
+        }
+        function onUp() {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          document.body.style.userSelect = '';
+          updateLotCourant();
+          afficherStackbars(lotCourant, cheminSelection);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+      segment.appendChild(handle);
+    }
+  }
   container.appendChild(stackbar);
 }
 
