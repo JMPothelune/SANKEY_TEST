@@ -326,21 +326,81 @@ function supprimerNoeudEtRepartir(niveau) {
 // --- Fonction utilitaire pour créer le titre de stackbar avec les icônes ---
 function creerTitreStackbar(niveau, nom, pct, kg) {
   const titre = document.createElement('div');
-  titre.className = `stackbar-parent-title font-bold ${niveau === 0 ? 'text-lg' : 'text-base'} mt-2 mb-4 flex items-center justify-between`;
+  titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
   titre.innerHTML = `
-    <span><span>${nom}</span> <span class="text-gray-500 font-normal">${pct.toFixed(1)}%${kg ? ` – ${kg} kg` : ''}</span></span>
-    <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm">
-      <button class="px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300">
+    <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
+      <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
+        <img src="../assets/svg/caret-left.svg" alt="Précédent" class="w-4 h-4" />
+      </button>
+      <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center">${nom}</span>
+      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
+      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
+      <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
+        <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
+      </button>
+    </div>
+    <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
+      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300">
         <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
       </button>
-      <button class="px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300">
+      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300">
         <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
       </button>
-      <button class="px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg">
+      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg">
         <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
       </button>
     </div>`;
+
+  // Ajout de la navigation caret gauche/droite
+  setTimeout(() => {
+    const btnLeft = titre.querySelector('.stackbar-caret-left');
+    const btnRight = titre.querySelector('.stackbar-caret-right');
+    if (btnLeft) {
+      btnLeft.onclick = () => {
+        naviguerSiblingStackbar(niveau, -1);
+      };
+    }
+    if (btnRight) {
+      btnRight.onclick = () => {
+        naviguerSiblingStackbar(niveau, +1);
+      };
+    }
+  }, 0);
+
   return titre;
+}
+
+// Fonction utilitaire pour naviguer entre les éléments frères d'un niveau
+function naviguerSiblingStackbar(niveau, direction) {
+  // Récupère la clé courante au niveau
+  const chemin = [...cheminSelection];
+  if (chemin.length <= niveau) return;
+  const cleCourante = chemin[niveau];
+  let siblings = [];
+  if (niveau === 0) {
+    siblings = Object.keys(lotCourant.format);
+  } else if (niveau === 1) {
+    const formatKey = chemin[0];
+    siblings = lotCourant.format[formatKey] && lotCourant.format[formatKey].types ? Object.keys(lotCourant.format[formatKey].types) : [];
+  } else if (niveau === 2) {
+    const formatKey = chemin[0];
+    const typeKey = chemin[1];
+    siblings = lotCourant.format[formatKey] && lotCourant.format[formatKey].types && lotCourant.format[formatKey].types[typeKey] && lotCourant.format[formatKey].types[typeKey].matieres ? Object.keys(lotCourant.format[formatKey].types[typeKey].matieres) : [];
+  } else if (niveau === 3) {
+    const formatKey = chemin[0];
+    const typeKey = chemin[1];
+    const matiereKey = chemin[2];
+    siblings = lotCourant.format[formatKey] && lotCourant.format[formatKey].types && lotCourant.format[formatKey].types[typeKey] && lotCourant.format[formatKey].types[typeKey].matieres && lotCourant.format[formatKey].types[typeKey].matieres[matiereKey] && lotCourant.format[formatKey].types[typeKey].matieres[matiereKey].fibres ? Object.keys(lotCourant.format[formatKey].types[typeKey].matieres[matiereKey].fibres) : [];
+  }
+  if (!siblings.length) return;
+  const idx = siblings.indexOf(cleCourante);
+  if (idx === -1) return;
+  let newIdx = idx + direction;
+  if (newIdx < 0) newIdx = siblings.length - 1;
+  if (newIdx >= siblings.length) newIdx = 0;
+  chemin[niveau] = siblings[newIdx];
+  cheminSelection = chemin.slice(0, niveau + 1);
+  afficherStackbars(lotCourant, cheminSelection);
 }
 
 // --- Chargement initial ---
