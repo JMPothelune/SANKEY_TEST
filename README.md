@@ -462,3 +462,23 @@ Cet objet permet d'obtenir une structure hiérarchique complète : format > ty
 ---
 
 Pour toute question ou adaptation de la structure, contactez le développeur du projet.
+
+## Affichage du « + » dans le Sankey
+
+### Règle actuelle
+- Le « + » s'affiche sur les nœuds feuilles sans lien sortant, sauf si le nœud a une destination finale (`target`) ou s'il est un nœud destination (`isTarget`).
+- Le « + » s'affiche également sur le lien « Reste » (coproduit) pour indiquer qu'une transformation supplémentaire peut être ajoutée.
+
+### Dernières modifications
+- Le champ `isProcess` est ajouté uniquement sur le résultat principal d'un process (le flux principal), **pas** sur le coproduit.
+- Le « + » ne s'affiche plus sur le coproduit d'un process (le « reste » du process), mais reste affiché sur les autres coproduits.
+
+#### Exemple de scénario
+```js
+{
+  type: 'processLavage',
+  yield: 0.8,
+  scenario: { /* ... */ }
+}
+```
+→ Le résultat principal du lavage aura `isProcess: true` et n'aura pas de « + », tandis que le coproduit (le reste) aura le « + ».
