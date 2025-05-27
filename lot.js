@@ -165,7 +165,10 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       const seg = stackbar.querySelector(`.stackbar-segment[data-idx='${i}']`);
       if (seg) seg.style.width = repartitionState[i].percent + '%';
       const label = seg.querySelector('.stackbar-label');
-      if (label) label.innerHTML = `<span class="font-bold">${repartitionState[i].name}</span><br><span class="stackbar-pct text-white font-bold" style="font-size:0.95rem;">${repartitionState[i].percent.toFixed(1)}%</span>`;
+      if (label) label.innerHTML = `
+        <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${repartitionState[i].name}">${repartitionState[i].name}</span>
+        <span class="text-black font-normal text-xs leading-tight truncate w-full">${repartitionState[i].percent.toFixed(1)}%</span>
+      `;
     }
   }
 
@@ -214,8 +217,11 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     }
     // Label
     const label = document.createElement('div');
-    label.className = 'stackbar-label w-full text-center';
-    label.innerHTML = `<span class=\"font-bold\">${item.name}</span><br><span class=\"stackbar-pct text-white font-bold\" style=\"font-size:0.95rem;\">${item.percent.toFixed(1)}%</span>`;
+    label.className = 'stackbar-label w-full h-full text-center px-1 flex flex-col items-center justify-center overflow-hidden';
+    label.innerHTML = `
+      <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${item.name}">${item.name}</span>
+      <span class="text-black font-normal text-xs leading-tight truncate w-full">${item.percent.toFixed(1)}%</span>
+    `;
     segment.appendChild(label);
     // Sélection
     segment.style.cursor = 'pointer';
@@ -340,13 +346,13 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
       </button>
     </div>
     <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
-      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300">
+      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300" aria-label="Ajouter">
         <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
       </button>
-      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300">
+      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300" aria-label="Supprimer">
         <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
       </button>
-      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg">
+      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg" aria-label="Fermer">
         <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
       </button>
     </div>`;
