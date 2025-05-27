@@ -214,6 +214,11 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       segment.classList.add('selected', 'z-10');
       segment.style.border = `4px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
       segment.style.zIndex = '1';
+      segment.style.opacity = '1';
+    } else if (selectedKey) {
+      segment.style.opacity = '0.4';
+    } else {
+      segment.style.opacity = '1';
     }
     // Label
     const label = document.createElement('div');
@@ -338,12 +343,12 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
       <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
         <img src="../assets/svg/caret-left.svg" alt="Précédent" class="w-4 h-4" />
       </button>
-      <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center">${nom}</span>
-      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
-      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
       <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
         <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
       </button>
+      <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center">${nom}</span>
+      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
+      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
     </div>
     <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
       <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300" aria-label="Ajouter">
