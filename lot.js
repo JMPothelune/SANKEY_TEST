@@ -183,15 +183,16 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     const segment = document.createElement('div');
     segment.className = 'stackbar-segment flex items-center justify-center relative font-bold text-base transition-all duration-200';
     segment.setAttribute('data-idx', i);
-    segment.style.background = colorMap[item.name];
+    const fillColor = d3.color(colorMap[item.name]);
+    segment.style.background = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.8)`;
+    segment.style.border = `2px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
     segment.style.width = item.percent + '%';
     segment.style.letterSpacing = '0.5px';
     if (i === 0) segment.classList.add('rounded-l-xl');
     if (i === repartitionState.length - 1) segment.classList.add('rounded-r-xl');
     if (selectedKey === item.name) {
-      segment.classList.add('selected', 'ring-4', 'ring-black', 'z-10');
-      segment.style.border = '3px solid #000';
-      segment.style.boxShadow = '0 0 0 2px #fff';
+      segment.classList.add('selected', 'z-10');
+      segment.style.border = `4px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
       segment.style.zIndex = '1';
     }
     // Label
