@@ -9,6 +9,17 @@ function afficherStackbars(lot, chemin) {
   const container = document.getElementById('stackbar-container');
   container.innerHTML = '';
 
+  // Affiche le poids total du lot en haut
+  if (lot.total) {
+    const totalDiv = document.createElement('div');
+    totalDiv.className = 'lot-total';
+    totalDiv.innerHTML = `<strong>Poids total du lot :</strong> ${Math.round(lot.total)} kg`;
+    totalDiv.style.fontSize = '1.18rem';
+    totalDiv.style.margin = '0 0 18px 0';
+    totalDiv.style.fontWeight = 'bold';
+    container.appendChild(totalDiv);
+  }
+
   // 1. Formats
   const formats = lot.format;
   const formatKeys = Object.keys(formats);
@@ -31,15 +42,18 @@ function afficherStackbars(lot, chemin) {
     const formatKey = chemin[0];
     const formatObj = lot.format[formatKey];
     if (formatObj && formatObj.types) {
-      // Ajout du titre du format sélectionné
+      // Titre format sélectionné
+      const pct = formatObj.pourcentage;
+      const poids = lot.total ? Math.round(lot.total * pct / 100) : '';
       const titreFormat = document.createElement('div');
       titreFormat.className = 'stackbar-parent-title';
-      titreFormat.innerHTML = `<strong>${formatKey}</strong> <span style="color:#888;font-weight:normal;">${formatObj.pourcentage.toFixed(1)}%</span>`;
+      titreFormat.innerHTML = `<strong>${formatKey}</strong> <span style="color:#888;font-weight:normal;">${pct.toFixed(1)}%${poids ? ` – ${poids} kg` : ''}</span>`;
       titreFormat.style.margin = '8px 0 2px 0';
       titreFormat.style.fontSize = '1.15rem';
       titreFormat.style.fontWeight = 'bold';
       container.appendChild(titreFormat);
 
+      // Stackbar types
       const typeKeys = Object.keys(formatObj.types);
       const repartitionTypes = typeKeys.map(key => ({
         name: key,
@@ -60,15 +74,18 @@ function afficherStackbars(lot, chemin) {
         const typeKey = chemin[1];
         const typeObj = formatObj.types[typeKey];
         if (typeObj && typeObj.matieres) {
-          // Ajout du titre du type sélectionné
+          // Titre type sélectionné
+          const pctType = typeObj.pourcentage;
+          const poidsType = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * pctType / 100) : '';
           const titreType = document.createElement('div');
           titreType.className = 'stackbar-parent-title';
-          titreType.innerHTML = `<strong>${typeKey}</strong> <span style="color:#888;font-weight:normal;">${typeObj.pourcentage.toFixed(1)}%</span>`;
+          titreType.innerHTML = `<strong>${typeKey}</strong> <span style="color:#888;font-weight:normal;">${pctType.toFixed(1)}%${poidsType ? ` – ${poidsType} kg` : ''}</span>`;
           titreType.style.margin = '8px 0 2px 0';
           titreType.style.fontSize = '1.08rem';
           titreType.style.fontWeight = 'bold';
           container.appendChild(titreType);
 
+          // Stackbar matières
           const matiereKeys = Object.keys(typeObj.matieres);
           const repartitionMatieres = matiereKeys.map(key => ({
             name: key,
@@ -82,22 +99,25 @@ function afficherStackbars(lot, chemin) {
           matiereKeys.forEach((key, i) => {
             colorMapMatieres[key] = matierePalette[i];
           });
-          renderStackbar(repartitionMatieres, colorMapMatieres, 'matiere', typeKey, container, chemin[2]);
+          renderStackbar(repartitionMatieres, colorMapMatieres, 'matiere', formatKey + '||' + typeKey, container, chemin[2]);
 
           // 4. Fibres (si une matière sélectionnée)
           if (chemin.length >= 3) {
             const matiereKey = chemin[2];
             const matiereObj = typeObj.matieres[matiereKey];
             if (matiereObj && matiereObj.fibres) {
-              // Ajout du titre de la matière sélectionnée
+              // Titre matière sélectionnée
+              const pctMat = matiereObj.pourcentage || 0;
+              const poidsMat = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * typeObj.pourcentage / 100 * pctMat / 100) : '';
               const titreMatiere = document.createElement('div');
               titreMatiere.className = 'stackbar-parent-title';
-              titreMatiere.innerHTML = `<strong>${matiereKey}</strong> <span style="color:#888;font-weight:normal;">${matiereObj.pourcentage ? matiereObj.pourcentage.toFixed(1) : ''}%</span>`;
+              titreMatiere.innerHTML = `<strong>${matiereKey}</strong> <span style="color:#888;font-weight:normal;">${pctMat.toFixed(1)}%${poidsMat ? ` – ${poidsMat} kg` : ''}</span>`;
               titreMatiere.style.margin = '8px 0 2px 0';
               titreMatiere.style.fontSize = '1.02rem';
               titreMatiere.style.fontWeight = 'bold';
               container.appendChild(titreMatiere);
 
+              // Stackbar fibres
               const fibreKeys = Object.keys(matiereObj.fibres);
               const repartitionFibres = fibreKeys.map(key => ({
                 name: key,
@@ -111,7 +131,7 @@ function afficherStackbars(lot, chemin) {
               fibreKeys.forEach((key, i) => {
                 colorMapFibres[key] = fibrePalette[i];
               });
-              renderStackbar(repartitionFibres, colorMapFibres, 'fibre', matiereKey, container, chemin[3]);
+              renderStackbar(repartitionFibres, colorMapFibres, 'fibre', matiereKey, container, null);
             }
           }
         }
