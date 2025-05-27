@@ -42,9 +42,7 @@ function afficherStackbars(lot, chemin) {
       // Titre format sélectionné
       const pct = formatObj.pourcentage;
       const poids = lot.total ? Math.round(lot.total * pct / 100) : '';
-      const titreFormat = document.createElement('div');
-      titreFormat.className = 'stackbar-parent-title font-bold text-lg mt-2 mb-1';
-      titreFormat.innerHTML = `<span>${formatKey}</span> <span class="text-gray-500 font-normal">${pct.toFixed(1)}%${poids ? ` – ${poids} kg` : ''}</span>`;
+      const titreFormat = creerTitreStackbar(0, formatKey, pct, poids);
       container.appendChild(titreFormat);
 
       // Stackbar types
@@ -71,9 +69,7 @@ function afficherStackbars(lot, chemin) {
           // Titre type sélectionné
           const pctType = typeObj.pourcentage;
           const poidsType = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * pctType / 100) : '';
-          const titreType = document.createElement('div');
-          titreType.className = 'stackbar-parent-title font-bold text-base mt-2 mb-1';
-          titreType.innerHTML = `<span>${typeKey}</span> <span class="text-gray-500 font-normal">${pctType.toFixed(1)}%${poidsType ? ` – ${poidsType} kg` : ''}</span>`;
+          const titreType = creerTitreStackbar(1, typeKey, pctType, poidsType);
           container.appendChild(titreType);
 
           // Stackbar matières
@@ -100,9 +96,7 @@ function afficherStackbars(lot, chemin) {
               // Titre matière sélectionnée
               const pctMat = matiereObj.pourcentage || 0;
               const poidsMat = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * typeObj.pourcentage / 100 * pctMat / 100) : '';
-              const titreMatiere = document.createElement('div');
-              titreMatiere.className = 'stackbar-parent-title font-bold text-base mt-2 mb-1';
-              titreMatiere.innerHTML = `<span>${matiereKey}</span> <span class="text-gray-500 font-normal">${pctMat.toFixed(1)}%${poidsMat ? ` – ${poidsMat} kg` : ''}</span>`;
+              const titreMatiere = creerTitreStackbar(2, matiereKey, pctMat, poidsMat);
               container.appendChild(titreMatiere);
 
               // Stackbar fibres
@@ -126,6 +120,29 @@ function afficherStackbars(lot, chemin) {
       }
     }
   }
+
+  // Après avoir inséré chaque titre, branche les listeners comme avant (DRY/générique)
+  [...container.querySelectorAll('.stackbar-parent-title')].forEach(titreDiv => {
+    const btnTrash = titreDiv.querySelector('button[aria-label="Supprimer"]');
+    if (btnTrash) {
+      const niveau = parseInt(titreDiv.getAttribute('data-niveau')) || [...container.querySelectorAll('.stackbar-parent-title')].indexOf(titreDiv);
+      btnTrash.dataset.niveau = niveau;
+      btnTrash.onclick = (e) => {
+        const n = parseInt(e.currentTarget.dataset.niveau, 10);
+        supprimerNoeudEtRepartir(n);
+      };
+    }
+    const btnClose = titreDiv.querySelector('button[aria-label="Fermer"]');
+    if (btnClose) {
+      const niveau = parseInt(titreDiv.getAttribute('data-niveau')) || [...container.querySelectorAll('.stackbar-parent-title')].indexOf(titreDiv);
+      btnClose.dataset.niveau = niveau;
+      btnClose.onclick = (e) => {
+        const n = parseInt(e.currentTarget.dataset.niveau, 10);
+        cheminSelection = cheminSelection.slice(0, n);
+        afficherStackbars(lotCourant, cheminSelection);
+      };
+    }
+  });
 }
 
 // Ajout d'une fonction utilitaire pour forcer un minimum de pourcentage
@@ -262,6 +279,68 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
 // --- Deep copy utilitaire ---
 function deepCopy(obj) {
   return JSON.parse(JSON.stringify(obj));
+}
+
+// --- Fonction utilitaire générique pour supprimer un noeud à n'importe quel niveau et réajuster la distribution ---
+function supprimerNoeudEtRepartir(niveau) {
+  const chemin = [...cheminSelection];
+  const cle = chemin[niveau];
+  if (!cle) return;
+
+  // Navigue dynamiquement jusqu'au parent
+  let parent = lotCourant;
+  const keys = ['format', 'types', 'matieres', 'fibres'];
+  for (let i = 0; i < niveau; i++) {
+    parent = (i === 0) ? parent[keys[i]][chemin[i]] : parent[keys[i]][chemin[i]];
+  }
+  // Liste à modifier
+  const liste = (niveau === 0) ? parent['format'] : parent[keys[niveau]];
+  if (!liste || !liste[cle]) return;
+
+  // Supprime la clé
+  delete liste[cle];
+
+  // Produit en croix pour réajuster les pourcentages
+  let total = 0;
+  const isFibres = (niveau === 3);
+  Object.values(liste).forEach(obj => {
+    if (isFibres) {
+      total += typeof obj === 'number' ? obj : 0;
+    } else {
+      total += (typeof obj === 'object' && obj.pourcentage !== undefined) ? obj.pourcentage : 0;
+    }
+  });
+  Object.keys(liste).forEach(k => {
+    if (isFibres) {
+      liste[k] = liste[k] * 100 / total;
+    } else if (typeof liste[k] === 'object' && liste[k].pourcentage !== undefined) {
+      liste[k].pourcentage = liste[k].pourcentage * 100 / total;
+    }
+  });
+
+  // Tronque le chemin de sélection si besoin
+  cheminSelection = cheminSelection.slice(0, niveau);
+  afficherStackbars(lotCourant, cheminSelection);
+}
+
+// --- Fonction utilitaire pour créer le titre de stackbar avec les icônes ---
+function creerTitreStackbar(niveau, nom, pct, kg) {
+  const titre = document.createElement('div');
+  titre.className = `stackbar-parent-title font-bold ${niveau === 0 ? 'text-lg' : 'text-base'} mt-2 mb-4 flex items-center justify-between`;
+  titre.innerHTML = `
+    <span><span>${nom}</span> <span class="text-gray-500 font-normal">${pct.toFixed(1)}%${kg ? ` – ${kg} kg` : ''}</span></span>
+    <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm">
+      <button class="px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300">
+        <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
+      </button>
+      <button class="px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300">
+        <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
+      </button>
+      <button class="px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg">
+        <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
+      </button>
+    </div>`;
+  return titre;
 }
 
 // --- Chargement initial ---
