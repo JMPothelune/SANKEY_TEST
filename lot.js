@@ -467,17 +467,32 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
   titre.dataset.niveau = niveau;
 
-  // Trouver le nœud courant dans lotCourant selon cheminSelection et niveau
-  let node = lotCourant;
-  for (let i = 0; i <= niveau; i++) {
-    if (i === 0) node = node.format ? node.format[cheminSelection[0]] : node[cheminSelection[0]];
-    else if (i === 1) node = node.types ? node.types[cheminSelection[1]] : node[cheminSelection[1]];
-    else if (i === 2) node = node.matieres ? node.matieres[cheminSelection[2]] : node[cheminSelection[2]];
-    else if (i === 3) node = node.fibres ? node.fibres[cheminSelection[3]] : node[cheminSelection[3]];
-    if (!node) break;
+  // On veut le nœud parent du niveau courant
+  let nodeParent = lotCourant;
+  for (let i = 0; i < niveau; i++) {
+    const { dimension, valeur } = cheminSelection[i];
+    if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+      nodeParent = null;
+      break;
+    }
+    nodeParent = nodeParent[dimension][valeur];
   }
-  // Dimensions accessibles à ce niveau
-  const dims = getDimensionsFromNode(node ? node : lotCourant);
+  const dims = getDimensionsFromNode(nodeParent ? nodeParent : lotCourant);
+
+  // Génération du button group dimension
+  // On génère un vrai button group collé, sans padding, avec séparateur vertical
+  let btnGroupDims = `<div class="inline-flex rounded-lg border border-blue-200 bg-white shadow items-center h-10 overflow-hidden">`;
+  dims.forEach((dim, idx) => {
+    const isSelected = dim === cheminSelection[niveau]?.dimension;
+    btnGroupDims += `
+      <button
+        class="h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none ${isSelected ? 'bg-blue-50 text-blue-600 border-blue-200 shadow' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'} ${idx > 0 ? 'border-l border-gray-200' : ''}"
+        style="border-radius:0;"
+      >${dim.charAt(0).toUpperCase() + dim.slice(1).toLowerCase()}</button>
+    `;
+  });
+  btnGroupDims += '</div>';
+
   // Détermination du label de dimension (niveau+1)
   let labelText = '';
   if (niveau + 1 === 0) labelText = 'format';
@@ -498,14 +513,10 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         ` : ''}
         <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
-        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
+        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg.toFixed(1)} kg` : ''}</span>
       </div>
       <div class="flex-1 flex justify-center">
-        <div class="inline-flex rounded-lg border border-blue-200 bg-blue-50 text-blue-600 font-semibold shadow items-center h-10 px-2 select-none gap-2">
-          ${dims.map(dim => `
-            <button class="px-4 h-8 rounded-md ${dim === labelText ? 'bg-blue-50 text-blue-600 font-semibold shadow border border-blue-200' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'}">${dim.charAt(0).toUpperCase() + dim.slice(1).toLowerCase()}</button>
-          `).join('')}
-        </div>
+        ${btnGroupDims}
       </div>
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
         <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg ${niveau > 0 ? 'border-r border-gray-300' : ''}" aria-label="Ajouter">
@@ -601,6 +612,17 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         naviguerSiblingStackbar(niveauHeader - 1, +1);
       };
     }
+
+    // Ajout des listeners sur les boutons de dimension
+    const btnDims = titre.querySelectorAll('.inline-flex button');
+    btnDims.forEach((btn, idx) => {
+      const dim = dims[idx];
+      btn.onclick = () => {
+        cheminSelection = cheminSelection.slice(0, niveau);
+        cheminSelection.push({ dimension: dim, valeur: null });
+        afficherStackbars(lotCourant, cheminSelection);
+      };
+    });
   }, 0);
 
   return titre;
