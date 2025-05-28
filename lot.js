@@ -35,7 +35,7 @@ function afficherStackbars(lot, chemin) {
     topBar.className = 'flex items-center justify-between mb-5';
     topBar.innerHTML = `
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
-        <span class="px-4 h-full font-bold text-base flex items-center">${lot.titre || 'Lot'}</span>
+        <span class="px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${lot.titre || 'Lot'}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">100%</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${Math.round(lot.total)} kg</span>
       </div>
@@ -45,6 +45,38 @@ function afficherStackbars(lot, chemin) {
         </button>
       </div>
     `;
+
+    // Ajout de l'édition inline du titre du lot
+    setTimeout(() => {
+      const spanTitre = topBar.querySelector('.stackbar-title-nom');
+      if (spanTitre) {
+        spanTitre.addEventListener('click', () => {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = lot.titre || 'Lot';
+          input.className = 'border-l border-gray-300 px-4 h-full font-bold text-base flex items-center outline-none';
+          input.style.width = '8rem';
+          input.style.background = 'white';
+          input.style.textAlign = 'left';
+          spanTitre.replaceWith(input);
+          input.focus();
+          input.select();
+          function saveEdit() {
+            const newTitre = input.value.trim();
+            if (newTitre && newTitre !== lot.titre) {
+              lotCourant.titre = newTitre;
+            }
+            afficherStackbars(lotCourant, cheminSelection);
+          }
+          input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') saveEdit();
+            if (e.key === 'Escape') afficherStackbars(lotCourant, cheminSelection);
+          });
+          input.addEventListener('blur', saveEdit);
+        });
+      }
+    }, 0);
+
     container.appendChild(topBar);
   }
 
@@ -391,7 +423,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
       <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
         <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
       </button>
-      <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center">${nom}</span>
+      <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
       <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
       <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
       <span class="border-l border-gray-300 px-3 h-full text-sm text-black font-normal flex items-center">${labelText}</span>
@@ -408,8 +440,96 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
       </button>
     </div>`;
 
-  // Ajout de la navigation caret gauche/droite
+  // Ajout de l'édition inline du nom
   setTimeout(() => {
+    const spanNom = titre.querySelector('.stackbar-title-nom');
+    if (spanNom) {
+      spanNom.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = nom;
+        input.className = 'border-l border-gray-300 px-4 h-full font-bold text-base flex items-center outline-none';
+        input.style.width = '8rem';
+        input.style.background = 'white';
+        input.style.textAlign = 'left';
+        spanNom.replaceWith(input);
+        input.focus();
+        input.select();
+        function saveEdit() {
+          const newName = input.value.trim();
+          if (newName && newName !== nom) {
+            // Renommage dans lotCourant selon le niveau
+            let parent;
+            if (niveau === 0) {
+              parent = lotCourant.format;
+            } else if (niveau === 1) {
+              parent = lotCourant.format[cheminSelection[0]].types;
+            } else if (niveau === 2) {
+              parent = lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres;
+            } else if (niveau === 3) {
+              parent = lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres[cheminSelection[2]].fibres;
+            }
+            if (parent && parent[nom] !== undefined && parent[newName] === undefined) {
+              // Sauvegarde la couleur de l'ancienne clé
+              let oldColor;
+              if (niveau === 0) oldColor = window.colorMapFormatsGlobal[nom];
+              else if (niveau === 1) oldColor = window.colorMapTypesGlobal[nom];
+              else if (niveau === 2) oldColor = window.colorMapMatieresGlobal[nom];
+              else if (niveau === 3) oldColor = window.colorMapFibresGlobal[nom];
+
+              // Conserve l'ordre : reconstruit l'objet avec la nouvelle clé à la même position
+              const entries = Object.entries(parent);
+              const idx = entries.findIndex(([k]) => k === nom);
+              if (idx !== -1) {
+                const newEntries = [
+                  ...entries.slice(0, idx),
+                  [newName, parent[nom]],
+                  ...entries.slice(idx + 1)
+                ];
+                const newObj = {};
+                newEntries.forEach(([k, v]) => { newObj[k] = v; });
+                // Remplace l'objet parent au bon endroit
+                if (niveau === 0) {
+                  lotCourant.format = newObj;
+                  // Met à jour le mapping des couleurs
+                  if (oldColor) {
+                    window.colorMapFormatsGlobal[newName] = oldColor;
+                    delete window.colorMapFormatsGlobal[nom];
+                  }
+                } else if (niveau === 1) {
+                  lotCourant.format[cheminSelection[0]].types = newObj;
+                  if (oldColor) {
+                    window.colorMapTypesGlobal[newName] = oldColor;
+                    delete window.colorMapTypesGlobal[nom];
+                  }
+                } else if (niveau === 2) {
+                  lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres = newObj;
+                  if (oldColor) {
+                    window.colorMapMatieresGlobal[newName] = oldColor;
+                    delete window.colorMapMatieresGlobal[nom];
+                  }
+                } else if (niveau === 3) {
+                  lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres[cheminSelection[2]].fibres = newObj;
+                  if (oldColor) {
+                    window.colorMapFibresGlobal[newName] = oldColor;
+                    delete window.colorMapFibresGlobal[nom];
+                  }
+                }
+                // Met à jour le cheminSelection
+                cheminSelection[niveau] = newName;
+              }
+            }
+          }
+          afficherStackbars(lotCourant, cheminSelection);
+        }
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') saveEdit();
+          if (e.key === 'Escape') afficherStackbars(lotCourant, cheminSelection);
+        });
+        input.addEventListener('blur', saveEdit);
+      });
+    }
+    // Navigation carets
     const btnLeft = titre.querySelector('.stackbar-caret-left');
     const btnRight = titre.querySelector('.stackbar-caret-right');
     if (btnLeft) {
