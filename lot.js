@@ -115,7 +115,23 @@ function afficherStackbars(lot, chemin) {
     const titre = creerTitreStackbar(
       niveau,
       niveau === 0 ? (lotCourant.title || 'Lot') : CheminManager.getNiveau(niveau-1)?.valeur || '',
-      pctLocal,
+      niveau === 0 ? 100 : (() => {
+        const parent = CheminManager.getNiveau(niveau-1);
+        if (!parent || !parent.dimension || !parent.valeur) return 100;
+        let node = lotCourant;
+        for (let i = 0; i < niveau-1; i++) {
+          const { dimension, valeur } = cheminSelection[i];
+          if (!node[dimension] || !valeur || !node[dimension][valeur]) return 100;
+          node = node[dimension][valeur];
+        }
+        const valNode = node[parent.dimension][parent.valeur];
+        if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
+          return valNode.pourcentage;
+        } else if (typeof valNode === 'number') {
+          return valNode;
+        }
+        return 100;
+      })(),
       poidsNiveau
     );
     container.appendChild(titre);
@@ -134,8 +150,10 @@ function afficherStackbars(lot, chemin) {
       // Attacher le handler du bouton Supprimer
       const btnDelete = titre.querySelector('button[aria-label="Supprimer"]');
       if (btnDelete) {
+        const niveauHeader = parseInt(titre.dataset.niveau, 10);
         btnDelete.onclick = () => {
-          supprimerNoeudEtRepartir(niveau);
+          console.log('Suppression demandée pour niveauHeader :', niveauHeader);
+          supprimerNoeudEtRepartir(niveauHeader);
         };
       }
 
@@ -463,43 +481,50 @@ function deepCopy(obj) {
 
 // --- Fonction utilitaire générique pour supprimer un noeud à n'importe quel niveau et réajuster la distribution ---
 function supprimerNoeudEtRepartir(niveau) {
+  // On veut supprimer la valeur sélectionnée dans la dimension du niveau parent (niveau-1)
+  if (niveau <= 0) return;
   const chemin = [...cheminSelection];
-  const cle = chemin[niveau];
-  if (!cle) return;
-
-  // Navigue dynamiquement jusqu'au parent
-  let parent = lotCourant;
-  const keys = ['format', 'types', 'matieres', 'fibres'];
-  for (let i = 0; i < niveau; i++) {
-    parent = (i === 0) ? parent[keys[i]][chemin[i]] : parent[keys[i]][chemin[i]];
+  const parentCle = chemin[niveau - 1];
+  if (!parentCle || parentCle.valeur == null) {
+    console.warn('Aucune valeur sélectionnée à ce niveau parent, suppression impossible.');
+    return;
   }
-  // Liste à modifier
-  const liste = (niveau === 0) ? parent['format'] : parent[keys[niveau]];
-  if (!liste || !liste[cle]) return;
+  const dim = parentCle.dimension;
+  const keyToDelete = parentCle.valeur;
+
+  // Navigue dynamiquement jusqu'au parent du parent
+  let parent = lotCourant;
+  for (let i = 0; i < niveau - 1; i++) {
+    const { dimension, valeur } = chemin[i];
+    if (!parent[dimension] || !valeur || !parent[dimension][valeur]) return;
+    parent = parent[dimension][valeur];
+  }
+  if (!dim || !parent[dim]) return;
+  const liste = parent[dim];
+  if (!liste[keyToDelete]) return;
 
   // Supprime la clé
-  delete liste[cle];
+  delete liste[keyToDelete];
 
-  // Produit en croix pour réajuster les pourcentages
+  // Réajuste les pourcentages
   let total = 0;
-  const isFibres = (niveau === 3);
   Object.values(liste).forEach(obj => {
-    if (isFibres) {
-      total += typeof obj === 'number' ? obj : 0;
-    } else {
-      total += (typeof obj === 'object' && obj.pourcentage !== undefined) ? obj.pourcentage : 0;
+    if (typeof obj === 'object' && obj.pourcentage !== undefined) {
+      total += obj.pourcentage;
+    } else if (typeof obj === 'number') {
+      total += obj;
     }
   });
   Object.keys(liste).forEach(k => {
-    if (isFibres) {
-      liste[k] = liste[k] * 100 / total;
-    } else if (typeof liste[k] === 'object' && liste[k].pourcentage !== undefined) {
-      liste[k].pourcentage = liste[k].pourcentage * 100 / total;
+    if (typeof liste[k] === 'object' && liste[k].pourcentage !== undefined) {
+      liste[k].pourcentage = total > 0 ? liste[k].pourcentage * 100 / total : 0;
+    } else if (typeof liste[k] === 'number') {
+      liste[k] = total > 0 ? liste[k] * 100 / total : 0;
     }
   });
 
-  // Tronque le chemin de sélection si besoin
-  cheminSelection = cheminSelection.slice(0, niveau);
+  // Tronque le chemin de sélection au niveau parent
+  cheminSelection = cheminSelection.slice(0, niveau - 1);
   afficherStackbars(lotCourant, cheminSelection);
 }
 
@@ -552,7 +577,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
           <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
             <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
           </button>
-        ` : ''}
+          ` : ''}
         <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg.toFixed(1)} kg` : ''}</span>
