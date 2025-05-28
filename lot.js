@@ -32,12 +32,17 @@ function afficherStackbars(lot, chemin) {
   // Affiche le poids total du lot en haut dans un button group
   if (lot.total) {
     const topBar = document.createElement('div');
-    topBar.className = 'flex items-center justify-between mb-5';
+    topBar.className = 'flex items-center justify-between mb-5 w-full';
     topBar.innerHTML = `
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
         <span class="px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${lot.titre || 'Lot'}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">100%</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${Math.round(lot.total)} kg</span>
+      </div>
+      <div class="flex-1 flex justify-center">
+        <div class="inline-flex rounded-lg border border-blue-200 bg-blue-50 text-blue-600 font-semibold shadow items-center h-10 px-6 select-none cursor-default">
+          Format
+        </div>
       </div>
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
         <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-lg" aria-label="Ajouter">
@@ -416,28 +421,34 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   else if (niveau + 1 === 3) labelText = 'Fibre';
 
   titre.innerHTML = `
-    <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
-      <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
-        <img src="../assets/svg/caret-left.svg" alt="Précédent" class="w-4 h-4" />
-      </button>
-      <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
-        <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
-      </button>
-      <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
-      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
-      <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
-      <span class="border-l border-gray-300 px-3 h-full text-sm text-black font-normal flex items-center">${labelText}</span>
-    </div>
-    <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
-      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300" aria-label="Ajouter">
-        <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
-      </button>
-      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300" aria-label="Supprimer">
-        <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
-      </button>
-      <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg" aria-label="Fermer">
-        <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
-      </button>
+    <div class="flex items-center justify-between w-full">
+      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
+        <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
+          <img src="../assets/svg/caret-left.svg" alt="Précédent" class="w-4 h-4" />
+        </button>
+        <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
+          <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
+        </button>
+        <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
+        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
+        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
+      </div>
+      <div class="flex-1 flex justify-center">
+        <div class="inline-flex rounded-lg border border-blue-200 bg-blue-50 text-blue-600 font-semibold shadow items-center h-10 px-6 select-none cursor-default">
+          ${labelText}
+        </div>
+      </div>
+      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
+        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300" aria-label="Ajouter">
+          <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
+        </button>
+        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300" aria-label="Supprimer">
+          <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
+        </button>
+        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg" aria-label="Fermer">
+          <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
+        </button>
+      </div>
     </div>`;
 
   // Ajout de l'édition inline du nom
