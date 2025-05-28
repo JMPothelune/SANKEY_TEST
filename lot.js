@@ -880,13 +880,75 @@ function afficherModalAjout(niveau, dimension) {
     const pourcentage = parseFloat(inputPourcentage.value);
     
     if (nom && !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100) {
-      // TODO: Ajouter la logique d'ajout ici
-      console.log('Ajout de', nom, 'avec', pourcentage, '% dans la dimension', dimension);
+      ajouterElementEtRepartir(niveau, dimension, nom, pourcentage);
       fermerModal();
+      afficherStackbars(lotCourant, cheminSelection);
     }
   };
   
   // Focus sur le premier input
   inputNom.focus();
+}
+
+// Fonction pour ajouter un élément et répartir les pourcentages
+function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage) {
+  let node = lotCourant;
+  for (let i = 0; i < niveau; i++) {
+    const { dimension: dim, valeur } = cheminSelection[i];
+    if (!node[dim] || !valeur || !node[dim][valeur]) return;
+    node = node[dim][valeur];
+  }
+  if (!node[dimension]) return;
+  if (node[dimension][nom]) return;
+
+  let keys = Object.keys(node[dimension]).filter(k => k !== 'title');
+  let autres = keys;
+  let totalAvant = 0;
+  autres.forEach(k => {
+    const val = node[dimension][k];
+    if (typeof val === 'object' && val.pourcentage !== undefined) {
+      totalAvant += val.pourcentage;
+    } else if (typeof val === 'number') {
+      totalAvant += val;
+    }
+  });
+
+  // Si c'est le premier élément, on met 100%
+  if (totalAvant === 0) {
+    node[dimension][nom] = { pourcentage: 100 };
+    return;
+  }
+
+  // Applique la normalisation proportionnelle
+  const facteur = (100 - pourcentage) / totalAvant;
+  let somme = pourcentage;
+  let autresSansDernier = autres.filter((k, idx) => idx < autres.length - 1);
+  autresSansDernier.forEach(k => {
+    const val = node[dimension][k];
+    let pct = 0;
+    if (typeof val === 'object' && val.pourcentage !== undefined) {
+      pct = val.pourcentage * facteur;
+      val.pourcentage = pct;
+    } else if (typeof val === 'number') {
+      pct = val * facteur;
+      node[dimension][k] = pct;
+    }
+    somme += pct;
+  });
+  // Dernier ancien élément : ajuste pour que la somme fasse 100
+  if (autres.length > 0) {
+    const k = autres[autres.length - 1];
+    if (k !== nom) {
+      const val = node[dimension][k];
+      let pct = 100 - somme;
+      if (typeof val === 'object' && val.pourcentage !== undefined) {
+        val.pourcentage = pct;
+      } else if (typeof val === 'number') {
+        node[dimension][k] = pct;
+      }
+    }
+  }
+  // Ajoute le nouvel élément
+  node[dimension][nom] = { pourcentage: pourcentage };
 }
 
