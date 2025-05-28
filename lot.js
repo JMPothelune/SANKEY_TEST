@@ -9,6 +9,26 @@ function afficherStackbars(lot, chemin) {
   const container = document.getElementById('stackbar-container');
   container.innerHTML = '';
 
+  // Ajout du pattern SVG pour le fond dashed
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.style.position = 'absolute';
+  svg.style.width = '0';
+  svg.style.height = '0';
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+  pattern.setAttribute('id', 'dashed-bg');
+  pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+  pattern.setAttribute('width', '8');
+  pattern.setAttribute('height', '8');
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('width', '8');
+  rect.setAttribute('height', '8');
+  rect.setAttribute('fill', '#f5f5f5');
+  pattern.appendChild(rect);
+  defs.appendChild(pattern);
+  svg.appendChild(defs);
+  container.appendChild(svg);
+
   // Affiche le poids total du lot en haut dans un button group
   if (lot.total) {
     const topBar = document.createElement('div');
@@ -35,15 +55,7 @@ function afficherStackbars(lot, chemin) {
     name: key,
     percent: formats[key].pourcentage
   }));
-  const nFormats = formatKeys.length;
-  const formatPalette = Array.from({length: nFormats}, (_, i) =>
-    d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1)))
-  );
-  const colorMapFormats = {};
-  formatKeys.forEach((key, i) => {
-    colorMapFormats[key] = formatPalette[i];
-  });
-  renderStackbar(repartitionFormats, colorMapFormats, 'format', null, container, chemin[0]);
+  renderStackbar(repartitionFormats, window.colorMapFormatsGlobal, 'format', null, container, chemin[0]);
 
   // 2. Types (si un format sélectionné)
   if (chemin.length >= 1) {
@@ -62,15 +74,7 @@ function afficherStackbars(lot, chemin) {
         name: key,
         percent: formatObj.types[key].pourcentage
       }));
-      const nTypes = typeKeys.length;
-      const typePalette = Array.from({length: nTypes}, (_, i) =>
-        d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1)))
-      );
-      const colorMapTypes = {};
-      typeKeys.forEach((key, i) => {
-        colorMapTypes[key] = typePalette[i];
-      });
-      renderStackbar(repartitionTypes, colorMapTypes, 'type', formatKey, container, chemin[1]);
+      renderStackbar(repartitionTypes, window.colorMapTypesGlobal, 'type', formatKey, container, chemin[1]);
 
       // 3. Matières (si un type sélectionné)
       if (chemin.length >= 2) {
@@ -89,15 +93,7 @@ function afficherStackbars(lot, chemin) {
             name: key,
             percent: typeObj.matieres[key].pourcentage
           }));
-          const nMatieres = matiereKeys.length;
-          const matierePalette = Array.from({length: nMatieres}, (_, i) =>
-            d3.interpolateCool(0.15 + 0.7 * (i / (nMatieres - 1)))
-          );
-          const colorMapMatieres = {};
-          matiereKeys.forEach((key, i) => {
-            colorMapMatieres[key] = matierePalette[i];
-          });
-          renderStackbar(repartitionMatieres, colorMapMatieres, 'matiere', formatKey + '||' + typeKey, container, chemin[2]);
+          renderStackbar(repartitionMatieres, window.colorMapMatieresGlobal, 'matiere', formatKey + '||' + typeKey, container, chemin[2]);
 
           // 4. Fibres (si une matière sélectionnée)
           if (chemin.length >= 3) {
@@ -116,15 +112,7 @@ function afficherStackbars(lot, chemin) {
                 name: key,
                 percent: matiereObj.fibres[key]
               }));
-              const nFibres = fibreKeys.length;
-              const fibrePalette = Array.from({length: nFibres}, (_, i) =>
-                d3.interpolateRainbow(0.15 + 0.7 * (i / (nFibres - 1)))
-              );
-              const colorMapFibres = {};
-              fibreKeys.forEach((key, i) => {
-                colorMapFibres[key] = fibrePalette[i];
-              });
-              renderStackbar(repartitionFibres, colorMapFibres, 'fibre', matiereKey, container, null);
+              renderStackbar(repartitionFibres, window.colorMapFibresGlobal, 'fibre', matiereKey, container, null);
             }
           }
         }
@@ -225,9 +213,26 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     const segment = document.createElement('div');
     segment.className = 'stackbar-segment flex items-center justify-center relative font-bold text-base transition-all duration-200';
     segment.setAttribute('data-idx', i);
-    const fillColor = d3.color(colorMap[item.name]);
-    segment.style.background = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.8)`;
-    segment.style.border = `2px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
+    let fillColor;
+    if (colorMap[item.name]) {
+      fillColor = d3.color(colorMap[item.name]);
+    } else {
+      // fallback palette selon le niveau
+      if (dimension === 'format') fillColor = d3.color(d3.interpolateYlGn(0.5));
+      else if (dimension === 'type') fillColor = d3.color(d3.interpolatePlasma(0.5));
+      else if (dimension === 'matiere') fillColor = d3.color(d3.interpolateCool(0.5));
+      else if (dimension === 'fibre') fillColor = d3.color(d3.interpolateRainbow(0.5));
+      else fillColor = d3.color('#bbb');
+    }
+    const isUnknown = ['inconnu', 'autre', 'autres compositions'].includes(item.name.toLowerCase());
+    
+    if (isUnknown) {
+      segment.style.background = 'repeating-linear-gradient(135deg, #f5f5f5, #f5f5f5 2px, #e0e0e0 2px, #e0e0e0 4px)';
+      segment.style.border = '1px solid #bbb';
+    } else {
+      segment.style.background = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.8)`;
+      segment.style.border = `2px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
+    }
     segment.style.width = item.percent + '%';
     segment.style.letterSpacing = '0.5px';
     if (i === 0) segment.classList.add('rounded-l-xl');
@@ -462,6 +467,68 @@ fetch('../lot_type.json')
     window._lotType = lotType;
     lotCourant = deepCopy(lotType);
     cheminSelection = [];
+
+    // Génération des mappings globaux pour chaque dimension
+    // 1. Formats
+    const formatValues = Object.keys(lotType.format);
+    const nFormats = formatValues.length;
+    const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
+    window.colorMapFormatsGlobal = {};
+    formatValues.forEach((key, i) => {
+      window.colorMapFormatsGlobal[key] = formatPalette[i];
+    });
+
+    // 2. Types
+    const typeSet = new Set();
+    Object.values(lotType.format).forEach(formatObj => {
+      Object.keys(formatObj.types).forEach(type => typeSet.add(type));
+    });
+    const typeValues = Array.from(typeSet);
+    const nTypes = typeValues.length;
+    const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
+    window.colorMapTypesGlobal = {};
+    typeValues.forEach((key, i) => {
+      window.colorMapTypesGlobal[key] = typePalette[i];
+    });
+
+    // 3. Matières
+    const matiereSet = new Set();
+    Object.values(lotType.format).forEach(formatObj => {
+      Object.values(formatObj.types).forEach(typeObj => {
+        if (typeObj.matieres) {
+          Object.keys(typeObj.matieres).forEach(matiere => matiereSet.add(matiere));
+        }
+      });
+    });
+    const matiereValues = Array.from(matiereSet);
+    const nMatieres = matiereValues.length;
+    const matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCool(0.15 + 0.7 * (i / (nMatieres - 1))));
+    window.colorMapMatieresGlobal = {};
+    matiereValues.forEach((key, i) => {
+      window.colorMapMatieresGlobal[key] = matierePalette[i];
+    });
+
+    // 4. Fibres
+    const fibreSet = new Set();
+    Object.values(lotType.format).forEach(formatObj => {
+      Object.values(formatObj.types).forEach(typeObj => {
+        if (typeObj.matieres) {
+          Object.values(typeObj.matieres).forEach(matiereObj => {
+            if (matiereObj.fibres) {
+              Object.keys(matiereObj.fibres).forEach(fibre => fibreSet.add(fibre));
+            }
+          });
+        }
+      });
+    });
+    const fibreValues = Array.from(fibreSet);
+    const nFibres = fibreValues.length;
+    const fibrePalette = Array.from({length: nFibres}, (_, i) => d3.interpolateRainbow(0.15 + 0.7 * (i / (nFibres - 1))));
+    window.colorMapFibresGlobal = {};
+    fibreValues.forEach((key, i) => {
+      window.colorMapFibresGlobal[key] = fibrePalette[i];
+    });
+
     afficherStackbars(lotCourant, cheminSelection);
   });
 
