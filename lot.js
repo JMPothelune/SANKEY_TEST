@@ -4,208 +4,190 @@ let cheminSelection = [];
 // --- Ajout d'une variable globale pour le lot courant (mutable) ---
 let lotCourant = null;
 
-// --- Fonction centrale pour afficher les stackbars selon le chemin ---
+// --- Fonction utilitaire pour obtenir les dimensions accessibles à partir d'un nœud (hors pourcentage, total, title)
+function getDimensionsFromNode(node) {
+  if (!node || typeof node !== 'object') return [];
+  return Object.keys(node).filter(k => {
+    if (["pourcentage", "percent", "name", "titre", "title", "total"].includes(k)) return false;
+    const v = node[k];
+    return typeof v === "object" && v !== null;
+  });
+}
+
+// --- Fonction utilitaire pour obtenir le title d'une dimension ou d'une valeur
+function getTitle(obj, key) {
+  if (!obj) return key;
+  if (obj[key] && obj[key].title) return obj[key].title;
+  if (obj.title) return obj.title;
+  return key;
+}
+
+// --- Fonction centrale pour afficher les stackbars selon le chemin
 function afficherStackbars(lot, chemin) {
   const container = document.getElementById('stackbar-container');
   container.innerHTML = '';
 
-  // Ajout du pattern SVG pour le fond dashed
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.style.position = 'absolute';
-  svg.style.width = '0';
-  svg.style.height = '0';
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-  pattern.setAttribute('id', 'dashed-bg');
-  pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-  pattern.setAttribute('width', '8');
-  pattern.setAttribute('height', '8');
-  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  rect.setAttribute('width', '8');
-  rect.setAttribute('height', '8');
-  rect.setAttribute('fill', '#f5f5f5');
-  pattern.appendChild(rect);
-  defs.appendChild(pattern);
-  svg.appendChild(defs);
-  container.appendChild(svg);
+  let node = lot;
+  let totalKg = lot.total || 0;
+  let pctParent = 100;
+  let niveau = 0;
+  let continuer = true;
+  let cheminCourant = [...chemin];
 
-  // Affiche le poids total du lot en haut dans un button group
-  if (lot.total) {
-    const topBar = document.createElement('div');
-    topBar.className = 'flex items-center justify-between mb-5 w-full';
-    topBar.innerHTML = `
-      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
-        <span class="px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${lot.titre || 'Lot'}</span>
-        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">100%</span>
-        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${Math.round(lot.total)} kg</span>
-      </div>
-      <div class="flex-1 flex justify-center">
-        <div class="inline-flex rounded-lg border border-blue-200 bg-blue-50 text-blue-600 font-semibold shadow items-center h-10 px-6 select-none cursor-default">
-          Format
-        </div>
-      </div>
-      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
-        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-lg" aria-label="Ajouter">
-          <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
-        </button>
-      </div>
-    `;
-
-    // Ajout de l'édition inline du titre du lot
-    setTimeout(() => {
-      const spanTitre = topBar.querySelector('.stackbar-title-nom');
-      if (spanTitre) {
-        spanTitre.addEventListener('click', () => {
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.value = lot.titre || 'Lot';
-          input.className = 'border-l border-gray-300 px-4 h-full font-bold text-base flex items-center outline-none';
-          input.style.width = '8rem';
-          input.style.background = 'white';
-          input.style.textAlign = 'left';
-          spanTitre.replaceWith(input);
-          input.focus();
-          input.select();
-          function saveEdit() {
-            const newTitre = input.value.trim();
-            if (newTitre && newTitre !== lot.titre) {
-              lotCourant.titre = newTitre;
-            }
-            afficherStackbars(lotCourant, cheminSelection);
-          }
-          input.addEventListener('keydown', e => {
-            if (e.key === 'Enter') saveEdit();
-            if (e.key === 'Escape') afficherStackbars(lotCourant, cheminSelection);
-          });
-          input.addEventListener('blur', saveEdit);
-        });
-      }
-    }, 0);
-
-    container.appendChild(topBar);
+  // Si le chemin est vide, on commence par la première dimension
+  if (cheminCourant.length === 0) {
+    const dims = getDimensionsFromNode(node);
+    if (dims.length > 0) {
+      cheminCourant.push({ dimension: dims[0], valeur: null });
+    }
   }
 
-  // 1. Formats
-  const formats = lot.format;
-  const formatKeys = Object.keys(formats);
-  const repartitionFormats = formatKeys.map(key => ({
-    name: key,
-    percent: formats[key].pourcentage
-  }));
-  renderStackbar(repartitionFormats, window.colorMapFormatsGlobal, 'format', null, container, chemin[0]);
+  while (continuer && niveau < 10) { // sécurité anti-boucle infinie
+    const { dimension, valeur } = cheminCourant[niveau] || {};
+    if (!dimension) break;
+    const dims = getDimensionsFromNode(node);
+    // HEADER (titre, navigation, %, poids, button group dimension, actions)
+    const titre = document.createElement('div');
+    titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
+    titre.innerHTML = `
+      <div class="flex items-center justify-between w-full">
+        <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
+          ${niveau > 0 ? `<button class=\"px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left\" aria-label=\"Précédent\"><img src=\"../assets/svg/caret-left.svg\" alt=\"Précédent\" class=\"w-4 h-4\" /></button>` : ''}
+          ${niveau > 0 ? `<button class=\"border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right\" aria-label=\"Suivant\"><img src=\"../assets/svg/caret-right.svg\" alt=\"Suivant\" class=\"w-4 h-4\" /></button>` : ''}
+          <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${niveau === 0 ? (lotCourant.title || 'Lot') : cheminCourant[niveau-1]?.valeur || ''}</span>
+          <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pctParent.toFixed(1)}%</span>
+          <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${(totalKg * pctParent / 100).toFixed(0)} kg</span>
+        </div>
+        <div class="flex-1 flex justify-center">
+          <div class="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm items-center h-10 select-none gap-0">
+            ${dims.map((dim, i) => `
+              <button class="px-4 h-10 font-medium border-gray-300 border-r first:rounded-l-lg last:rounded-r-lg ${dim === dimension ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'} ${i === 0 ? '' : 'border-l'}" data-dimension="${dim}">${dim}</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
+          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-lg" aria-label="Ajouter">
+            <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
+          </button>
+          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-l border-gray-300" aria-label="Supprimer">
+            <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
+          </button>
+          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-lg" aria-label="Fermer">
+            <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
+          </button>
+        </div>
+      </div>`;
+    container.appendChild(titre);
 
-  // 2. Types (si un format sélectionné)
-  if (chemin.length >= 1) {
-    const formatKey = chemin[0];
-    const formatObj = lot.format[formatKey];
-    if (formatObj && formatObj.types) {
-      // Titre format sélectionné
-      const pct = formatObj.pourcentage;
-      const poids = lot.total ? Math.round(lot.total * pct / 100) : '';
-      const titreFormat = creerTitreStackbar(0, formatKey, pct, poids);
-      container.appendChild(titreFormat);
-
-      // Stackbar types
-      const typeKeys = Object.keys(formatObj.types);
-      const repartitionTypes = typeKeys.map(key => ({
-        name: key,
-        percent: formatObj.types[key].pourcentage
-      }));
-      renderStackbar(repartitionTypes, window.colorMapTypesGlobal, 'type', formatKey, container, chemin[1]);
-
-      // 3. Matières (si un type sélectionné)
-      if (chemin.length >= 2) {
-        const typeKey = chemin[1];
-        const typeObj = formatObj.types[typeKey];
-        if (typeObj && typeObj.matieres) {
-          // Titre type sélectionné
-          const pctType = typeObj.pourcentage;
-          const poidsType = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * pctType / 100) : '';
-          const titreType = creerTitreStackbar(1, typeKey, pctType, poidsType);
-          container.appendChild(titreType);
-
-          // Stackbar matières
-          const matiereKeys = Object.keys(typeObj.matieres);
-          const repartitionMatieres = matiereKeys.map(key => ({
-            name: key,
-            percent: typeObj.matieres[key].pourcentage
-          }));
-          renderStackbar(repartitionMatieres, window.colorMapMatieresGlobal, 'matiere', formatKey + '||' + typeKey, container, chemin[2]);
-
-          // 4. Fibres (si une matière sélectionnée)
-          if (chemin.length >= 3) {
-            const matiereKey = chemin[2];
-            const matiereObj = typeObj.matieres[matiereKey];
-            if (matiereObj && matiereObj.fibres) {
-              // Titre matière sélectionnée
-              const pctMat = matiereObj.pourcentage || 0;
-              const poidsMat = lot.total ? Math.round(lot.total * formatObj.pourcentage / 100 * typeObj.pourcentage / 100 * pctMat / 100) : '';
-              const titreMatiere = creerTitreStackbar(2, matiereKey, pctMat, poidsMat);
-              container.appendChild(titreMatiere);
-
-              // Stackbar fibres
-              const fibreKeys = Object.keys(matiereObj.fibres);
-              const repartitionFibres = fibreKeys.map(key => ({
-                name: key,
-                percent: matiereObj.fibres[key]
-              }));
-              renderStackbar(repartitionFibres, window.colorMapFibresGlobal, 'fibre', matiereKey, container, null);
+    // Ajout de la logique pour les boutons gauche/droite (sauf niveau 0)
+    if (niveau > 0) {
+      setTimeout(() => {
+        const btnLeft = titre.querySelector('.stackbar-caret-left');
+        const btnRight = titre.querySelector('.stackbar-caret-right');
+        if (btnLeft || btnRight) {
+          // On veut naviguer entre les frères du niveau parent
+          const dimensionParent = cheminCourant[niveau-1]?.dimension;
+          const valeurParent = cheminCourant[niveau-1]?.valeur;
+          // Trouver le node parent
+          let nodeParent = lot;
+          for (let i = 0; i < niveau-1; i++) {
+            const { dimension, valeur } = cheminCourant[i];
+            if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+              nodeParent = null;
+              break;
             }
+            nodeParent = nodeParent[dimension][valeur];
+          }
+          let siblings = [];
+          if (nodeParent && nodeParent[dimensionParent]) siblings = Object.keys(nodeParent[dimensionParent]).filter(k => k !== 'title');
+          const idx = siblings.indexOf(valeurParent);
+          if (btnLeft) {
+            btnLeft.onclick = () => {
+              if (!siblings.length) return;
+              let newIdx = idx > 0 ? idx - 1 : siblings.length - 1;
+              let newChemin = cheminSelection.slice(0, niveau); // jusqu'au parent inclus
+              newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
+              // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
+              newChemin = newChemin.slice(0, niveau);
+              newChemin.push({ dimension: dimension, valeur: null });
+              cheminSelection = newChemin;
+              afficherStackbars(lotCourant, cheminSelection);
+            };
+          }
+          if (btnRight) {
+            btnRight.onclick = () => {
+              if (!siblings.length) return;
+              let newIdx = idx < siblings.length - 1 && idx !== -1 ? idx + 1 : 0;
+              let newChemin = cheminSelection.slice(0, niveau); // jusqu'au parent inclus
+              newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
+              // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
+              newChemin = newChemin.slice(0, niveau);
+              newChemin.push({ dimension: dimension, valeur: null });
+              cheminSelection = newChemin;
+              afficherStackbars(lotCourant, cheminSelection);
+            };
           }
         }
+      }, 0);
+    }
+
+    // Afficher la stackbar pour la dimension courante
+    if (node[dimension]) {
+      const keys = Object.keys(node[dimension]).filter(k => k !== 'title');
+      let repartition = keys.map(key => {
+        const val = node[dimension][key];
+        let pct = typeof val === 'object' && val.pourcentage !== undefined ? val.pourcentage : (typeof val === 'number' ? val : 0);
+        return { name: key, key, percent: pct };
+      });
+      renderStackbar(
+        repartition,
+        null,
+        dimension,
+        null,
+        container,
+        valeur // sélectionne la valeur si présente
+      );
+    }
+
+    // Si une valeur est sélectionnée, préparer la dimension enfant (sans valeur)
+    if (valeur && node[dimension] && node[dimension][valeur]) {
+      node = node[dimension][valeur];
+      pctParent = typeof node.pourcentage === 'number' ? node.pourcentage : pctParent;
+      const dimsEnfant = getDimensionsFromNode(node);
+      if (dimsEnfant.length > 0) {
+        // Si le chemin n'a pas encore ce niveau, on l'ajoute avec valeur null
+        if (!cheminCourant[niveau+1] || cheminCourant[niveau+1].dimension !== dimsEnfant[0]) {
+          cheminCourant = cheminCourant.slice(0, niveau+1);
+          cheminCourant.push({ dimension: dimsEnfant[0], valeur: null });
+        }
+        niveau++;
+        continue;
       }
     }
+    continuer = false;
   }
+  // Met à jour le chemin global
+  cheminSelection = cheminCourant;
+}
 
-  // Après avoir inséré chaque titre, branche les listeners comme avant (DRY/générique)
-  [...container.querySelectorAll('.stackbar-parent-title')].forEach(titreDiv => {
-    const btnTrash = titreDiv.querySelector('button[aria-label="Supprimer"]');
-    if (btnTrash) {
-      const niveau = parseInt(titreDiv.getAttribute('data-niveau')) || [...container.querySelectorAll('.stackbar-parent-title')].indexOf(titreDiv);
-      btnTrash.dataset.niveau = niveau;
-      btnTrash.onclick = (e) => {
-        const n = parseInt(e.currentTarget.dataset.niveau, 10);
-        supprimerNoeudEtRepartir(n);
-      };
-    }
-    const btnClose = titreDiv.querySelector('button[aria-label="Fermer"]');
-    if (btnClose) {
-      const niveau = parseInt(titreDiv.getAttribute('data-niveau')) || [...container.querySelectorAll('.stackbar-parent-title')].indexOf(titreDiv);
-      btnClose.dataset.niveau = niveau;
-      btnClose.onclick = (e) => {
-        const n = parseInt(e.currentTarget.dataset.niveau, 10);
-        cheminSelection = cheminSelection.slice(0, n);
-        afficherStackbars(lotCourant, cheminSelection);
-      };
-    }
+// --- Initialisation ---
+fetch('../lot_type.json')
+  .then(res => res.json())
+  .then(lotType => {
+    window._lotType = lotType;
+    lotCourant = deepCopy(lotType);
+    cheminSelection = [];
+    afficherStackbars(lotCourant, cheminSelection);
   });
 
-  // À la toute fin de afficherStackbars, ajouter le bouton Enregistrer
-  const saveBar = document.createElement('div');
-  saveBar.className = 'flex justify-end mt-8';
-  saveBar.innerHTML = `
-    <div class="inline-flex rounded-lg shadow-sm">
-      <button class="px-6 py-2 bg-blue text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition">Enregistrer</button>
-    </div>
-  `;
-  container.appendChild(saveBar);
-}
-
-// Ajout d'une fonction utilitaire pour forcer un minimum de pourcentage
-function clampPercent(val, min = 1, max = 100) {
-  return Math.max(min, Math.min(max, val));
-}
-
-// --- renderStackbar modifiée pour la stackbar des formats avec handles ---
+// --- renderStackbar modifiée pour gérer la sélection fluide ---
 function renderStackbar(repartition, colorMap, dimension, parentKey, container, selectedKey) {
   const stackbar = document.createElement('div');
   stackbar.id = `stackbar-${dimension}` + (parentKey ? `-${parentKey}` : '');
   stackbar.className = 'flex w-full h-16 overflow-hidden rounded-xl shadow-sm mb-5 relative';
 
-  // On travaille sur une copie pour pouvoir modifier les valeurs
   let repartitionState = repartition.map(r => ({ ...r }));
 
-  // Fonction pour mettre à jour l'affichage et les valeurs
   function updateSegments() {
     for (let i = 0; i < repartitionState.length; i++) {
       const seg = stackbar.querySelector(`.stackbar-segment[data-idx='${i}']`);
@@ -218,7 +200,6 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     }
   }
 
-  // Fonction pour mettre à jour lotCourant selon le niveau
   function updateLotCourant() {
     if (dimension === 'format') {
       for (let i = 0; i < repartitionState.length; i++) {
@@ -251,18 +232,20 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     segment.className = 'stackbar-segment flex items-center justify-center relative font-bold text-base transition-all duration-200';
     segment.setAttribute('data-idx', i);
     let fillColor;
-    if (colorMap[item.name]) {
+    const t = repartitionState.length > 1 ? i / (repartitionState.length - 1) : 0.5;
+    if (colorMap && colorMap[item.name]) {
       fillColor = d3.color(colorMap[item.name]);
     } else {
-      // fallback palette selon le niveau
-      if (dimension === 'format') fillColor = d3.color(d3.interpolateYlGn(0.5));
-      else if (dimension === 'type') fillColor = d3.color(d3.interpolatePlasma(0.5));
-      else if (dimension === 'matiere') fillColor = d3.color(d3.interpolateCool(0.5));
-      else if (dimension === 'fibre') fillColor = d3.color(d3.interpolateRainbow(0.5));
+      if (dimension === 'format' || dimension === 'formats') fillColor = d3.color(d3.interpolateYlGn(t));
+      else if (dimension === 'type' || dimension === 'types') fillColor = d3.color(d3.interpolatePlasma(t));
+      else if (dimension === 'matiere' || dimension === 'matieres') fillColor = d3.color(d3.interpolateCool(t));
+      else if (dimension === 'fibre' || dimension === 'fibres') {
+        const tFibres = repartitionState.length > 1 ? (0.15 + 0.7 * (i / (repartitionState.length - 1))) : 0.5;
+        fillColor = d3.color(d3.interpolateRainbow(tFibres));
+      }
       else fillColor = d3.color('#bbb');
     }
     const isUnknown = ['inconnu', 'autre', 'autres compositions'].includes(item.name.toLowerCase());
-    
     if (isUnknown) {
       segment.style.background = 'repeating-linear-gradient(135deg, #f5f5f5, #f5f5f5 2px, #e0e0e0 2px, #e0e0e0 4px)';
       segment.style.border = '1px solid #bbb';
@@ -277,6 +260,7 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     if (selectedKey === item.name) {
       segment.classList.add('selected');
       segment.style.border = `4px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
+      segment.style.opacity = '1';
     } else if (selectedKey) {
       segment.style.opacity = '0.4';
     } else {
@@ -293,16 +277,32 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     // Sélection
     segment.style.cursor = 'pointer';
     segment.addEventListener('click', () => {
-      let newChemin = [];
-      if (dimension === 'format') newChemin = [item.name];
-      if (dimension === 'type') newChemin = [parentKey, item.name];
-      if (dimension === 'matiere') newChemin = [parentKey.split('||')[0], parentKey.split('||')[1], item.name];
-      if (dimension === 'fibre') newChemin = [parentKey.split('||')[0], parentKey.split('||')[1], parentKey.split('||')[2], item.name];
+      // Trouver le niveau courant dans cheminSelection par la dimension
+      let niveau = cheminSelection.findIndex(sel => sel.dimension === dimension);
+      if (niveau === -1) niveau = cheminSelection.length - 1;
+      let newChemin = cheminSelection.slice(0, niveau);
+      newChemin.push({ dimension: dimension, valeur: item.name });
+      // Chercher la dimension enfant éventuelle
+      let node = lotCourant;
+      for (let i = 0; i < newChemin.length; i++) {
+        const { dimension, valeur } = newChemin[i];
+        if (!node[dimension] || !valeur || !node[dimension][valeur]) {
+          node = null;
+          break;
+        }
+        node = node[dimension][valeur];
+      }
+      if (node) {
+        const dimsEnfant = getDimensionsFromNode(node);
+        if (dimsEnfant.length > 0) {
+          newChemin.push({ dimension: dimsEnfant[0], valeur: null });
+        }
+      }
       cheminSelection = newChemin;
       afficherStackbars(lotCourant, cheminSelection);
     });
     stackbar.appendChild(segment);
-    // Handle (sauf après le dernier segment)
+    // Handle (inchangé)
     if (i < repartitionState.length - 1) {
       const handle = document.createElement('button');
       handle.type = 'button';
@@ -361,6 +361,11 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
   container.appendChild(stackbar);
 }
 
+// Ajout d'une fonction utilitaire pour forcer un minimum de pourcentage
+function clampPercent(val, min = 1, max = 100) {
+  return Math.max(min, Math.min(max, val));
+}
+
 // --- Deep copy utilitaire ---
 function deepCopy(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -413,13 +418,24 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   const titre = document.createElement('div');
   titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
 
+  // Trouver le nœud courant dans lotCourant selon cheminSelection et niveau
+  let node = lotCourant;
+  for (let i = 0; i <= niveau; i++) {
+    if (i === 0) node = node.format ? node.format[cheminSelection[0]] : node[cheminSelection[0]];
+    else if (i === 1) node = node.types ? node.types[cheminSelection[1]] : node[cheminSelection[1]];
+    else if (i === 2) node = node.matieres ? node.matieres[cheminSelection[2]] : node[cheminSelection[2]];
+    else if (i === 3) node = node.fibres ? node.fibres[cheminSelection[3]] : node[cheminSelection[3]];
+    if (!node) break;
+  }
+  // Dimensions accessibles à ce niveau
+  const dims = getDimensionsFromNode(node ? node : lotCourant);
   // Détermination du label de dimension (niveau+1)
   let labelText = '';
-  if (niveau + 1 === 0) labelText = 'Format';
-  else if (niveau + 1 === 1) labelText = 'Type';
-  else if (niveau + 1 === 2) labelText = 'Matière';
-  else if (niveau + 1 === 3) labelText = 'Fibre';
-
+  if (niveau + 1 === 0) labelText = 'format';
+  else if (niveau + 1 === 1) labelText = 'types';
+  else if (niveau + 1 === 2) labelText = 'matieres';
+  else if (niveau + 1 === 3) labelText = 'fibres';
+  // Génération du button group dimension
   titre.innerHTML = `
     <div class="flex items-center justify-between w-full">
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
@@ -434,8 +450,10 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
       </div>
       <div class="flex-1 flex justify-center">
-        <div class="inline-flex rounded-lg border border-blue-200 bg-blue-50 text-blue-600 font-semibold shadow items-center h-10 px-6 select-none cursor-default">
-          ${labelText}
+        <div class="inline-flex rounded-lg border border-blue-200 bg-blue-50 text-blue-600 font-semibold shadow items-center h-10 px-2 select-none gap-2">
+          ${dims.map(dim => `
+            <button class="px-4 h-8 rounded-md ${dim === labelText ? 'bg-blue-50 text-blue-600 font-semibold shadow border border-blue-200' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'}">${dim.charAt(0).toUpperCase() + dim.slice(1).toLowerCase()}</button>
+          `).join('')}
         </div>
       </div>
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
@@ -456,9 +474,10 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
     const spanNom = titre.querySelector('.stackbar-title-nom');
     if (spanNom) {
       spanNom.addEventListener('click', () => {
+        const oldName = spanNom.textContent;
         const input = document.createElement('input');
         input.type = 'text';
-        input.value = nom;
+        input.value = oldName;
         input.className = 'border-l border-gray-300 px-4 h-full font-bold text-base flex items-center outline-none';
         input.style.width = '8rem';
         input.style.background = 'white';
@@ -468,66 +487,41 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         input.select();
         function saveEdit() {
           const newName = input.value.trim();
-          if (newName && newName !== nom) {
-            // Renommage dans lotCourant selon le niveau
-            let parent;
+          if (newName && newName !== oldName) {
             if (niveau === 0) {
-              parent = lotCourant.format;
-            } else if (niveau === 1) {
-              parent = lotCourant.format[cheminSelection[0]].types;
-            } else if (niveau === 2) {
-              parent = lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres;
-            } else if (niveau === 3) {
-              parent = lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres[cheminSelection[2]].fibres;
-            }
-            if (parent && parent[nom] !== undefined && parent[newName] === undefined) {
-              // Sauvegarde la couleur de l'ancienne clé
-              let oldColor;
-              if (niveau === 0) oldColor = window.colorMapFormatsGlobal[nom];
-              else if (niveau === 1) oldColor = window.colorMapTypesGlobal[nom];
-              else if (niveau === 2) oldColor = window.colorMapMatieresGlobal[nom];
-              else if (niveau === 3) oldColor = window.colorMapFibresGlobal[nom];
-
-              // Conserve l'ordre : reconstruit l'objet avec la nouvelle clé à la même position
-              const entries = Object.entries(parent);
-              const idx = entries.findIndex(([k]) => k === nom);
-              if (idx !== -1) {
-                const newEntries = [
-                  ...entries.slice(0, idx),
-                  [newName, parent[nom]],
-                  ...entries.slice(idx + 1)
-                ];
-                const newObj = {};
-                newEntries.forEach(([k, v]) => { newObj[k] = v; });
-                // Remplace l'objet parent au bon endroit
-                if (niveau === 0) {
-                  lotCourant.format = newObj;
-                  // Met à jour le mapping des couleurs
-                  if (oldColor) {
-                    window.colorMapFormatsGlobal[newName] = oldColor;
-                    delete window.colorMapFormatsGlobal[nom];
-                  }
-                } else if (niveau === 1) {
-                  lotCourant.format[cheminSelection[0]].types = newObj;
-                  if (oldColor) {
-                    window.colorMapTypesGlobal[newName] = oldColor;
-                    delete window.colorMapTypesGlobal[nom];
-                  }
-                } else if (niveau === 2) {
-                  lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres = newObj;
-                  if (oldColor) {
-                    window.colorMapMatieresGlobal[newName] = oldColor;
-                    delete window.colorMapMatieresGlobal[nom];
-                  }
-                } else if (niveau === 3) {
-                  lotCourant.format[cheminSelection[0]].types[cheminSelection[1]].matieres[cheminSelection[2]].fibres = newObj;
-                  if (oldColor) {
-                    window.colorMapFibresGlobal[newName] = oldColor;
-                    delete window.colorMapFibresGlobal[nom];
+              lotCourant.title = newName;
+            } else {
+              // Renommage d'un segment à un niveau > 0
+              // Trouver le parent
+              let parent = lotCourant;
+              for (let i = 0; i < niveau-1; i++) {
+                const { dimension, valeur } = cheminSelection[i];
+                if (!parent[dimension] || !valeur || !parent[dimension][valeur]) {
+                  parent = null;
+                  break;
+                }
+                parent = parent[dimension][valeur];
+              }
+              const dim = cheminSelection[niveau-1]?.dimension;
+              const val = cheminSelection[niveau-1]?.valeur;
+              if (parent && dim && val && parent[dim] && parent[dim][oldName] && !parent[dim][newName]) {
+                // Conserve l'ordre
+                const entries = Object.entries(parent[dim]);
+                const idx = entries.findIndex(([k]) => k === oldName);
+                if (idx !== -1) {
+                  const newEntries = [
+                    ...entries.slice(0, idx),
+                    [newName, parent[dim][oldName]],
+                    ...entries.slice(idx + 1)
+                  ];
+                  const newObj = {};
+                  newEntries.forEach(([k, v]) => { newObj[k] = v; });
+                  parent[dim] = newObj;
+                  // Met à jour cheminSelection si besoin
+                  if (cheminSelection[niveau-1].valeur === oldName) {
+                    cheminSelection[niveau-1].valeur = newName;
                   }
                 }
-                // Met à jour le cheminSelection
-                cheminSelection[niveau] = newName;
               }
             }
           }
@@ -590,76 +584,4 @@ function naviguerSiblingStackbar(niveau, direction) {
   cheminSelection = chemin.slice(0, niveau + 1);
   afficherStackbars(lotCourant, cheminSelection);
 }
-
-// --- Chargement initial ---
-fetch('../lot_type.json')
-  .then(res => res.json())
-  .then(lotType => {
-    window._lotType = lotType;
-    lotCourant = deepCopy(lotType);
-    cheminSelection = [];
-
-    // Génération des mappings globaux pour chaque dimension
-    // 1. Formats
-    const formatValues = Object.keys(lotType.format);
-    const nFormats = formatValues.length;
-    const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
-    window.colorMapFormatsGlobal = {};
-    formatValues.forEach((key, i) => {
-      window.colorMapFormatsGlobal[key] = formatPalette[i];
-    });
-
-    // 2. Types
-    const typeSet = new Set();
-    Object.values(lotType.format).forEach(formatObj => {
-      Object.keys(formatObj.types).forEach(type => typeSet.add(type));
-    });
-    const typeValues = Array.from(typeSet);
-    const nTypes = typeValues.length;
-    const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
-    window.colorMapTypesGlobal = {};
-    typeValues.forEach((key, i) => {
-      window.colorMapTypesGlobal[key] = typePalette[i];
-    });
-
-    // 3. Matières
-    const matiereSet = new Set();
-    Object.values(lotType.format).forEach(formatObj => {
-      Object.values(formatObj.types).forEach(typeObj => {
-        if (typeObj.matieres) {
-          Object.keys(typeObj.matieres).forEach(matiere => matiereSet.add(matiere));
-        }
-      });
-    });
-    const matiereValues = Array.from(matiereSet);
-    const nMatieres = matiereValues.length;
-    const matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCool(0.15 + 0.7 * (i / (nMatieres - 1))));
-    window.colorMapMatieresGlobal = {};
-    matiereValues.forEach((key, i) => {
-      window.colorMapMatieresGlobal[key] = matierePalette[i];
-    });
-
-    // 4. Fibres
-    const fibreSet = new Set();
-    Object.values(lotType.format).forEach(formatObj => {
-      Object.values(formatObj.types).forEach(typeObj => {
-        if (typeObj.matieres) {
-          Object.values(typeObj.matieres).forEach(matiereObj => {
-            if (matiereObj.fibres) {
-              Object.keys(matiereObj.fibres).forEach(fibre => fibreSet.add(fibre));
-            }
-          });
-        }
-      });
-    });
-    const fibreValues = Array.from(fibreSet);
-    const nFibres = fibreValues.length;
-    const fibrePalette = Array.from({length: nFibres}, (_, i) => d3.interpolateRainbow(0.15 + 0.7 * (i / (nFibres - 1))));
-    window.colorMapFibresGlobal = {};
-    fibreValues.forEach((key, i) => {
-      window.colorMapFibresGlobal[key] = fibrePalette[i];
-    });
-
-    afficherStackbars(lotCourant, cheminSelection);
-  });
 
