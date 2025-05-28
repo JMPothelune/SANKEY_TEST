@@ -47,37 +47,39 @@ function afficherStackbars(lot, chemin) {
     if (!dimension) break;
     const dims = getDimensionsFromNode(node);
     // HEADER (titre, navigation, %, poids, button group dimension, actions)
-    const titre = document.createElement('div');
-    titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
-    titre.innerHTML = `
-      <div class="flex items-center justify-between w-full">
-        <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
-          ${niveau > 0 ? `<button class=\"px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left\" aria-label=\"Précédent\"><img src=\"../assets/svg/caret-left.svg\" alt=\"Précédent\" class=\"w-4 h-4\" /></button>` : ''}
-          ${niveau > 0 ? `<button class=\"border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right\" aria-label=\"Suivant\"><img src=\"../assets/svg/caret-right.svg\" alt=\"Suivant\" class=\"w-4 h-4\" /></button>` : ''}
-          <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${niveau === 0 ? (lotCourant.title || 'Lot') : cheminCourant[niveau-1]?.valeur || ''}</span>
-          <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pctParent.toFixed(1)}%</span>
-          <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${(totalKg * pctParent / 100).toFixed(0)} kg</span>
-        </div>
-        <div class="flex-1 flex justify-center">
-          <div class="inline-flex rounded-lg border border-gray-300 bg-white shadow-sm items-center h-10 select-none gap-0">
-            ${dims.map((dim, i) => `
-              <button class="px-4 h-10 font-medium border-gray-300 border-r first:rounded-l-lg last:rounded-r-lg ${dim === dimension ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'} ${i === 0 ? '' : 'border-l'}" data-dimension="${dim}">${dim}</button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
-          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-lg" aria-label="Ajouter">
-            <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
-          </button>
-          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-l border-gray-300" aria-label="Supprimer">
-            <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
-          </button>
-          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-lg" aria-label="Fermer">
-            <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
-          </button>
-        </div>
-      </div>`;
+    const titre = creerTitreStackbar(niveau, 
+      niveau === 0 ? (lotCourant.title || 'Lot') : cheminCourant[niveau-1]?.valeur || '',
+      pctParent,
+      totalKg * pctParent / 100
+    );
     container.appendChild(titre);
+
+    // Attacher le handler du bouton X juste après
+    if (niveau > 0) {
+      const btnClose = titre.querySelector('button[aria-label="Fermer"]');
+      if (btnClose) {
+        btnClose.onclick = () => {
+          cheminSelection = cheminSelection.slice(0, niveau);
+          afficherStackbars(lotCourant, cheminSelection);
+        };
+      }
+
+      // Attacher le handler du bouton Supprimer
+      const btnDelete = titre.querySelector('button[aria-label="Supprimer"]');
+      if (btnDelete) {
+        btnDelete.onclick = () => {
+          supprimerNoeudEtRepartir(niveau);
+        };
+      }
+
+      // Attacher le handler du bouton Ajouter
+      const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
+      if (btnAdd) {
+        btnAdd.onclick = () => {
+          // TODO: Implémenter l'ajout d'un nouveau segment
+        };
+      }
+    }
 
     // Ajout de la logique pour les boutons gauche/droite (sauf niveau 0)
     if (niveau > 0) {
@@ -439,12 +441,14 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   titre.innerHTML = `
     <div class="flex items-center justify-between w-full">
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
-        <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
-          <img src="../assets/svg/caret-left.svg" alt="Précédent" class="w-4 h-4" />
-        </button>
-        <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
-          <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
-        </button>
+        ${niveau > 0 ? `
+          <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
+            <img src="../assets/svg/caret-left.svg" alt="Précédent" class="w-4 h-4" />
+          </button>
+          <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
+            <img src="../assets/svg/caret-right.svg" alt="Suivant" class="w-4 h-4" />
+          </button>
+        ` : ''}
         <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg} kg` : ''}</span>
@@ -457,15 +461,17 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         </div>
       </div>
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
-        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg border-r border-gray-300" aria-label="Ajouter">
+        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg ${niveau > 0 ? 'border-r border-gray-300' : ''}" aria-label="Ajouter">
           <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
         </button>
-        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300" aria-label="Supprimer">
-          <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
-        </button>
-        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg" aria-label="Fermer">
-          <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
-        </button>
+        ${niveau > 0 ? `
+          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300" aria-label="Supprimer">
+            <img src="../assets/svg/trash.svg" alt="Supprimer" class="w-4 h-4" />
+          </button>
+          <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg" aria-label="Fermer">
+            <img src="../assets/svg/x.svg" alt="Fermer" class="w-4 h-4" />
+          </button>
+        ` : ''}
       </div>
     </div>`;
 
