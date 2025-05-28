@@ -251,26 +251,24 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
   }
 
   function updateLotCourant() {
-    if (dimension === 'format') {
-      for (let i = 0; i < repartitionState.length; i++) {
-        lotCourant.format[repartitionState[i].name].pourcentage = repartitionState[i].percent;
-      }
-    } else if (dimension === 'type') {
-      const formatKey = parentKey;
-      for (let i = 0; i < repartitionState.length; i++) {
-        lotCourant.format[formatKey].types[repartitionState[i].name].pourcentage = repartitionState[i].percent;
-      }
-    } else if (dimension === 'matiere') {
-      const [formatKey, typeKey] = parentKey.split('||');
-      for (let i = 0; i < repartitionState.length; i++) {
-        lotCourant.format[formatKey].types[typeKey].matieres[repartitionState[i].name].pourcentage = repartitionState[i].percent;
-      }
-    } else if (dimension === 'fibre') {
-      // parentKey = matiereKey, il faut retrouver le chemin complet
-      // On le retrouve via cheminSelection
-      const [formatKey, typeKey, matiereKey] = cheminSelection;
-      for (let i = 0; i < repartitionState.length; i++) {
-        lotCourant.format[formatKey].types[typeKey].matieres[matiereKey].fibres[repartitionState[i].name] = repartitionState[i].percent;
+    // On veut trouver le parent qui contient la liste à modifier
+    // On part de lotCourant, on descend le chemin jusqu'à l'avant-dernier niveau pour la dimension courante
+    let node = lotCourant;
+    for (let i = 0; i < cheminSelection.length; i++) {
+      const { dimension: dim, valeur } = cheminSelection[i];
+      // On s'arrête juste avant la dimension courante
+      if (dim === dimension) break;
+      if (!node[dim] || !valeur || !node[dim][valeur]) return;
+      node = node[dim][valeur];
+    }
+    // Maintenant, node[dimension] est la liste à modifier
+    if (!node[dimension]) return;
+    for (let i = 0; i < repartitionState.length; i++) {
+      const key = repartitionState[i].name;
+      if (typeof node[dimension][key] === 'object') {
+        node[dimension][key].pourcentage = repartitionState[i].percent;
+      } else {
+        node[dimension][key] = repartitionState[i].percent;
       }
     }
   }
