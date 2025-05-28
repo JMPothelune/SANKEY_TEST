@@ -1,4 +1,4 @@
-// --- Ajout d'une variable globale pour le chemin de sélection ---
+// --- Nouvelle structure pour le chemin ---
 let cheminSelection = [];
 
 // --- Ajout d'une variable globale pour le lot courant (mutable) ---
@@ -22,7 +22,56 @@ function getTitle(obj, key) {
   return key;
 }
 
-// --- Fonction centrale pour afficher les stackbars selon le chemin
+// --- Fonction utilitaire pour manipuler le chemin ---
+const CheminManager = {
+  // Ajouter une dimension avec ou sans valeur
+  ajouterDimension: (dimension, valeur = null) => {
+    cheminSelection.push({ dimension, valeur });
+  },
+
+  // Mettre à jour la valeur d'une dimension existante
+  mettreAJourValeur: (niveau, valeur) => {
+    if (niveau >= 0 && niveau < cheminSelection.length) {
+      cheminSelection[niveau].valeur = valeur;
+    }
+  },
+
+  // Tronquer le chemin à un niveau donné
+  tronquer: (niveau) => {
+    cheminSelection = cheminSelection.slice(0, niveau);
+  },
+
+  // Obtenir le chemin jusqu'à un niveau donné
+  getCheminJusquA: (niveau) => {
+    return cheminSelection.slice(0, niveau);
+  },
+
+  // Obtenir la dimension et la valeur à un niveau donné
+  getNiveau: (niveau) => {
+    return niveau >= 0 && niveau < cheminSelection.length ? cheminSelection[niveau] : null;
+  },
+
+  // Vérifier si une dimension a une valeur à un niveau donné
+  aValeur: (niveau) => {
+    return niveau >= 0 && niveau < cheminSelection.length && cheminSelection[niveau].valeur !== null;
+  },
+
+  // Obtenir le node correspondant au chemin actuel
+  getNode: (lot) => {
+    let node = lot;
+    for (const { dimension, valeur } of cheminSelection) {
+      if (!valeur) break; // On s'arrête si on trouve une dimension sans valeur
+      if (!node[dimension] || !node[dimension][valeur]) {
+        node = null;
+        break;
+      }
+      node = node[dimension][valeur];
+    }
+    return node;
+  }
+};
+
+// --- Fonction centrale pour afficher les stackbars selon le chemin ---
 function afficherStackbars(lot, chemin) {
   const container = document.getElementById('stackbar-container');
   container.innerHTML = '';
@@ -30,25 +79,26 @@ function afficherStackbars(lot, chemin) {
   let node = lot;
   let totalKg = lot.total || 0;
   let pctParent = 100;
-  let niveau = 0;
-  let continuer = true;
-  let cheminCourant = [...chemin];
 
   // Si le chemin est vide, on commence par la première dimension
-  if (cheminCourant.length === 0) {
+  if (cheminSelection.length === 0) {
     const dims = getDimensionsFromNode(node);
     if (dims.length > 0) {
-      cheminCourant.push({ dimension: dims[0], valeur: null });
+      CheminManager.ajouterDimension(dims[0]);
     }
   }
 
-  while (continuer && niveau < 10) { // sécurité anti-boucle infinie
-    const { dimension, valeur } = cheminCourant[niveau] || {};
-    if (!dimension) break;
-    const dims = getDimensionsFromNode(node);
+  // On parcourt le cheminSelection pour afficher chaque niveau
+  for (let niveau = 0; niveau < cheminSelection.length; niveau++) {
+    const niveauCourant = CheminManager.getNiveau(niveau);
+    if (!niveauCourant) break;
+
+    const { dimension, valeur } = niveauCourant;
+
     // HEADER (titre, navigation, %, poids, button group dimension, actions)
-    const titre = creerTitreStackbar(niveau, 
-      niveau === 0 ? (lotCourant.title || 'Lot') : cheminCourant[niveau-1]?.valeur || '',
+    const titre = creerTitreStackbar(
+      niveau, // <-- niveau FIXE pour ce header
+      niveau === 0 ? (lotCourant.title || 'Lot') : CheminManager.getNiveau(niveau-1)?.valeur || '',
       pctParent,
       totalKg * pctParent / 100
     );
@@ -59,7 +109,7 @@ function afficherStackbars(lot, chemin) {
       const btnClose = titre.querySelector('button[aria-label="Fermer"]');
       if (btnClose) {
         btnClose.onclick = () => {
-          cheminSelection = cheminSelection.slice(0, niveau);
+          CheminManager.tronquer(niveau);
           afficherStackbars(lotCourant, cheminSelection);
         };
       }
@@ -88,12 +138,12 @@ function afficherStackbars(lot, chemin) {
         const btnRight = titre.querySelector('.stackbar-caret-right');
         if (btnLeft || btnRight) {
           // On veut naviguer entre les frères du niveau parent
-          const dimensionParent = cheminCourant[niveau-1]?.dimension;
-          const valeurParent = cheminCourant[niveau-1]?.valeur;
+          const dimensionParent = CheminManager.getNiveau(niveau-1)?.dimension;
+          const valeurParent = CheminManager.getNiveau(niveau-1)?.valeur;
           // Trouver le node parent
           let nodeParent = lot;
           for (let i = 0; i < niveau-1; i++) {
-            const { dimension, valeur } = cheminCourant[i];
+            const { dimension, valeur } = CheminManager.getNiveau(i);
             if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
               nodeParent = null;
               break;
@@ -107,7 +157,7 @@ function afficherStackbars(lot, chemin) {
             btnLeft.onclick = () => {
               if (!siblings.length) return;
               let newIdx = idx > 0 ? idx - 1 : siblings.length - 1;
-              let newChemin = cheminSelection.slice(0, niveau); // jusqu'au parent inclus
+              let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
               newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
               // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
               newChemin = newChemin.slice(0, niveau);
@@ -120,7 +170,7 @@ function afficherStackbars(lot, chemin) {
             btnRight.onclick = () => {
               if (!siblings.length) return;
               let newIdx = idx < siblings.length - 1 && idx !== -1 ? idx + 1 : 0;
-              let newChemin = cheminSelection.slice(0, niveau); // jusqu'au parent inclus
+              let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
               newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
               // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
               newChemin = newChemin.slice(0, niveau);
@@ -151,25 +201,23 @@ function afficherStackbars(lot, chemin) {
       );
     }
 
-    // Si une valeur est sélectionnée, préparer la dimension enfant (sans valeur)
+    // Préparer le niveau suivant si une valeur est sélectionnée
     if (valeur && node[dimension] && node[dimension][valeur]) {
       node = node[dimension][valeur];
       pctParent = typeof node.pourcentage === 'number' ? node.pourcentage : pctParent;
       const dimsEnfant = getDimensionsFromNode(node);
       if (dimsEnfant.length > 0) {
         // Si le chemin n'a pas encore ce niveau, on l'ajoute avec valeur null
-        if (!cheminCourant[niveau+1] || cheminCourant[niveau+1].dimension !== dimsEnfant[0]) {
-          cheminCourant = cheminCourant.slice(0, niveau+1);
-          cheminCourant.push({ dimension: dimsEnfant[0], valeur: null });
+        if (!CheminManager.getNiveau(niveau + 1)) {
+          CheminManager.ajouterDimension(dimsEnfant[0]);
         }
-        niveau++;
+        // On continue la boucle (niveau+1)
         continue;
       }
     }
-    continuer = false;
+    // Si pas de valeur ou pas de dimension enfant, on arrête
+    break;
   }
-  // Met à jour le chemin global
-  cheminSelection = cheminCourant;
 }
 
 // --- Initialisation ---
@@ -419,6 +467,7 @@ function supprimerNoeudEtRepartir(niveau) {
 function creerTitreStackbar(niveau, nom, pct, kg) {
   const titre = document.createElement('div');
   titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
+  titre.dataset.niveau = niveau;
 
   // Trouver le nœud courant dans lotCourant selon cheminSelection et niveau
   let node = lotCourant;
@@ -543,14 +592,15 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
     // Navigation carets
     const btnLeft = titre.querySelector('.stackbar-caret-left');
     const btnRight = titre.querySelector('.stackbar-caret-right');
-    if (btnLeft) {
+    const niveauHeader = parseInt(titre.dataset.niveau, 10);
+    if (btnLeft && niveauHeader > 0) {
       btnLeft.onclick = () => {
-        naviguerSiblingStackbar(niveau, -1);
+        naviguerSiblingStackbar(niveauHeader - 1, -1);
       };
     }
-    if (btnRight) {
+    if (btnRight && niveauHeader > 0) {
       btnRight.onclick = () => {
-        naviguerSiblingStackbar(niveau, +1);
+        naviguerSiblingStackbar(niveauHeader - 1, +1);
       };
     }
   }, 0);
@@ -560,34 +610,51 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
 
 // Fonction utilitaire pour naviguer entre les éléments frères d'un niveau
 function naviguerSiblingStackbar(niveau, direction) {
-  // Récupère la clé courante au niveau
-  const chemin = [...cheminSelection];
-  if (chemin.length <= niveau) return;
-  const cleCourante = chemin[niveau];
-  let siblings = [];
-  if (niveau === 0) {
-    siblings = Object.keys(lotCourant.format);
-  } else if (niveau === 1) {
-    const formatKey = chemin[0];
-    siblings = lotCourant.format[formatKey] && lotCourant.format[formatKey].types ? Object.keys(lotCourant.format[formatKey].types) : [];
-  } else if (niveau === 2) {
-    const formatKey = chemin[0];
-    const typeKey = chemin[1];
-    siblings = lotCourant.format[formatKey] && lotCourant.format[formatKey].types && lotCourant.format[formatKey].types[typeKey] && lotCourant.format[formatKey].types[typeKey].matieres ? Object.keys(lotCourant.format[formatKey].types[typeKey].matieres) : [];
-  } else if (niveau === 3) {
-    const formatKey = chemin[0];
-    const typeKey = chemin[1];
-    const matiereKey = chemin[2];
-    siblings = lotCourant.format[formatKey] && lotCourant.format[formatKey].types && lotCourant.format[formatKey].types[typeKey] && lotCourant.format[formatKey].types[typeKey].matieres && lotCourant.format[formatKey].types[typeKey].matieres[matiereKey] && lotCourant.format[formatKey].types[typeKey].matieres[matiereKey].fibres ? Object.keys(lotCourant.format[formatKey].types[typeKey].matieres[matiereKey].fibres) : [];
+  // Récupère le niveau courant
+  const niveauCourant = CheminManager.getNiveau(niveau);
+  if (!niveauCourant) return;
+
+  // Récupère le node parent
+  let nodeParent = lotCourant;
+  for (let i = 0; i < niveau; i++) {
+    const niveauParent = CheminManager.getNiveau(i);
+    if (!niveauParent || !niveauParent.valeur) {
+      nodeParent = null;
+      break;
+    }
+    if (!nodeParent[niveauParent.dimension] || !nodeParent[niveauParent.dimension][niveauParent.valeur]) {
+      nodeParent = null;
+      break;
+    }
+    nodeParent = nodeParent[niveauParent.dimension][niveauParent.valeur];
   }
+
+  // Récupère les siblings (frères) du niveau courant
+  let siblings = [];
+  if (nodeParent && niveauCourant.dimension) {
+    siblings = Object.keys(nodeParent[niveauCourant.dimension]).filter(k => k !== 'title');
+  }
+
   if (!siblings.length) return;
-  const idx = siblings.indexOf(cleCourante);
+
+  // Trouve l'index du sibling courant
+  const idx = siblings.indexOf(niveauCourant.valeur);
   if (idx === -1) return;
+
+  // Calcule le nouvel index
   let newIdx = idx + direction;
   if (newIdx < 0) newIdx = siblings.length - 1;
   if (newIdx >= siblings.length) newIdx = 0;
-  chemin[niveau] = siblings[newIdx];
-  cheminSelection = chemin.slice(0, niveau + 1);
+
+  // Met à jour le chemin
+  CheminManager.mettreAJourValeur(niveau, siblings[newIdx]);
+  
+  // Si on a une dimension enfant, on la réinitialise
+  if (CheminManager.getNiveau(niveau + 1)) {
+    CheminManager.tronquer(niveau + 1);
+  }
+
+  // Rafraîchit l'affichage
   afficherStackbars(lotCourant, cheminSelection);
 }
 
