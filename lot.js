@@ -281,17 +281,44 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     segment.setAttribute('data-idx', i);
     let fillColor;
     const t = repartitionState.length > 1 ? i / (repartitionState.length - 1) : 0.5;
-    if (colorMap && colorMap[item.name]) {
+
+    // Palette statique pour les couleurs
+    const couleurMap = {
+      'noir': '#222',
+      'blanc': '#f5f5f5',
+      'bleu': '#2980b9',
+      'gris': '#7f8c8d',
+      'marron': '#8d5524',
+      'rouge': '#e74c3c',
+      'vert': '#27ae60',
+      'violet': '#8e44ad',
+      'orange': '#e67e22',
+      'jaune': '#f1c40f',
+      'inconnu': '#b2bec3',
+      'multicolore': '#fd79a8'
+    };
+
+    if (dimension === 'couleur' || dimension === 'couleurs') {
+      fillColor = d3.color(couleurMap[item.name] || '#bbb');
+    } else if (colorMap && colorMap[item.name]) {
       fillColor = d3.color(colorMap[item.name]);
     } else {
-      if (dimension === 'format' || dimension === 'formats') fillColor = d3.color(d3.interpolateYlGn(t));
-      else if (dimension === 'type' || dimension === 'types') fillColor = d3.color(d3.interpolatePlasma(t));
-      else if (dimension === 'matiere' || dimension === 'matieres') fillColor = d3.color(d3.interpolateCool(t));
-      else if (dimension === 'fibre' || dimension === 'fibres') {
+      if (dimension === 'format' || dimension === 'formats') {
+        fillColor = d3.color(d3.interpolateYlGn(t));
+      } else if (dimension === 'type' || dimension === 'types') {
+        fillColor = d3.color(d3.interpolatePlasma(t));
+      } else if (dimension === 'matiere' || dimension === 'matieres') {
+        fillColor = d3.color(d3.interpolateCool(t));
+      } else if (dimension === 'fibre' || dimension === 'fibres') {
         const tFibres = repartitionState.length > 1 ? (0.15 + 0.7 * (i / (repartitionState.length - 1))) : 0.5;
         fillColor = d3.color(d3.interpolateRainbow(tFibres));
+      } else if (dimension === 'qualite') {
+        fillColor = d3.color(d3.interpolateOranges(t));
+      } else if (dimension === 'proprete') {
+        fillColor = d3.color(d3.interpolateBlues(t));
+      } else {
+        fillColor = d3.color('#bbb');
       }
-      else fillColor = d3.color('#bbb');
     }
     const isUnknown = ['inconnu', 'autre', 'autres compositions'].includes(item.name.toLowerCase());
     if (isUnknown) {
