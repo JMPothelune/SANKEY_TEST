@@ -614,12 +614,35 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
     }
 
     // Ajout des listeners sur les boutons de dimension
-    const btnDims = titre.querySelectorAll('.inline-flex button');
+    const btnGroupDims = titre.querySelector('.flex-1 .inline-flex');
+    const btnDims = btnGroupDims ? btnGroupDims.querySelectorAll('button') : [];
     btnDims.forEach((btn, idx) => {
       const dim = dims[idx];
       btn.onclick = () => {
-        cheminSelection = cheminSelection.slice(0, niveau);
-        cheminSelection.push({ dimension: dim, valeur: null });
+        if (cheminSelection[niveau]?.dimension === dim) return;
+
+        let newChemin = cheminSelection.slice(0, niveau);
+        newChemin.push({ dimension: dim, valeur: null });
+
+        let nodeParent = lotCourant;
+        for (let i = 0; i < niveau; i++) {
+          const { dimension, valeur } = newChemin[i];
+          if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+            nodeParent = null;
+            break;
+          }
+          nodeParent = nodeParent[dimension][valeur];
+        }
+        if (nodeParent && nodeParent[dim]) {
+          const valeursPossibles = Object.keys(nodeParent[dim]).filter(k => k !== 'title');
+          if (valeursPossibles.length === 1) {
+            newChemin[niveau].valeur = valeursPossibles[0];
+          }
+        }
+
+        console.log('Dimension cliquée :', dim, '| Nouveau chemin :', JSON.stringify(newChemin));
+
+        cheminSelection = newChemin;
         afficherStackbars(lotCourant, cheminSelection);
       };
     });
