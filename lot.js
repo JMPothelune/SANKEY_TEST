@@ -124,8 +124,9 @@ function afficherStackbars(lot, chemin) {
     if (niveau > 0) {
       const btnClose = titre.querySelector('button[aria-label="Fermer"]');
       if (btnClose) {
+        const niveauHeader = parseInt(titre.dataset.niveau, 10);
         btnClose.onclick = () => {
-          CheminManager.tronquer(niveau);
+          CheminManager.tronquer(niveauHeader);
           afficherStackbars(lotCourant, cheminSelection);
         };
       }
