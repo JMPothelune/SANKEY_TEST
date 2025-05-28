@@ -9,12 +9,23 @@ function afficherStackbars(lot, chemin) {
   const container = document.getElementById('stackbar-container');
   container.innerHTML = '';
 
-  // Affiche le poids total du lot en haut
+  // Affiche le poids total du lot en haut dans un button group
   if (lot.total) {
-    const totalDiv = document.createElement('div');
-    totalDiv.className = 'lot-total text-2xl font-bold mb-5';
-    totalDiv.innerHTML = `<span>Poids total du lot :</span> <span class="text-black">${Math.round(lot.total)} kg</span>`;
-    container.appendChild(totalDiv);
+    const topBar = document.createElement('div');
+    topBar.className = 'flex items-center justify-between mb-5';
+    topBar.innerHTML = `
+      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
+        <span class="px-4 h-full font-bold text-base flex items-center">${lot.titre || 'Lot'}</span>
+        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">100%</span>
+        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${Math.round(lot.total)} kg</span>
+      </div>
+      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center ml-2 h-10">
+        <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-lg" aria-label="Ajouter">
+          <img src="../assets/svg/plus.svg" alt="Ajouter" class="w-4 h-4" />
+        </button>
+      </div>
+    `;
+    container.appendChild(topBar);
   }
 
   // 1. Formats
@@ -143,6 +154,16 @@ function afficherStackbars(lot, chemin) {
       };
     }
   });
+
+  // À la toute fin de afficherStackbars, ajouter le bouton Enregistrer
+  const saveBar = document.createElement('div');
+  saveBar.className = 'flex justify-end mt-8';
+  saveBar.innerHTML = `
+    <div class="inline-flex rounded-lg shadow-sm">
+      <button class="px-6 py-2 bg-blue text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition">Enregistrer</button>
+    </div>
+  `;
+  container.appendChild(saveBar);
 }
 
 // Ajout d'une fonction utilitaire pour forcer un minimum de pourcentage
@@ -198,6 +219,7 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     }
   }
 
+  let cumulatedPercent = 0;
   for (let i = 0; i < repartitionState.length; i++) {
     const item = repartitionState[i];
     const segment = document.createElement('div');
@@ -211,10 +233,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     if (i === 0) segment.classList.add('rounded-l-xl');
     if (i === repartitionState.length - 1) segment.classList.add('rounded-r-xl');
     if (selectedKey === item.name) {
-      segment.classList.add('selected', 'z-10');
+      segment.classList.add('selected');
       segment.style.border = `4px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
-      segment.style.zIndex = '1';
-      segment.style.opacity = '1';
     } else if (selectedKey) {
       segment.style.opacity = '0.4';
     } else {
@@ -242,9 +262,18 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     stackbar.appendChild(segment);
     // Handle (sauf après le dernier segment)
     if (i < repartitionState.length - 1) {
-      const handle = document.createElement('div');
-      handle.className = 'stackbar-handle absolute right-[-8px] top-0 w-4 h-full flex items-center justify-center cursor-ew-resize z-20';
-      handle.innerHTML = '<div class="w-1 h-10 bg-gray-500 rounded"></div>';
+      const handle = document.createElement('button');
+      handle.type = 'button';
+      handle.className = 'stackbar-handle-btn absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-gray-300 rounded-full shadow flex items-center justify-center hover:bg-gray-50 active:scale-95 transition z-50 cursor-ew-resize';
+      handle.style.zIndex = 50;
+      handle.style.left = `calc(${cumulatedPercent + repartitionState[i].percent}% - 14px)`;
+      handle.style.pointerEvents = 'auto';
+      handle.innerHTML = `
+        <svg width="18" height="18" fill="none" viewBox="0 0 18 18">
+          <path d="M7 5l-3 4 3 4" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11 5l3 4-3 4" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
       // Drag logic
       let startX = 0;
       let startPctL = 0;
@@ -270,6 +299,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
           repartitionState[i].percent = newPctL;
           repartitionState[i+1].percent = newPctR;
           updateSegments();
+          // Met à jour la position du handle pendant le drag
+          handle.style.left = `calc(${cumulatedPercent + repartitionState[i].percent}% - 14px)`;
         }
         function onUp() {
           document.removeEventListener('mousemove', onMove);
@@ -281,8 +312,9 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
       });
-      segment.appendChild(handle);
+      stackbar.appendChild(handle);
     }
+    cumulatedPercent += item.percent;
   }
   container.appendChild(stackbar);
 }
