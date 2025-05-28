@@ -78,7 +78,7 @@ function afficherStackbars(lot, chemin) {
 
   let node = lot;
   let totalKg = lot.total || 0;
-  let pctParent = 100;
+  let pctCumul = 100;
 
   // Si le chemin est vide, on commence par la première dimension
   if (cheminSelection.length === 0) {
@@ -95,12 +95,28 @@ function afficherStackbars(lot, chemin) {
 
     const { dimension, valeur } = niveauCourant;
 
-    // HEADER (titre, navigation, %, poids, button group dimension, actions)
+    // 1. Calcul du poids cumulé AVANT d'avancer dans l'arbre
+    const poidsNiveau = totalKg * pctCumul / 100;
+
+    // 2. Calcul du pourcentage local (pour l'affichage)
+    let pctLocal = 100;
+    if (niveau === 0) {
+      pctLocal = 100;
+    } else if (valeur && node[dimension] && node[dimension][valeur]) {
+      const valNode = node[dimension][valeur];
+      if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
+        pctLocal = valNode.pourcentage;
+      } else if (typeof valNode === 'number') {
+        pctLocal = valNode;
+      }
+    }
+
+    // 3. Affichage du header
     const titre = creerTitreStackbar(
-      niveau, // <-- niveau FIXE pour ce header
+      niveau,
       niveau === 0 ? (lotCourant.title || 'Lot') : CheminManager.getNiveau(niveau-1)?.valeur || '',
-      pctParent,
-      totalKg * pctParent / 100
+      pctLocal,
+      poidsNiveau
     );
     container.appendChild(titre);
 
@@ -183,7 +199,7 @@ function afficherStackbars(lot, chemin) {
       }, 0);
     }
 
-    // Afficher la stackbar pour la dimension courante
+    // 4. Affichage de la stackbar
     if (node[dimension]) {
       const keys = Object.keys(node[dimension]).filter(k => k !== 'title');
       let repartition = keys.map(key => {
@@ -201,22 +217,20 @@ function afficherStackbars(lot, chemin) {
       );
     }
 
-    // Préparer le niveau suivant si une valeur est sélectionnée
+    // 5. Mettre à jour le pourcentage cumulé et avancer dans l'arbre
     if (valeur && node[dimension] && node[dimension][valeur]) {
-      node = node[dimension][valeur];
-      pctParent = typeof node.pourcentage === 'number' ? node.pourcentage : pctParent;
-      const dimsEnfant = getDimensionsFromNode(node);
-      if (dimsEnfant.length > 0) {
-        // Si le chemin n'a pas encore ce niveau, on l'ajoute avec valeur null
-        if (!CheminManager.getNiveau(niveau + 1)) {
-          CheminManager.ajouterDimension(dimsEnfant[0]);
-        }
-        // On continue la boucle (niveau+1)
-        continue;
+      const valNode = node[dimension][valeur];
+      let pctPourCumul = 100;
+      if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
+        pctPourCumul = valNode.pourcentage;
+      } else if (typeof valNode === 'number') {
+        pctPourCumul = valNode;
       }
+      pctCumul = pctCumul * pctPourCumul / 100;
+      node = valNode;
+    } else {
+      break;
     }
-    // Si pas de valeur ou pas de dimension enfant, on arrête
-    break;
   }
 }
 
