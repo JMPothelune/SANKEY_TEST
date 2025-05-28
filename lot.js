@@ -136,6 +136,18 @@ function afficherStackbars(lot, chemin) {
     );
     container.appendChild(titre);
 
+    // Attacher le handler du bouton Ajouter
+    const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
+    if (btnAdd) {
+      btnAdd.onclick = () => {
+        // On veut la dimension du niveau courant
+        const dimension = niveau === 0 ? 
+          cheminSelection[0]?.dimension : // Pour le niveau 0, on prend la dimension active du button group
+          cheminSelection[niveau]?.dimension; // Pour les autres niveaux, on prend la dimension du niveau courant
+        afficherModalAjout(niveau, dimension);
+      };
+    }
+
     // Attacher le handler du bouton X juste après
     if (niveau > 0) {
       const btnClose = titre.querySelector('button[aria-label="Fermer"]');
@@ -157,65 +169,57 @@ function afficherStackbars(lot, chemin) {
         };
       }
 
-      // Attacher le handler du bouton Ajouter
-      const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
-      if (btnAdd) {
-        btnAdd.onclick = () => {
-          // TODO: Implémenter l'ajout d'un nouveau segment
-        };
-      }
-    }
-
-    // Ajout de la logique pour les boutons gauche/droite (sauf niveau 0)
-    if (niveau > 0) {
-      setTimeout(() => {
-        const btnLeft = titre.querySelector('.stackbar-caret-left');
-        const btnRight = titre.querySelector('.stackbar-caret-right');
-        if (btnLeft || btnRight) {
-          // On veut naviguer entre les frères du niveau parent
-          const dimensionParent = CheminManager.getNiveau(niveau-1)?.dimension;
-          const valeurParent = CheminManager.getNiveau(niveau-1)?.valeur;
-          // Trouver le node parent
-          let nodeParent = lot;
-          for (let i = 0; i < niveau-1; i++) {
-            const { dimension, valeur } = CheminManager.getNiveau(i);
-            if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
-              nodeParent = null;
-              break;
+      // Ajout de la logique pour les boutons gauche/droite (sauf niveau 0)
+      if (niveau > 0) {
+        setTimeout(() => {
+          const btnLeft = titre.querySelector('.stackbar-caret-left');
+          const btnRight = titre.querySelector('.stackbar-caret-right');
+          if (btnLeft || btnRight) {
+            // On veut naviguer entre les frères du niveau parent
+            const dimensionParent = CheminManager.getNiveau(niveau-1)?.dimension;
+            const valeurParent = CheminManager.getNiveau(niveau-1)?.valeur;
+            // Trouver le node parent
+            let nodeParent = lot;
+            for (let i = 0; i < niveau-1; i++) {
+              const { dimension, valeur } = CheminManager.getNiveau(i);
+              if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+                nodeParent = null;
+                break;
+              }
+              nodeParent = nodeParent[dimension][valeur];
             }
-            nodeParent = nodeParent[dimension][valeur];
+            let siblings = [];
+            if (nodeParent && nodeParent[dimensionParent]) siblings = Object.keys(nodeParent[dimensionParent]).filter(k => k !== 'title');
+            const idx = siblings.indexOf(valeurParent);
+            if (btnLeft) {
+              btnLeft.onclick = () => {
+                if (!siblings.length) return;
+                let newIdx = idx > 0 ? idx - 1 : siblings.length - 1;
+                let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
+                newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
+                // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
+                newChemin = newChemin.slice(0, niveau);
+                newChemin.push({ dimension: dimension, valeur: null });
+                cheminSelection = newChemin;
+                afficherStackbars(lotCourant, cheminSelection);
+              };
+            }
+            if (btnRight) {
+              btnRight.onclick = () => {
+                if (!siblings.length) return;
+                let newIdx = idx < siblings.length - 1 && idx !== -1 ? idx + 1 : 0;
+                let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
+                newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
+                // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
+                newChemin = newChemin.slice(0, niveau);
+                newChemin.push({ dimension: dimension, valeur: null });
+                cheminSelection = newChemin;
+                afficherStackbars(lotCourant, cheminSelection);
+              };
+            }
           }
-          let siblings = [];
-          if (nodeParent && nodeParent[dimensionParent]) siblings = Object.keys(nodeParent[dimensionParent]).filter(k => k !== 'title');
-          const idx = siblings.indexOf(valeurParent);
-          if (btnLeft) {
-            btnLeft.onclick = () => {
-              if (!siblings.length) return;
-              let newIdx = idx > 0 ? idx - 1 : siblings.length - 1;
-              let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
-              newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
-              // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
-              newChemin = newChemin.slice(0, niveau);
-              newChemin.push({ dimension: dimension, valeur: null });
-              cheminSelection = newChemin;
-              afficherStackbars(lotCourant, cheminSelection);
-            };
-          }
-          if (btnRight) {
-            btnRight.onclick = () => {
-              if (!siblings.length) return;
-              let newIdx = idx < siblings.length - 1 && idx !== -1 ? idx + 1 : 0;
-              let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
-              newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
-              // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
-              newChemin = newChemin.slice(0, niveau);
-              newChemin.push({ dimension: dimension, valeur: null });
-              cheminSelection = newChemin;
-              afficherStackbars(lotCourant, cheminSelection);
-            };
-          }
-        }
-      }, 0);
+        }, 0);
+      }
     }
 
     // 4. Affichage de la stackbar
@@ -799,5 +803,90 @@ function naviguerSiblingStackbar(niveau, direction) {
 
   // Rafraîchit l'affichage
   afficherStackbars(lotCourant, cheminSelection);
+}
+
+// Fonction pour afficher la modal d'ajout
+function afficherModalAjout(niveau, dimension) {
+  if (!dimension) return; // On ne fait rien si pas de dimension
+
+  // Créer le backdrop
+  const backdrop = document.createElement('div');
+  backdrop.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  
+  // Créer la modal
+  const modal = document.createElement('div');
+  modal.className = 'bg-white rounded-lg shadow-xl w-full max-w-md mx-4';
+  
+  // Header de la modal
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-between p-4 border-b';
+  header.innerHTML = `
+    <h3 class="text-lg font-semibold text-gray-900">Ajouter un ${dimension}</h3>
+    <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" aria-label="Fermer">
+      <img src="../assets/svg/x.svg" alt="Fermer" class="w-5 h-5" />
+    </button>
+  `;
+  
+  // Contenu de la modal
+  const content = document.createElement('div');
+  content.className = 'p-4';
+  content.innerHTML = `
+    <div class="space-y-4">
+      <div>
+        <label for="nom" class="block text-sm font-medium text-gray-700">Nom</label>
+        <input type="text" id="nom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="Entrez un nom">
+      </div>
+      <div>
+        <label for="pourcentage" class="block text-sm font-medium text-gray-700">Pourcentage</label>
+        <input type="number" id="pourcentage" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="0" min="0" max="100" step="0.1">
+      </div>
+    </div>
+  `;
+  
+  // Footer de la modal
+  const footer = document.createElement('div');
+  footer.className = 'flex items-center justify-end gap-3 p-4 border-t';
+  footer.innerHTML = `
+    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Annuler</button>
+    <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Ajouter</button>
+  `;
+  
+  // Assembler la modal
+  modal.appendChild(header);
+  modal.appendChild(content);
+  modal.appendChild(footer);
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+  
+  // Gestionnaires d'événements
+  const btnFermer = header.querySelector('button');
+  const btnAnnuler = footer.querySelector('button:first-child');
+  const btnAjouter = footer.querySelector('button:last-child');
+  const inputNom = content.querySelector('#nom');
+  const inputPourcentage = content.querySelector('#pourcentage');
+  
+  function fermerModal() {
+    backdrop.remove();
+  }
+  
+  btnFermer.onclick = fermerModal;
+  btnAnnuler.onclick = fermerModal;
+  backdrop.onclick = (e) => {
+    if (e.target === backdrop) fermerModal();
+  };
+  
+  btnAjouter.onclick = () => {
+    const nom = inputNom.value.trim();
+    const pourcentage = parseFloat(inputPourcentage.value);
+    
+    if (nom && !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100) {
+      // TODO: Ajouter la logique d'ajout ici
+      console.log('Ajout de', nom, 'avec', pourcentage, '% dans la dimension', dimension);
+      fermerModal();
+    }
+  };
+  
+  // Focus sur le premier input
+  inputNom.focus();
 }
 
