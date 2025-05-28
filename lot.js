@@ -580,7 +580,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
           ` : ''}
         <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
-        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${kg ? `${kg.toFixed(1)} kg` : ''}</span>
+        <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center stackbar-title-poids" tabindex="0" style="cursor:pointer;">${kg ? `${kg.toFixed(1)} kg` : ''}</span>
       </div>
       <div class="flex-1 flex justify-center">
         ${btnGroupDims}
@@ -665,6 +665,39 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         input.addEventListener('blur', saveEdit);
       });
     }
+
+    // Ajout de l'édition inline du poids total (niveau 0 uniquement)
+    const spanPoids = titre.querySelector('.stackbar-title-poids');
+    if (spanPoids && niveau === 0) {
+      spanPoids.addEventListener('click', () => {
+        const oldPoids = lotCourant.total || 0;
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = '0.1';
+        input.min = '0';
+        input.value = oldPoids;
+        input.className = 'border-l border-gray-300 px-3 h-full text-sm flex items-center outline-none';
+        input.style.width = '5rem';
+        input.style.background = 'white';
+        input.style.textAlign = 'right';
+        spanPoids.replaceWith(input);
+        input.focus();
+        input.select();
+        function saveEdit() {
+          const newPoids = parseFloat(input.value);
+          if (!isNaN(newPoids) && newPoids >= 0 && newPoids !== oldPoids) {
+            lotCourant.total = newPoids;
+          }
+          afficherStackbars(lotCourant, cheminSelection);
+        }
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') saveEdit();
+          if (e.key === 'Escape') afficherStackbars(lotCourant, cheminSelection);
+        });
+        input.addEventListener('blur', saveEdit);
+      });
+    }
+
     // Navigation carets
     const btnLeft = titre.querySelector('.stackbar-caret-left');
     const btnRight = titre.querySelector('.stackbar-caret-right');
