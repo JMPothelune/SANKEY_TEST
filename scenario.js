@@ -136,7 +136,7 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
 
     // Utiliser le title de la transformation s'il existe, sinon générer un titre unique
     const titre = transfo.title || `${pathNum}.${idx + 1}`;
-    if (!targetLot.titre) targetLot.titre = titre;
+    if (!targetLot.title) targetLot.title = titre;
     console.log('Création lot:', targetLot);
     const nodeId = `${idGenObj.id++}`;
     const newTransformations = [...transformations_appliquees, transfo];
@@ -171,7 +171,7 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
   if (resteLot && resteLot.total > 0.1) {
     // Utiliser le title du coproduct s'il existe, sinon générer un titre unique
     const titre = scenario.coproduct_scenario?.title || `${pathNum}.${(scenario.transformations || []).length + 1}`;
-    if (!resteLot.titre) resteLot.titre = titre;
+    if (!resteLot.title) resteLot.title = titre;
     // Ajout de la target au coproduit si elle existe
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.target) {
       resteLot.target = scenario.coproduct_scenario.target;
@@ -290,7 +290,6 @@ function crossDistrib(lot, formats, formatsMass, lotMass) {
 // Nouvelle transformation adaptée à lotType : sélection par format
 function selectByFormat(lot, selectedFormats) {
   // Deep clone pour ne pas modifier l'objet d'origine
-  const newLot = JSON.parse(JSON.stringify(lot));
   const dist = lot.format;
   let selected = {};
   let rest = {};
@@ -315,24 +314,14 @@ function selectByFormat(lot, selectedFormats) {
     rest[k].pourcentage = rest[k].pourcentage / restPct * 100;
   });
 
-  // Création des deux lots
-  const targetLot = {
-    ...newLot,
-    format: selected,
-    total: lot.total * selectedPct / 100
-  };
-  // Pour le lot cible, on ne garde que les formats sélectionnés
-  Object.keys(targetLot.format).forEach(k => {
-    if (!selectedFormats.includes(k)) {
-      delete targetLot.format[k];
-    }
-  });
+  // Création des deux lots avec deep clone
+  const targetLot = JSON.parse(JSON.stringify(lot));
+  targetLot.format = selected;
+  targetLot.total = lot.total * selectedPct / 100;
 
-  const coProductLot = {
-    ...newLot,
-    format: rest,
-    total: lot.total * restPct / 100
-  };
+  const coProductLot = JSON.parse(JSON.stringify(lot));
+  coProductLot.format = rest;
+  coProductLot.total = lot.total * restPct / 100;
 
   return { targetLot, coProductLot };
 }
@@ -357,6 +346,7 @@ function selectByType(lot, selectedTypes) {
     let couleurs = (typeof value === 'object' && value.couleurs) ? value.couleurs : {};
     if (selectedTypes.includes(key)) {
       selected[key] = {
+        ...value,  // Copie toutes les propriétés existantes
         pourcentage: pct,
         matieres: matieres,
         couleurs: couleurs
@@ -364,6 +354,7 @@ function selectByType(lot, selectedTypes) {
       selectedPct += pct;
     } else {
       rest[key] = {
+        ...value,  // Copie toutes les propriétés existantes
         pourcentage: pct,
         matieres: matieres,
         couleurs: couleurs
@@ -385,6 +376,7 @@ function selectByType(lot, selectedTypes) {
   const targetLot = JSON.parse(JSON.stringify(lot));
   targetLot.format[formatKey].types = selected;
   targetLot.total = lot.total * selectedPct / 100;
+  delete targetLot.title;  // On supprime le titre pour qu'il soit redéfini dans applyScenario
 
   const coProductLot = JSON.parse(JSON.stringify(lot));
   coProductLot.format[formatKey].types = rest;

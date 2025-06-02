@@ -108,19 +108,36 @@ const scenario = {
       }
     },
     {
-      title: 'Vêtements',
+      title: 'Vêtements tous',
       type: ['selectByFormat'],
       keys: [['vêtements']],
       scenario: {
-        transformations: [
-            {
-                title: 'Vêtements pour réemploi',
-                type: ['selectByQualite'],
-                keys: [['neuf étiqueté', 'parfait état', 'bon état']],
-                scenario: {
-                  target: 'CT2'
+        transformations: [  
+          {
+            title: 'Tshirts',
+            type: ['selectByType'],
+            keys: [['hauts type t-shirt']],
+            scenario: {
+              transformations: [
+                {
+                  title: 'tshirts vert et bleu',
+                  type: ['selectByCouleur'],
+                  keys: [['vert', 'bleu']],
+                  scenario: {
+                    target: 'CT2'
+                  }
                 }
+              ]
             }
+          },  
+          {
+            title: 'Vêtements pour réemploi',
+            type: ['selectByQualite'],
+            keys: [['neuf étiqueté', 'parfait état', 'bon état']],
+            scenario: {
+              target: 'CT2'
+            }
+          }
         ],
         coproduct_scenario: {
             title: 'Vêtements hors réemploi',

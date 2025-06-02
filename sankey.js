@@ -1095,7 +1095,7 @@ function updateSankey(dimension) {
             .attr('y', d.y0 - 8)
             .attr('text-anchor', 'middle')
             .text(
-                d.lot && d.lot.titre ? d.lot.titre : d.name
+                d.lot && d.lot.title ? d.lot.title : d.name
             )
             .style('font-size', '11px')
             .style('fill', '#666')
