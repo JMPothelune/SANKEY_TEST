@@ -13,6 +13,17 @@
   <div class="lot-container">
     <div id="stackbar-container"></div>
   </div>
+  <script>
+    fetch('../lot_type.json')
+      .then(res => res.json())
+      .then(lot => {
+        window.lotInitial = lot;
+        lancerLotUI(document.getElementById('stackbar-container'), window.lotInitial);
+        window.onLotChange = (lot) => {
+          console.log('Lot modifié :', lot);
+        };
+      });
+  </script>
   <script src="lot.js"></script>
 </body>
 </html>

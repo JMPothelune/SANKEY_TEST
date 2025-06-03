@@ -6,7 +6,6 @@
 ### Lot 
 - Passer le + à droite de la barre 
 - Pouvoir modifier le % en cliquant dessus 
-- Pb ajout élément> -> dimension active ! 
 
 ---
 ## Done 
@@ -17,3 +16,4 @@
 - Pouvoir changer le poids total
 - Pouvoir ajouter des items 
 - Pouvoir enlever des éléments même quand ils ont pas d'enfant (menu au moins)
+- Pb ajout élément> -> dimension active ! 

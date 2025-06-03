@@ -289,6 +289,11 @@ function initLotUI(container, lotInitial) {
   afficherStackbars(lotCourant, cheminSelection);
 }
 
+// --- Fonction d'entrée plug&play ---
+function lancerLotUI(container, lotInitial) {
+  initLotUI(container, lotInitial);
+}
+
 // --- Publication de l'état du lot (Bubble-ready) ---
 function publierEtatLot() {
   if (window.onLotChange) window.onLotChange(lotCourant);
@@ -992,14 +997,6 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage) {
   publierEtatLot();
 }
 
-// --- Initialisation locale (testable) ---
-fetch('../lot_type.json')
-  .then(res => res.json())
-  .then(lotType => {
-    window._lotType = lotType;
-    initLotUI(document.getElementById('stackbar-container'), lotType);
-    window.onLotChange = (lot) => {
-      console.log('Lot modifié :', lot);
-    };
-  });
+// --- Exemple d'appel local (à mettre dans index.html) ---
+// lancerLotUI(document.getElementById('stackbar-container'), window.lotInitial);
 
