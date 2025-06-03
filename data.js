@@ -236,12 +236,12 @@ const propreteDistrib = {
     "légèrement souillé": 40,
     "fortement souillé": 10,
     "contaminé": 5
-};
+}; 
 
 // Liste des distributions par type 
 
 const repartitionParType = {
-  // Pantalon en jean 
+// Pantalon en jean 
   "pantalons en jean": {
     "matieres": [
       { "nom": "coton/élasthanne", "pourcentage": 31.2 },

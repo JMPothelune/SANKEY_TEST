@@ -2,7 +2,7 @@
 let cheminSelection = [];
 
 // --- Ajout d'une variable globale pour le lot courant (mutable) ---
-let lotCourant = null;
+let lotCourant = {};
 window.lotCourant = lotCourant;
 
 // --- Variables globales pour compatibilité Bubble/local ---
@@ -357,6 +357,7 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
         node[dimension][key] = repartitionState[i].percent;
       }
     }
+    window.lotCourant = lotCourant;
   }
 
   let cumulatedPercent = 0;
@@ -686,6 +687,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
           if (newName && newName !== oldName) {
             if (niveau === 0) {
               lotCourant.title = newName;
+              window.lotCourant = lotCourant;
             } else {
               // Renommage d'un segment à un niveau > 0
               // Trouver le parent
@@ -717,6 +719,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
                   if (cheminSelection[niveau-1].valeur === oldName) {
                     cheminSelection[niveau-1].valeur = newName;
                   }
+                  window.lotCourant = lotCourant;
                 }
               }
             }
@@ -752,6 +755,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
           const newPoids = parseFloat(input.value);
           if (!isNaN(newPoids) && newPoids >= 0 && newPoids !== oldPoids) {
             lotCourant.total = newPoids;
+            window.lotCourant = lotCourant;
           }
           afficherStackbars(lotCourant, cheminSelection);
         }
