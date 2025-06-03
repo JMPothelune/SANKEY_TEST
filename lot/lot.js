@@ -3,6 +3,7 @@ let cheminSelection = [];
 
 // --- Ajout d'une variable globale pour le lot courant (mutable) ---
 let lotCourant = null;
+window.lotCourant = lotCourant;
 
 // --- Variables globales pour compatibilité Bubble/local ---
 let rootContainer = null;
@@ -299,6 +300,7 @@ function afficherStackbars(lot, chemin) {
 function initLotUI(container, lotInitial) {
   rootContainer = container;
   lotCourant = deepCopy(lotInitial);
+  window.lotCourant = lotCourant;
   cheminSelection = [];
   afficherStackbars(lotCourant, cheminSelection);
 }
@@ -585,6 +587,7 @@ function supprimerNoeudEtRepartir(niveau) {
   }
   afficherStackbars(lotCourant, cheminSelection);
   publierEtatLot();
+  window.lotCourant = lotCourant;
 }
 
 // --- Fonction utilitaire pour créer le titre de stackbar avec les icônes ---
@@ -1009,6 +1012,7 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage) {
   // Ajoute le nouvel élément
   node[dimension][nom] = { pourcentage: pourcentage };
   publierEtatLot();
+  window.lotCourant = lotCourant;
 }
 
 // --- Exemple d'appel local (à mettre dans index.html) ---
