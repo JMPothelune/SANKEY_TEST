@@ -121,7 +121,76 @@ function attacherHandlersHeader(titre, niveau) {
   }
 }
 
-// --- Fonction centrale pour afficher les stackbars selon le chemin ---
+// --- Fonction utilitaire pour calculer les infos d'un header (nom, %, kg, parent, etc.) ---
+function getInfosHeader({ lot, cheminSelection, niveau }) {
+  let nodeParent = lot;
+  for (let i = 0; i < niveau; i++) {
+    const { dimension, valeur } = cheminSelection[i];
+    if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+      nodeParent = null;
+      break;
+    }
+    nodeParent = nodeParent[dimension][valeur];
+  }
+  const niveauCourant = cheminSelection[niveau] || {};
+  const dimension = niveauCourant.dimension || '';
+  const valeur = niveauCourant.valeur || '';
+  let nom = '';
+  let pct = 100;
+  let kg = 0;
+  if (niveau === 0) {
+    nom = lot.title || 'Lot';
+    pct = 100;
+    kg = lot.total || 0;
+  } else {
+    nom = cheminSelection[niveau-1]?.valeur || '';
+    // Calcul du pourcentage local
+    let nodeParent2 = lot;
+    for (let i = 0; i < niveau-1; i++) {
+      const { dimension, valeur } = cheminSelection[i];
+      if (!nodeParent2[dimension] || !valeur || !nodeParent2[dimension][valeur]) {
+        nodeParent2 = null;
+        break;
+      }
+      nodeParent2 = nodeParent2[dimension][valeur];
+    }
+    const parent = cheminSelection[niveau-1];
+    if (parent && parent.dimension && parent.valeur && nodeParent2 && nodeParent2[parent.dimension] && nodeParent2[parent.dimension][parent.valeur]) {
+      const valNode = nodeParent2[parent.dimension][parent.valeur];
+      if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
+        pct = valNode.pourcentage;
+      } else if (typeof valNode === 'number') {
+        pct = valNode;
+      }
+    }
+    // Calcul du poids réel
+    let totalKg = lot.total || 0;
+    let pctCumul = 100;
+    let nodeTmp = lot;
+    for (let i = 0; i <= niveau-1; i++) {
+      const { dimension, valeur } = cheminSelection[i];
+      if (!nodeTmp[dimension] || !valeur || !nodeTmp[dimension][valeur]) break;
+      let n = nodeTmp[dimension][valeur];
+      if (typeof n === 'object' && n.pourcentage !== undefined) {
+        pctCumul = pctCumul * n.pourcentage / 100;
+      } else if (typeof n === 'number') {
+        pctCumul = pctCumul * n / 100;
+      }
+      nodeTmp = n;
+    }
+    kg = totalKg * pctCumul / 100;
+  }
+  return { nodeParent, dimension, valeur, nom, pct, kg };
+}
+
+// --- Fonction unique d'affichage d'un header ---
+function afficherHeaderNiveau({ niveau, nodeParent, dimension, valeur, nom, pct, kg, container }) {
+  const titre = creerTitreStackbar(niveau, nom, pct, kg);
+  container.appendChild(titre);
+  attacherHandlersHeader(titre, niveau);
+}
+
+// --- Fonction centrale pour afficher les stackbars selon le chemin (refactorisée) ---
 function afficherStackbars(lot, chemin) {
   const container = document.getElementById('stackbar-container');
   container.innerHTML = '';
@@ -140,77 +209,31 @@ function afficherStackbars(lot, chemin) {
 
   // Boucle principale : headers et stackbars pour chaque niveau du chemin
   for (let niveau = 0; niveau < cheminSelection.length; niveau++) {
-    const niveauCourant = CheminManager.getNiveau(niveau);
-    if (!niveauCourant) break;
-    const { dimension, valeur } = niveauCourant;
-
-    // Calcul du poids cumulé AVANT d'avancer dans l'arbre
-    const poidsNiveau = totalKg * pctCumul / 100;
-
-    // Calcul du pourcentage local (pour l'affichage)
-    let pctLocal = 100;
-    if (niveau === 0) {
-      pctLocal = 100;
-    } else {
-      // On veut la part de la value sélectionnée au niveau N-1 dans la distribution de son parent
-      const parent = CheminManager.getNiveau(niveau - 1);
-      if (parent && parent.dimension && parent.valeur) {
-        let nodeParent = lotCourant;
-        for (let i = 0; i < niveau - 1; i++) {
-          const { dimension, valeur } = cheminSelection[i];
-          if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
-            nodeParent = null;
-            break;
-          }
-          nodeParent = nodeParent[dimension][valeur];
-        }
-        if (nodeParent && nodeParent[parent.dimension] && nodeParent[parent.dimension][parent.valeur]) {
-          const valNode = nodeParent[parent.dimension][parent.valeur];
-          if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
-            pctLocal = valNode.pourcentage;
-          } else if (typeof valNode === 'number') {
-            pctLocal = valNode;
-          }
-        }
-      }
-    }
-
-    // Affichage du header du niveau courant
-    const titre = creerTitreStackbar(
-      niveau,
-      niveau === 0 ? (lotCourant.title || 'Lot') : CheminManager.getNiveau(niveau-1)?.valeur || '',
-      pctLocal,
-      poidsNiveau
-    );
-    container.appendChild(titre);
-
-    // Attacher les handlers (unique pour tous les headers)
-    attacherHandlersHeader(titre, niveau);
-
+    const infos = getInfosHeader({ lot, cheminSelection, niveau });
+    afficherHeaderNiveau({ ...infos, niveau, container });
     // Affichage de la stackbar si distribution
-    if (node[dimension]) {
-      const keys = Object.keys(node[dimension]).filter(k => k !== 'title');
+    if (node[infos.dimension]) {
+      const keys = Object.keys(node[infos.dimension]).filter(k => k !== 'title');
       if (keys.length > 0) {
         let repartition = keys.map(key => {
-          const val = node[dimension][key];
+          const val = node[infos.dimension][key];
           let pct = typeof val === 'object' && val.pourcentage !== undefined ? val.pourcentage : (typeof val === 'number' ? val : 0);
           return { name: key, key, percent: pct };
         });
-        let selected = (valeur && keys.includes(valeur)) ? valeur : null;
+        let selected = (infos.valeur && keys.includes(infos.valeur)) ? infos.valeur : null;
         renderStackbar(
           repartition,
           null,
-          dimension,
+          infos.dimension,
           null,
           container,
           selected
         );
       }
     }
-
     // Mise à jour du pourcentage cumulé et avancer dans l'arbre
-    if (valeur && node[dimension] && node[dimension][valeur]) {
-      const valNode = node[dimension][valeur];
+    if (infos.valeur && node[infos.dimension] && node[infos.dimension][infos.valeur]) {
+      const valNode = node[infos.dimension][infos.valeur];
       let pctPourCumul = 100;
       if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
         pctPourCumul = valNode.pourcentage;
@@ -246,43 +269,9 @@ function afficherStackbars(lot, chemin) {
       // Vérifie si le nœud courant n'a PAS de distribution (feuille)
       const dims = getDimensionsFromNode(nodeValue);
       if (!nodeValue || dims.length === 0) {
-        // Calcul du nom, % et kg pour le header du niveau suivant
-        let nomValue = last.valeur;
-        let pctValue = 100;
-        let kgValue = 0;
-        if (nodeValue) {
-          if (typeof nodeValue === 'object' && nodeValue.pourcentage !== undefined) {
-            pctValue = nodeValue.pourcentage;
-          } else if (typeof nodeValue === 'number') {
-            pctValue = nodeValue;
-          }
-          // Calcul du poids réel
-          let totalKg = lot.total || 0;
-          let pctCumul = 100;
-          let nodeTmp = lot;
-          for (let i = 0; i <= lastNiveau; i++) {
-            const { dimension, valeur } = cheminSelection[i];
-            if (!nodeTmp[dimension] || !valeur || !nodeTmp[dimension][valeur]) break;
-            let n = nodeTmp[dimension][valeur];
-            if (typeof n === 'object' && n.pourcentage !== undefined) {
-              pctCumul = pctCumul * n.pourcentage / 100;
-            } else if (typeof n === 'number') {
-              pctCumul = pctCumul * n / 100;
-            }
-            nodeTmp = n;
-          }
-          kgValue = totalKg * pctCumul / 100;
-        }
-        const titreNext = creerTitreStackbar(
-          lastNiveau + 1,
-          nomValue,
-          pctValue,
-          kgValue
-        );
-        container.appendChild(titreNext);
-
-        // Attacher les handlers (même logique que pour les autres headers)
-        attacherHandlersHeader(titreNext, lastNiveau + 1);
+        // Calcul des infos pour le header du niveau suivant
+        const infos = getInfosHeader({ lot, cheminSelection, niveau: lastNiveau + 1 });
+        afficherHeaderNiveau({ ...infos, niveau: lastNiveau + 1, container });
       }
     }
   }
