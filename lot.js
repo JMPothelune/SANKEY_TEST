@@ -151,12 +151,27 @@ function afficherStackbars(lot, chemin) {
     let pctLocal = 100;
     if (niveau === 0) {
       pctLocal = 100;
-    } else if (valeur && node[dimension] && node[dimension][valeur]) {
-      const valNode = node[dimension][valeur];
-      if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
-        pctLocal = valNode.pourcentage;
-      } else if (typeof valNode === 'number') {
-        pctLocal = valNode;
+    } else {
+      // On veut la part de la value sélectionnée au niveau N-1 dans la distribution de son parent
+      const parent = CheminManager.getNiveau(niveau - 1);
+      if (parent && parent.dimension && parent.valeur) {
+        let nodeParent = lotCourant;
+        for (let i = 0; i < niveau - 1; i++) {
+          const { dimension, valeur } = cheminSelection[i];
+          if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+            nodeParent = null;
+            break;
+          }
+          nodeParent = nodeParent[dimension][valeur];
+        }
+        if (nodeParent && nodeParent[parent.dimension] && nodeParent[parent.dimension][parent.valeur]) {
+          const valNode = nodeParent[parent.dimension][parent.valeur];
+          if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
+            pctLocal = valNode.pourcentage;
+          } else if (typeof valNode === 'number') {
+            pctLocal = valNode;
+          }
+        }
       }
     }
 
@@ -181,13 +196,14 @@ function afficherStackbars(lot, chemin) {
           let pct = typeof val === 'object' && val.pourcentage !== undefined ? val.pourcentage : (typeof val === 'number' ? val : 0);
           return { name: key, key, percent: pct };
         });
+        let selected = (valeur && keys.includes(valeur)) ? valeur : null;
         renderStackbar(
           repartition,
           null,
           dimension,
           null,
           container,
-          valeur // sélectionne la valeur si présente
+          selected
         );
       }
     }
@@ -542,8 +558,15 @@ function supprimerNoeudEtRepartir(niveau) {
     }
   });
 
-  // Tronque le chemin de sélection au niveau parent
-  cheminSelection = cheminSelection.slice(0, niveau - 1);
+  // Tronque le chemin à ce niveau (on garde 0 à N-1)
+  cheminSelection = cheminSelection.slice(0, niveau);
+  // Réajoute la dimension courante avec valeur null
+  if (chemin[niveau - 1]) {
+    cheminSelection.push({ 
+      dimension: chemin[niveau - 1].dimension, 
+      valeur: null 
+    });
+  }
   afficherStackbars(lotCourant, cheminSelection);
 }
 
