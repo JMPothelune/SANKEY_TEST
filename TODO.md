@@ -1,8 +1,14 @@
+## Todo
+### Sankey 
+- Affichage tooltip 
+- Standardiser les tooltips 
+
+### Lot 
 - Passer le + à droite de la barre 
 - Pouvoir enlever des éléments même quand ils ont pas d'enfant (menu au moins)
 - Pouvoir modifier le % en cliquant dessus 
 
-
+---
 ## Done 
 - Meilleure visibilité de ce qui est sélectionné -> Passer le reste en opacité basse
 - Pb quand il n'y a qu'un seul item en fin de course. 
