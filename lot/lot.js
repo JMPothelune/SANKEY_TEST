@@ -16,10 +16,8 @@ function getIconSVG(name, className = '') {
     'caret-left': 'ph-caret-left',
     'caret-right': 'ph-caret-right'
   };
-  
   const iconClass = iconMap[name];
   if (!iconClass) return '';
-  
   return `<i class="ph ${iconClass} ${className}"></i>`;
 }
 
