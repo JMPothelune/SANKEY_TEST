@@ -88,17 +88,16 @@ function afficherStackbars(lot, chemin) {
     }
   }
 
-  // On parcourt le cheminSelection pour afficher chaque niveau
+  // Boucle principale : headers et stackbars pour chaque niveau du chemin
   for (let niveau = 0; niveau < cheminSelection.length; niveau++) {
     const niveauCourant = CheminManager.getNiveau(niveau);
     if (!niveauCourant) break;
-
     const { dimension, valeur } = niveauCourant;
 
-    // 1. Calcul du poids cumulé AVANT d'avancer dans l'arbre
+    // Calcul du poids cumulé AVANT d'avancer dans l'arbre
     const poidsNiveau = totalKg * pctCumul / 100;
 
-    // 2. Calcul du pourcentage local (pour l'affichage)
+    // Calcul du pourcentage local (pour l'affichage)
     let pctLocal = 100;
     if (niveau === 0) {
       pctLocal = 100;
@@ -111,136 +110,36 @@ function afficherStackbars(lot, chemin) {
       }
     }
 
-    // 3. Affichage du header
+    // Affichage du header du niveau courant
     const titre = creerTitreStackbar(
       niveau,
       niveau === 0 ? (lotCourant.title || 'Lot') : CheminManager.getNiveau(niveau-1)?.valeur || '',
-      niveau === 0 ? 100 : (() => {
-        const parent = CheminManager.getNiveau(niveau-1);
-        if (!parent || !parent.dimension || !parent.valeur) return 100;
-        let node = lotCourant;
-        for (let i = 0; i < niveau-1; i++) {
-          const { dimension, valeur } = cheminSelection[i];
-          if (!node[dimension] || !valeur || !node[dimension][valeur]) return 100;
-          node = node[dimension][valeur];
-        }
-        const valNode = node[parent.dimension][parent.valeur];
-        if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
-          return valNode.pourcentage;
-        } else if (typeof valNode === 'number') {
-          return valNode;
-        }
-        return 100;
-      })(),
+      pctLocal,
       poidsNiveau
     );
     container.appendChild(titre);
 
-    // Attacher le handler du bouton Ajouter
-    const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
-    if (btnAdd) {
-      btnAdd.onclick = () => {
-        // On veut la dimension du niveau courant
-        const dimension = niveau === 0 ? 
-          cheminSelection[0]?.dimension : // Pour le niveau 0, on prend la dimension active du button group
-          cheminSelection[niveau]?.dimension; // Pour les autres niveaux, on prend la dimension du niveau courant
-        afficherModalAjout(niveau, dimension);
-      };
-    }
-
-    // Attacher le handler du bouton X juste après
-    if (niveau > 0) {
-      const btnClose = titre.querySelector('button[aria-label="Fermer"]');
-      if (btnClose) {
-        const niveauHeader = parseInt(titre.dataset.niveau, 10);
-        btnClose.onclick = () => {
-          CheminManager.tronquer(niveauHeader);
-          afficherStackbars(lotCourant, cheminSelection);
-        };
-      }
-
-      // Attacher le handler du bouton Supprimer
-      const btnDelete = titre.querySelector('button[aria-label="Supprimer"]');
-      if (btnDelete) {
-        const niveauHeader = parseInt(titre.dataset.niveau, 10);
-        btnDelete.onclick = () => {
-          console.log('Suppression demandée pour niveauHeader :', niveauHeader);
-          supprimerNoeudEtRepartir(niveauHeader);
-        };
-      }
-
-      // Ajout de la logique pour les boutons gauche/droite (sauf niveau 0)
-      if (niveau > 0) {
-        setTimeout(() => {
-          const btnLeft = titre.querySelector('.stackbar-caret-left');
-          const btnRight = titre.querySelector('.stackbar-caret-right');
-          if (btnLeft || btnRight) {
-            // On veut naviguer entre les frères du niveau parent
-            const dimensionParent = CheminManager.getNiveau(niveau-1)?.dimension;
-            const valeurParent = CheminManager.getNiveau(niveau-1)?.valeur;
-            // Trouver le node parent
-            let nodeParent = lot;
-            for (let i = 0; i < niveau-1; i++) {
-              const { dimension, valeur } = CheminManager.getNiveau(i);
-              if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
-                nodeParent = null;
-                break;
-              }
-              nodeParent = nodeParent[dimension][valeur];
-            }
-            let siblings = [];
-            if (nodeParent && nodeParent[dimensionParent]) siblings = Object.keys(nodeParent[dimensionParent]).filter(k => k !== 'title');
-            const idx = siblings.indexOf(valeurParent);
-            if (btnLeft) {
-              btnLeft.onclick = () => {
-                if (!siblings.length) return;
-                let newIdx = idx > 0 ? idx - 1 : siblings.length - 1;
-                let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
-                newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
-                // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
-                newChemin = newChemin.slice(0, niveau);
-                newChemin.push({ dimension: dimension, valeur: null });
-                cheminSelection = newChemin;
-                afficherStackbars(lotCourant, cheminSelection);
-              };
-            }
-            if (btnRight) {
-              btnRight.onclick = () => {
-                if (!siblings.length) return;
-                let newIdx = idx < siblings.length - 1 && idx !== -1 ? idx + 1 : 0;
-                let newChemin = CheminManager.getCheminJusquA(niveau); // jusqu'au parent inclus
-                newChemin[niveau-1] = { dimension: dimensionParent, valeur: siblings[newIdx] };
-                // Ajoute la dimension enfant (celle du niveau courant) avec valeur null
-                newChemin = newChemin.slice(0, niveau);
-                newChemin.push({ dimension: dimension, valeur: null });
-                cheminSelection = newChemin;
-                afficherStackbars(lotCourant, cheminSelection);
-              };
-            }
-          }
-        }, 0);
-      }
-    }
-
-    // 4. Affichage de la stackbar
+    // Affichage de la stackbar si distribution
     if (node[dimension]) {
       const keys = Object.keys(node[dimension]).filter(k => k !== 'title');
-      let repartition = keys.map(key => {
-        const val = node[dimension][key];
-        let pct = typeof val === 'object' && val.pourcentage !== undefined ? val.pourcentage : (typeof val === 'number' ? val : 0);
-        return { name: key, key, percent: pct };
-      });
-      renderStackbar(
-        repartition,
-        null,
-        dimension,
-        null,
-        container,
-        valeur // sélectionne la valeur si présente
-      );
+      if (keys.length > 0) {
+        let repartition = keys.map(key => {
+          const val = node[dimension][key];
+          let pct = typeof val === 'object' && val.pourcentage !== undefined ? val.pourcentage : (typeof val === 'number' ? val : 0);
+          return { name: key, key, percent: pct };
+        });
+        renderStackbar(
+          repartition,
+          null,
+          dimension,
+          null,
+          container,
+          valeur // sélectionne la valeur si présente
+        );
+      }
     }
 
-    // 5. Mettre à jour le pourcentage cumulé et avancer dans l'arbre
+    // Mise à jour du pourcentage cumulé et avancer dans l'arbre
     if (valeur && node[dimension] && node[dimension][valeur]) {
       const valNode = node[dimension][valeur];
       let pctPourCumul = 100;
@@ -253,6 +152,66 @@ function afficherStackbars(lot, chemin) {
       node = valNode;
     } else {
       break;
+    }
+  }
+
+  // Après la boucle : afficher le header du niveau suivant si une value est sélectionnée au dernier niveau
+  if (cheminSelection.length > 0) {
+    const lastNiveau = cheminSelection.length - 1;
+    const last = CheminManager.getNiveau(lastNiveau);
+    if (last && last.valeur) {
+      // On remonte le node correspondant à la value sélectionnée
+      let nodeParent = lot;
+      for (let i = 0; i < lastNiveau; i++) {
+        const { dimension, valeur } = cheminSelection[i];
+        if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+          nodeParent = null;
+          break;
+        }
+        nodeParent = nodeParent[dimension][valeur];
+      }
+      let nodeValue = null;
+      if (nodeParent && last.dimension && nodeParent[last.dimension] && nodeParent[last.dimension][last.valeur]) {
+        nodeValue = nodeParent[last.dimension][last.valeur];
+      }
+      // Vérifie si le nœud courant n'a PAS de distribution (feuille)
+      const dims = getDimensionsFromNode(nodeValue);
+      if (!nodeValue || dims.length === 0) {
+        // Calcul du nom, % et kg pour le header du niveau suivant
+        let nomValue = last.valeur;
+        let pctValue = 100;
+        let kgValue = 0;
+        if (nodeValue) {
+          if (typeof nodeValue === 'object' && nodeValue.pourcentage !== undefined) {
+            pctValue = nodeValue.pourcentage;
+          } else if (typeof nodeValue === 'number') {
+            pctValue = nodeValue;
+          }
+          // Calcul du poids réel
+          let totalKg = lot.total || 0;
+          let pctCumul = 100;
+          let nodeTmp = lot;
+          for (let i = 0; i <= lastNiveau; i++) {
+            const { dimension, valeur } = cheminSelection[i];
+            if (!nodeTmp[dimension] || !valeur || !nodeTmp[dimension][valeur]) break;
+            let n = nodeTmp[dimension][valeur];
+            if (typeof n === 'object' && n.pourcentage !== undefined) {
+              pctCumul = pctCumul * n.pourcentage / 100;
+            } else if (typeof n === 'number') {
+              pctCumul = pctCumul * n / 100;
+            }
+            nodeTmp = n;
+          }
+          kgValue = totalKg * pctCumul / 100;
+        }
+        const titreNext = creerTitreStackbar(
+          lastNiveau + 1,
+          nomValue,
+          pctValue,
+          kgValue
+        );
+        container.appendChild(titreNext);
+      }
     }
   }
 }
@@ -552,17 +511,20 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
 
   // Génération du button group dimension
   // On génère un vrai button group collé, sans padding, avec séparateur vertical
-  let btnGroupDims = `<div class="inline-flex rounded-lg border border-blue-200 bg-white shadow items-center h-10 overflow-hidden">`;
-  dims.forEach((dim, idx) => {
-    const isSelected = dim === cheminSelection[niveau]?.dimension;
-    btnGroupDims += `
-      <button
-        class="h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none ${isSelected ? 'bg-blue-50 text-blue-600 border-blue-200 shadow' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'} ${idx > 0 ? 'border-l border-gray-200' : ''}"
-        style="border-radius:0;"
-      >${dim.charAt(0).toUpperCase() + dim.slice(1).toLowerCase()}</button>
-    `;
-  });
-  btnGroupDims += '</div>';
+  let btnGroupDims = '';
+  if (dims.length > 0) {
+    btnGroupDims = `<div class="inline-flex rounded-lg border border-blue-200 bg-white shadow items-center h-10 overflow-hidden">`;
+    dims.forEach((dim, idx) => {
+      const isSelected = dim === cheminSelection[niveau]?.dimension;
+      btnGroupDims += `
+        <button
+          class="h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none ${isSelected ? 'bg-blue-50 text-blue-600 border-blue-200 shadow' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'} ${idx > 0 ? 'border-l border-gray-200' : ''}"
+          style="border-radius:0;"
+        >${dim.charAt(0).toUpperCase() + dim.slice(1).toLowerCase()}</button>
+      `;
+    });
+    btnGroupDims += '</div>';
+  }
 
   // Détermination du label de dimension (niveau+1)
   let labelText = '';

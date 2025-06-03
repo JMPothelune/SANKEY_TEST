@@ -5,7 +5,6 @@
 
 ### Lot 
 - Passer le + à droite de la barre 
-- Pouvoir enlever des éléments même quand ils ont pas d'enfant (menu au moins)
 - Pouvoir modifier le % en cliquant dessus 
 
 ---
@@ -16,3 +15,4 @@
 - Pouvoir basculer de dimension quand c'est possible. 
 - Pouvoir changer le poids total
 - Pouvoir ajouter des items 
+- Pouvoir enlever des éléments même quand ils ont pas d'enfant (menu au moins)
