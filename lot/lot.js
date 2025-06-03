@@ -7,23 +7,20 @@ let lotCourant = null;
 // --- Variables globales pour compatibilité Bubble/local ---
 let rootContainer = null;
 
-// --- Objet centralisant les icônes SVG ---
-const ICONES_SVG = {
-  'plus': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
-  'trash': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
-  'x': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-  'caret-left': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
-  'caret-right': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`
-};
-
-// --- Fonction utilitaire pour injecter les icônes SVG ---
+// --- Fonction utilitaire pour injecter les icônes Phosphor ---
 function getIconSVG(name, className = '') {
-  const svg = ICONES_SVG[name];
-  if (!svg) return '';
-  if (className) {
-    return svg.replace('<svg ', `<svg class="${className}" `);
-  }
-  return svg;
+  const iconMap = {
+    'plus': 'ph-plus',
+    'trash': 'ph-trash',
+    'x': 'ph-x',
+    'caret-left': 'ph-caret-left',
+    'caret-right': 'ph-caret-right'
+  };
+  
+  const iconClass = iconMap[name];
+  if (!iconClass) return '';
+  
+  return `<i class="ph ${iconClass} ${className}"></i>`;
 }
 
 // --- Fonction utilitaire pour obtenir les dimensions accessibles à partir d'un nœud (hors pourcentage, total, title)
