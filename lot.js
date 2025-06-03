@@ -71,6 +71,56 @@ const CheminManager = {
   }
 };
 
+// Fonction utilitaire pour attacher les handlers aux boutons d'un header
+function attacherHandlersHeader(titre, niveau) {
+  // Bouton Ajouter
+  const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
+  let nodeParent = lotCourant;
+  for (let i = 0; i < niveau; i++) {
+    const { dimension, valeur } = cheminSelection[i];
+    if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+      nodeParent = null;
+      break;
+    }
+    nodeParent = nodeParent[dimension][valeur];
+  }
+  const dims = getDimensionsFromNode(nodeParent ? nodeParent : lotCourant);
+  if (btnAdd) {
+    if (dims.length > 0) {
+      btnAdd.onclick = () => {
+        afficherModalAjout(niveau, dims[0]);
+      };
+    } else {
+      btnAdd.style.display = 'none';
+    }
+  }
+
+  // Bouton Supprimer
+  const btnDelete = titre.querySelector('button[aria-label="Supprimer"]');
+  if (btnDelete) {
+    btnDelete.onclick = () => {
+      supprimerNoeudEtRepartir(niveau);
+    };
+  }
+
+  // Bouton Fermer (X)
+  const btnClose = titre.querySelector('button[aria-label="Fermer"]');
+  if (btnClose) {
+    if (niveau === 0) {
+      btnClose.style.display = 'none'; // Pas de X au niveau 0
+    } else {
+      btnClose.style.display = ''; // Toujours visible sinon
+      btnClose.onclick = () => {
+        cheminSelection = cheminSelection.slice(0, niveau);
+        if (cheminSelection[niveau - 1]) {
+          cheminSelection[niveau - 1].valeur = null;
+        }
+        afficherStackbars(lotCourant, cheminSelection);
+      };
+    }
+  }
+}
+
 // --- Fonction centrale pour afficher les stackbars selon le chemin ---
 function afficherStackbars(lot, chemin) {
   const container = document.getElementById('stackbar-container');
@@ -119,6 +169,9 @@ function afficherStackbars(lot, chemin) {
     );
     container.appendChild(titre);
 
+    // Attacher les handlers (unique pour tous les headers)
+    attacherHandlersHeader(titre, niveau);
+
     // Affichage de la stackbar si distribution
     if (node[dimension]) {
       const keys = Object.keys(node[dimension]).filter(k => k !== 'title');
@@ -155,7 +208,7 @@ function afficherStackbars(lot, chemin) {
     }
   }
 
-  // Après la boucle : afficher le header du niveau suivant si une value est sélectionnée au dernier niveau
+  // Après la boucle : afficher le header du niveau suivant si une value est sélectionnée au dernier niveau et pas de distribution
   if (cheminSelection.length > 0) {
     const lastNiveau = cheminSelection.length - 1;
     const last = CheminManager.getNiveau(lastNiveau);
@@ -211,6 +264,9 @@ function afficherStackbars(lot, chemin) {
           kgValue
         );
         container.appendChild(titreNext);
+
+        // Attacher les handlers (même logique que pour les autres headers)
+        attacherHandlersHeader(titreNext, lastNiveau + 1);
       }
     }
   }
@@ -298,7 +354,7 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       fillColor = d3.color(couleurMap[item.name] || '#bbb');
     } else if (colorMap && colorMap[item.name]) {
       fillColor = d3.color(colorMap[item.name]);
-    } else {
+    } else {  
       if (dimension === 'format' || dimension === 'formats') {
         fillColor = d3.color(d3.interpolateYlGn(t));
       } else if (dimension === 'type' || dimension === 'types') {
