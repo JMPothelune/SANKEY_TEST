@@ -91,7 +91,8 @@ function attacherHandlersHeader(titre, niveau) {
   if (btnAdd) {
     if (dims.length > 0) {
       btnAdd.onclick = () => {
-        afficherModalAjout(niveau, dims[0]);
+        const dimActive = cheminSelection[niveau]?.dimension || dims[0];
+        afficherModalAjout(niveau, dimActive);
       };
     } else {
       btnAdd.style.display = 'none';

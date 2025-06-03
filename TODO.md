@@ -6,6 +6,7 @@
 ### Lot 
 - Passer le + à droite de la barre 
 - Pouvoir modifier le % en cliquant dessus 
+- Pb ajout élément> -> dimension active ! 
 
 ---
 ## Done 
