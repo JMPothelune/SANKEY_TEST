@@ -4,6 +4,9 @@ let cheminSelection = [];
 // --- Ajout d'une variable globale pour le lot courant (mutable) ---
 let lotCourant = null;
 
+// --- Variables globales pour compatibilité Bubble/local ---
+let rootContainer = null;
+
 // --- Fonction utilitaire pour obtenir les dimensions accessibles à partir d'un nœud (hors pourcentage, total, title)
 function getDimensionsFromNode(node) {
   if (!node || typeof node !== 'object') return [];
@@ -192,7 +195,7 @@ function afficherHeaderNiveau({ niveau, nodeParent, dimension, valeur, nom, pct,
 
 // --- Fonction centrale pour afficher les stackbars selon le chemin (refactorisée) ---
 function afficherStackbars(lot, chemin) {
-  const container = document.getElementById('stackbar-container');
+  const container = rootContainer;
   container.innerHTML = '';
 
   let node = lot;
@@ -277,15 +280,19 @@ function afficherStackbars(lot, chemin) {
   }
 }
 
-// --- Initialisation ---
-fetch('../lot_type.json')
-  .then(res => res.json())
-  .then(lotType => {
-    window._lotType = lotType;
-    lotCourant = deepCopy(lotType);
-    cheminSelection = [];
-    afficherStackbars(lotCourant, cheminSelection);
-  });
+// --- Fonction d'initialisation universelle ---
+function initLotUI(container, lotInitial) {
+  rootContainer = container;
+  lotCourant = deepCopy(lotInitial);
+  cheminSelection = [];
+  afficherStackbars(lotCourant, cheminSelection);
+}
+
+// --- Publication de l'état du lot (Bubble-ready) ---
+function publierEtatLot() {
+  if (window.onLotChange) window.onLotChange(lotCourant);
+  // Dans Bubble, remplacer par : instance.publishState('lot', JSON.stringify(lotCourant));
+}
 
 // --- renderStackbar modifiée pour gérer la sélection fluide ---
 function renderStackbar(repartition, colorMap, dimension, parentKey, container, selectedKey) {
@@ -557,6 +564,7 @@ function supprimerNoeudEtRepartir(niveau) {
     });
   }
   afficherStackbars(lotCourant, cheminSelection);
+  publierEtatLot();
 }
 
 // --- Fonction utilitaire pour créer le titre de stackbar avec les icônes ---
@@ -980,5 +988,17 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage) {
   }
   // Ajoute le nouvel élément
   node[dimension][nom] = { pourcentage: pourcentage };
+  publierEtatLot();
 }
+
+// --- Initialisation locale (testable) ---
+fetch('../lot_type.json')
+  .then(res => res.json())
+  .then(lotType => {
+    window._lotType = lotType;
+    initLotUI(document.getElementById('stackbar-container'), lotType);
+    window.onLotChange = (lot) => {
+      console.log('Lot modifié :', lot);
+    };
+  });
 
