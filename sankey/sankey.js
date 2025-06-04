@@ -1117,15 +1117,6 @@ document.getElementById('dimension-selector').addEventListener('change', functio
 // Initialisation avec la première dimension
 document.getElementById('dimension-selector').value = 'format';
 
-if (window.sankeyScenario) {
-    updateSankey('format');
-} else {
-    // On attend que le scénario soit prêt (événement custom dispatché dans scenario.js)
-    window.addEventListener('sankeyScenarioReady', function() {
-        updateSankey('format');
-    }, { once: true });
-}
-
 // Gestion du redimensionnement
 window.addEventListener('resize', function() {
     width = window.innerWidth - margin.left - margin.right;
@@ -1134,4 +1125,20 @@ window.addEventListener('resize', function() {
        .attr('height', height + margin.top + margin.bottom);
     updateSankey(document.getElementById('dimension-selector').value);
 });
+
+// Fonction principale pour lancer le Sankey depuis le HTML
+function runSankey({ lot, scenario, containerId = 'sankey-container', dimension = 'format' }) {
+  // Appliquer le scénario au lot
+  const sankeyScenario = applyScenario(lot, scenario);
+
+  // Stocker dans le global pour compatibilité temporaire
+  window.sankeyScenario = sankeyScenario;
+
+  // Mettre à jour le Sankey
+  if (typeof updateSankey === 'function') {
+    updateSankey(dimension);
+  } else {
+    console.error('updateSankey non défini');
+  }
+}
 

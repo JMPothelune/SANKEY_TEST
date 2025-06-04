@@ -47,20 +47,20 @@ On pourra ensuite traiter chaque point ensemble, dans l’ordre que tu veux.
 ### 2.2. Adaptation des fichiers HTML
 
 - [ ] Chaque `index.html` de projet doit :
-  - Charger le JS et le CSS du projet localement (pas de dépendance à la racine)
+  - [x] Charger le JS et le CSS du projet localement (pas de dépendance à la racine)
   - Fournir un point d'entrée JS (ex : un bouton ou un script qui lance l'UI avec la data)
   - Charger la data de base (`lot_type.json`) depuis `/data` (ou via un paramètre)
   - Être facilement référencé depuis Bubble (un seul fichier HTML à inclure)
 
 ### 2.3. Gestion des données
 
-- [ ] Centraliser les fichiers de données dans `/data`
+- [x] Centraliser les fichiers de données dans `/data`
 - [ ] Prévoir des scripts (plus tard) pour générer dynamiquement les fichiers de données selon des paramètres d'input
-- [ ] Adapter les projets pour charger la data depuis `/data/lot_type.json` (ou autre selon le type)
+- [x] Adapter les projets pour charger la data depuis `/data/lot_type.json` (ou autre selon le type)
 
 ### 2.4. Point d'entrée global
 
-- [ ] Créer un `index.html` à la racine qui propose des boutons/links pour accéder à chaque projet (`/lots/index.html`, `/sankey/index.html`, etc.)
+- [x] Créer un `index.html` à la racine qui propose des boutons/links pour accéder à chaque projet (`/lots/index.html`, `/sankey/index.html`, etc.)
 
 ### 2.5. Compatibilité Bubble
 

@@ -37,5 +37,36 @@
     <script src="../data/data.js"></script>
     <script src="scenario.js"></script>
     <script src="sankey.js"></script>
+    <script>
+      console.log('[HTML] script chargé');
+      document.addEventListener('sankeyScenarioReady', function() {
+        console.log('[HTML] sankeyScenarioReady reçu');
+      });
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('[HTML] DOMContentLoaded');
+        function launchSankeyFromSelectors() {
+          const lot = window.lotType;
+          const scenarioIdx = document.getElementById('scenario-selector').value;
+          const scenario = window.scenarios[scenarioIdx]?.scenario;
+          const dimension = document.getElementById('dimension-selector').value;
+          console.log('[HTML] launchSankeyFromSelectors', { lot, scenarioIdx, scenario, dimension });
+          if (typeof runSankey === 'function' && lot && scenario) {
+            runSankey({
+              lot,
+              scenario,
+              containerId: 'sankey-container',
+              dimension
+            });
+          }
+        }
+
+        // On attend un micro-délai pour que les selects soient remplis par scenario.js
+        setTimeout(() => {
+          launchSankeyFromSelectors();
+          document.getElementById('scenario-selector').addEventListener('change', launchSankeyFromSelectors);
+          document.getElementById('dimension-selector').addEventListener('change', launchSankeyFromSelectors);
+        }, 0);
+      });
+    </script>
 </body>
 </html> 

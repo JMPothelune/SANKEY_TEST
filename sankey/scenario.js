@@ -736,17 +736,19 @@ window.addEventListener('DOMContentLoaded', function() {
     });
     // Sélectionne 'Avant' par défaut
     select.selectedIndex = 0;
-    // Initialise le Sankey avec le scénario 'Avant'
-    window.sankeyScenario = applyScenario(window.lotType, window.scenarios[0].scenario);
-    if (typeof updateSankey === 'function') updateSankey();
+    // (SUPPRIMÉ) Initialisation automatique du Sankey
+    // window.sankeyScenario = applyScenario(window.lotType, window.scenarios[0].scenario);
+    // if (typeof updateSankey === 'function') updateSankey();
     // Met à jour le Sankey quand on change de scénario
     select.addEventListener('change', function() {
-      const idx = parseInt(this.value, 10);
-      window.sankeyScenario = applyScenario(window.lotType, window.scenarios[idx].scenario);
-      // On récupère la dimension actuellement sélectionnée
-      const currentDimension = document.getElementById('dimension-selector').value;
-      if (typeof updateSankey === 'function') updateSankey(currentDimension);
+      // (SUPPRIMÉ) Relance automatique du Sankey
+      // const idx = parseInt(this.value, 10);
+      // window.sankeyScenario = applyScenario(window.lotType, window.scenarios[idx].scenario);
+      // const currentDimension = document.getElementById('dimension-selector').value;
+      // if (typeof updateSankey === 'function') updateSankey(currentDimension);
+      // Désormais, c'est runSankey qui doit être appelé explicitement
     });
+    console.log('[scenario.js] sankeyScenarioReady dispatché, select rempli:', select.innerHTML);
     window.dispatchEvent(new Event('sankeyScenarioReady'));
   }
 });
