@@ -251,6 +251,14 @@ function afficherStackbars(lot, chemin) {
       }
     }
     // Mise à jour du pourcentage cumulé et avancer dans l'arbre
+    console.log('DEBUG AVANT AVANCEMENT', {
+      niveau,
+      node,
+      dimension: infos.dimension,
+      valeur: infos.valeur,
+      nodeDimension: node[infos.dimension],
+      nodeValeur: node[infos.dimension] ? node[infos.dimension][infos.valeur] : undefined
+    });
     if (infos.valeur && node[infos.dimension] && node[infos.dimension][infos.valeur]) {
       const valNode = node[infos.dimension][infos.valeur];
       let pctPourCumul = 100;
@@ -262,7 +270,17 @@ function afficherStackbars(lot, chemin) {
       pctCumul = pctCumul * pctPourCumul / 100;
       node = valNode;
     } else {
-      break;
+      if (!(infos.valeur && node[infos.dimension] && node[infos.dimension][infos.valeur])) {
+        console.warn('STOP AFFICHAGE HEADER', {
+          niveau,
+          dimension: infos.dimension,
+          valeur: infos.valeur,
+          nodeCourant: node,
+          nodeDimension: node[infos.dimension],
+          keys: node[infos.dimension] ? Object.keys(node[infos.dimension]) : null
+        });
+        break;
+      }
     }
   }
 
@@ -460,6 +478,7 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
           newChemin.push({ dimension: dimsEnfant[0], valeur: null });
         }
       }
+      console.log('Nouveau chemin après clic sur stackbar :', JSON.stringify(newChemin));
       cheminSelection = newChemin;
       afficherStackbars(lotCourant, cheminSelection);
     });
@@ -822,8 +841,12 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
 
 // Fonction utilitaire pour naviguer entre les éléments frères d'un niveau
 function naviguerSiblingStackbar(niveau, direction) {
+  console.log('Navigation - Niveau:', niveau, 'Direction:', direction);
+  console.log('Chemin actuel:', JSON.stringify(cheminSelection));
+
   // Récupère le niveau courant
   const niveauCourant = CheminManager.getNiveau(niveau);
+  console.log('Niveau courant:', niveauCourant);
   if (!niveauCourant) return;
 
   // Récupère le node parent
@@ -840,33 +863,55 @@ function naviguerSiblingStackbar(niveau, direction) {
     }
     nodeParent = nodeParent[niveauParent.dimension][niveauParent.valeur];
   }
+  console.log('Node parent:', nodeParent);
 
   // Récupère les siblings (frères) du niveau courant
   let siblings = [];
   if (nodeParent && niveauCourant.dimension) {
     siblings = Object.keys(nodeParent[niveauCourant.dimension]).filter(k => k !== 'title');
+  } else if (niveau === 0) {
+    // Cas spécial pour le niveau 0 (formats) : on prend directement les clés du lot
+    siblings = Object.keys(lotCourant[niveauCourant.dimension]).filter(k => k !== 'title');
   }
+  console.log('Siblings:', siblings);
 
   if (!siblings.length) return;
 
   // Trouve l'index du sibling courant
   const idx = siblings.indexOf(niveauCourant.valeur);
+  console.log('Index courant:', idx);
   if (idx === -1) return;
 
   // Calcule le nouvel index
   let newIdx = idx + direction;
   if (newIdx < 0) newIdx = siblings.length - 1;
   if (newIdx >= siblings.length) newIdx = 0;
+  console.log('Nouvel index:', newIdx);
 
-  // Met à jour le chemin
-  CheminManager.mettreAJourValeur(niveau, siblings[newIdx]);
+  // Met à jour le chemin avec la nouvelle valeur
+  let newChemin = cheminSelection.slice(0, niveau);
+  newChemin.push({ dimension: niveauCourant.dimension, valeur: siblings[newIdx] });
   
-  // Si on a une dimension enfant, on la réinitialise
-  if (CheminManager.getNiveau(niveau + 1)) {
-    CheminManager.tronquer(niveau + 1);
+  // Ajout automatique de la dimension enfant si elle existe
+  let node = lotCourant;
+  for (let i = 0; i < newChemin.length; i++) {
+    const { dimension, valeur } = newChemin[i];
+    if (!node[dimension] || !valeur || !node[dimension][valeur]) {
+      node = null;
+      break;
+    }
+    node = node[dimension][valeur];
+  }
+  if (node) {
+    const dimsEnfant = getDimensionsFromNode(node);
+    if (dimsEnfant.length > 0) {
+      newChemin.push({ dimension: dimsEnfant[0], valeur: null });
+    }
   }
 
-  // Rafraîchit l'affichage
+  // Tronquer le chemin si besoin (pour éviter des restes d'anciens enfants)
+  cheminSelection = newChemin;
+
   afficherStackbars(lotCourant, cheminSelection);
 }
 
