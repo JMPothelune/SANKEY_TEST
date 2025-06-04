@@ -665,7 +665,7 @@ const repartitionParType = {
 
 // Génération de l'objet lotType au chargement
 const total = 1000;
-window.lotType = {
+lotType = {
   total,
   format: {},
   qualite: qualiteDistrib,
@@ -674,8 +674,10 @@ window.lotType = {
   )
 };
 
+console.log('lotType :', lotType);
+
 Object.entries(formats_types).forEach(([format, formatObj]) => {
-  lotType.format[format] = {
+  lotType.formats[format] = {
     pourcentage: formatObj.pourcentage,
     types: {}
   };
@@ -701,7 +703,7 @@ Object.entries(formats_types).forEach(([format, formatObj]) => {
     couleursSource.forEach(c => {
       couleurs[c.nom] = { pourcentage: c.pourcentage };
     });
-    lotType.format[format].types[type] = {
+    lotType.formats[format].types[type] = {
       pourcentage: typePct,
       matieres,
       couleurs

@@ -3,64 +3,6 @@ const margin = { top: 20, right: 40, bottom: 20, left: 0 };
 let width = window.innerWidth - margin.left - margin.right;
 let height = document.getElementById('sankey-container').offsetHeight - margin.top - margin.bottom;
 
-
-// Palette harmonieuse pour les matières (dégradé, plage centrale, ordre mélangé)
-const matiereSet = new Set();
-Object.values(window.lotType.format).forEach(formatObj => {
-  Object.values(formatObj.types).forEach(typeObj => {
-    if (typeObj.matieres) {
-      Object.keys(typeObj.matieres).forEach(matiere => matiereSet.add(matiere));
-    }
-  });
-});
-const matiereValues = Array.from(matiereSet);
-const nMatieres = matiereValues.length;
-// Générer la palette sur une plage centrale (0.15 à 0.85)
-let matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCool(0.15 + 0.7 * (i / (nMatieres - 1))));
-// Mélanger l'ordre des couleurs
-matierePalette = d3.shuffle(matierePalette);
-
-// Pour les formats, on prend les clés de lotType.format (ordre dynamique) + moreFormats
-const formatValues = [
-  ...Object.keys(window.lotType.format),
-  ...(window.moreFormats || [])
-].filter((v, i, arr) => arr.indexOf(v) === i); // unicité
-const nFormats = formatValues.length;
-const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
-
-// Palette stable pour les types (tous types de tous formats) + moreTypes
-const allTypeValues = [];
-formatValues.forEach(format => {
-  const types = Object.keys(window.lotType.format[format]?.types || {});
-  types.forEach(type => {
-    if (!allTypeValues.includes(type)) allTypeValues.push(type);
-  });
-});
-if (window.moreTypes) {
-  window.moreTypes.forEach(type => {
-    if (!allTypeValues.includes(type)) allTypeValues.push(type);
-  });
-}
-const nTypes = allTypeValues.length;
-const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
-
-// Palette stable pour les fibres (toutes fibres de toutes matières de tous types de tous formats)
-const fibreSet = new Set();
-Object.values(window.lotType.format).forEach(formatObj => {
-  Object.values(formatObj.types).forEach(typeObj => {
-    if (typeObj.matieres) {
-      Object.values(typeObj.matieres).forEach(matiereObj => {
-        if (matiereObj.fibres) {
-          Object.keys(matiereObj.fibres).forEach(fibre => fibreSet.add(fibre));
-        }
-      });
-    }
-  });
-});
-const fibreValues = Array.from(fibreSet);
-const nFibres = fibreValues.length;
-const fibrePalette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
-
 // Palette pour les couleurs (statique)
 const couleurMap = {
     'noir': '#222',
@@ -77,40 +19,8 @@ const couleurMap = {
     'multicolore': '#fd79a8'
 };
 
-// Palette pour la qualité
-const qualiteValues = Object.keys(qualiteDistrib);
-const nQualite = qualiteValues.length;
-const qualitePalette = Array.from({length: nQualite}, (_, i) => d3.interpolateOranges(0.2 + 0.6 * (i / (nQualite - 1))));
-
-// Palette pour la propreté (comme pour la qualité)
-const propreteValues = Object.keys(propreteDistrib); // À définir
-const nProprete = propreteValues.length;
-const propretePalette = Array.from({length: nProprete}, (_, i) => d3.interpolateBlues(0.2 + 0.6 * (i / (nProprete - 1))));
-
 // Palette de couleurs pour les dimensions
-const colorScales = {
-    matiere: d3.scaleOrdinal()
-        .domain(matiereValues)
-        .range(matierePalette),
-    format: d3.scaleOrdinal()
-        .domain(formatValues)
-        .range(formatPalette),
-    type: d3.scaleOrdinal()
-        .domain(allTypeValues)
-        .range(typePalette),
-    couleur: d3.scaleOrdinal()
-        .domain(Object.keys(couleurMap))
-        .range(Object.values(couleurMap)),
-    qualite: d3.scaleOrdinal()
-        .domain(qualiteValues)
-        .range(qualitePalette),
-    proprete: d3.scaleOrdinal()
-        .domain(propreteValues)
-        .range(propretePalette),
-    fibre: d3.scaleOrdinal()
-        .domain(fibreValues)
-        .range(fibrePalette)
-};
+let colorScales = {};
 
 // Création du SVG
 const svg = d3.select('#sankey-container')
@@ -147,9 +57,9 @@ const tooltip = d3.select('body')
 const stackbarComponents = {
   format: {
     getStackValues: lot => {
-      if (!lot.format) return {};
+      if (!lot.formats) return {};
       const values = {};
-      Object.entries(lot.format).forEach(([key, obj]) => {
+      Object.entries(lot.formats).forEach(([key, obj]) => {
         if (typeof obj.pourcentage === 'number') values[key] = obj.pourcentage;
       });
       return values;
@@ -160,10 +70,10 @@ const stackbarComponents = {
   },
   format_type: {
     getStackValues: lot => {
-      if (!lot.format) return {};
+      if (!lot.formats) return {};
       const values = {};
       let totalWithType = 0;
-      Object.values(lot.format).forEach(formatObj => {
+      Object.values(lot.formats).forEach(formatObj => {
         if (formatObj.types) {
           Object.entries(formatObj.types).forEach(([type, typeObj]) => {
             if (typeof typeObj.pourcentage === 'number') {
@@ -193,29 +103,41 @@ const stackbarComponents = {
   },
   matiere: {
     getStackValues: lot => {
-      if (!lot.format) return {};
+      if (!lot.formats) return {};
       const values = {};
-      Object.values(lot.format).forEach(formatObj => {
+      Object.values(lot.formats).forEach(formatObj => {
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
             if (typeObj.matieres) {
               Object.entries(typeObj.matieres).forEach(([matiere, matiereObj]) => {
-                if (typeof matiereObj.pourcentage === 'number') {
-                  // Pondération par le pourcentage du type et du format
-                  const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
-                  values[matiere] = (values[matiere] || 0) + pct;
-                }
+                // On accepte aussi les objets { pourcentage: ... } ou nombre direct
+                let pctMatiere = typeof matiereObj === 'object' && matiereObj !== null
+                  ? (matiereObj.pourcentage !== undefined ? matiereObj.pourcentage : 0)
+                  : matiereObj;
+                let pctType = typeof typeObj.pourcentage === 'number' ? typeObj.pourcentage : 100;
+                let pctFormat = typeof formatObj.pourcentage === 'number' ? formatObj.pourcentage : 100;
+                // Pondération par le pourcentage du type et du format
+                const pct = pctMatiere * (pctType / 100) * (pctFormat / 100);
+                values[matiere] = (values[matiere] || 0) + pct;
               });
             }
           });
         }
       });
+      // Normalisation pour que la somme fasse 100%
+      const sum = Object.values(values).reduce((a, b) => a + b, 0);
+      if (sum > 0) {
+        Object.keys(values).forEach(k => {
+          values[k] = values[k] / sum * 100;
+        });
+      }
+      values._missing = 100 - (sum > 0 ? 100 : 0);
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
       // Trouver la matière dans le lot courant
       let fibresDistrib = {};
-      Object.values(lot.format).forEach(formatObj => {
+      Object.values(lot.formats).forEach(formatObj => {
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
             if (typeObj.matieres && typeObj.matieres[key] && typeObj.matieres[key].fibres) {
@@ -245,42 +167,23 @@ const stackbarComponents = {
   },
   fibres: {
     getStackValues: lot => {
-      // Cas lot fusionné (structure imbriquée avec matieres/fibres)
-      if (lot.matieres) {
-        const fibreMasses = {};
-        let totalFibreMasse = 0;
-        Object.values(lot.matieres).forEach(matiereObj => {
-          if (matiereObj.fibres) {
-            Object.entries(matiereObj.fibres).forEach(([fibre, fibreObj]) => {
-              const masse = typeof fibreObj === 'object' ? fibreObj.masse : null;
-              if (masse !== null) {
-                fibreMasses[fibre] = (fibreMasses[fibre] || 0) + masse;
-                totalFibreMasse += masse;
-              }
-            });
-          }
-        });
-        // Normalisation
-        const values = {};
-        Object.keys(fibreMasses).forEach(fibre => {
-          values[fibre] = totalFibreMasse > 0 ? fibreMasses[fibre] / totalFibreMasse * 100 : 0;
-        });
-        values._missing = 100 - (Object.values(values).reduce((a, b) => a + b, 0));
-        return values;
-      }
-      // Cas classique (structure d'origine)
-      if (!lot.format) return {};
+      if (!lot.formats) return {};
       const values = {};
-      Object.entries(lot.format).forEach(([formatName, formatObj]) => {
+      Object.values(lot.formats).forEach(formatObj => {
         if (formatObj.types) {
-          Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
+          Object.values(formatObj.types).forEach(typeObj => {
             if (typeObj.matieres) {
-              Object.entries(typeObj.matieres).forEach(([matiereName, matiereObj]) => {
-                // On ignore les matières sans fibres
-                if (matiereObj && matiereObj.fibres && Object.keys(matiereObj.fibres).length > 0) {
-                  Object.entries(matiereObj.fibres).forEach(([fibre, pctFibre]) => {
-                    // Pondération par le pourcentage de la matière, du type et du format
-                    const pct = (pctFibre / 100) * (matiereObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
+              Object.values(typeObj.matieres).forEach(matiereObj => {
+                if (matiereObj.fibres) {
+                  Object.entries(matiereObj.fibres).forEach(([fibre, val]) => {
+                    let pctFibre = typeof val === 'object' && val !== null
+                      ? (val.pourcentage !== undefined ? val.pourcentage : val.masse !== undefined ? val.masse : 0)
+                      : val;
+                    // Pondération par tous les pourcentages
+                    const pct = (pctFibre / 100) *
+                                (matiereObj.pourcentage / 100) *
+                                (typeObj.pourcentage / 100) *
+                                (formatObj.pourcentage / 100) * 100;
                     values[fibre] = (values[fibre] || 0) + pct;
                   });
                 }
@@ -289,14 +192,13 @@ const stackbarComponents = {
           });
         }
       });
-      // Normalisation pour que la somme fasse 100% de la part du lot qui a des fibres
+      // Normalisation pour que la somme fasse 100%
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
       if (sum > 0) {
         Object.keys(values).forEach(k => {
           values[k] = values[k] / sum * 100;
         });
       }
-      // Optionnel : indiquer la part sans fibre
       values._missing = 100 - (sum > 0 ? 100 : 0);
       return values;
     },
@@ -306,9 +208,9 @@ const stackbarComponents = {
   },
   couleur: {
     getStackValues: lot => {
-      if (!lot.format) return {};
+      if (!lot.formats) return {};
       const values = {};
-      Object.values(lot.format).forEach(formatObj => {
+      Object.values(lot.formats).forEach(formatObj => {
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
             if (typeObj.couleurs) {
@@ -387,6 +289,91 @@ function getIconSVG(name, className = '') {
 }
 
 function updateSankey(dimension) {
+    // Initialisation des palettes de couleurs
+    const matiereSet = new Set();
+    Object.values(window.lotType.formats).forEach(formatObj => {
+        Object.values(formatObj.types).forEach(typeObj => {
+            if (typeObj.matieres) {
+                Object.keys(typeObj.matieres).forEach(matiere => matiereSet.add(matiere));
+            }
+        });
+    });
+    const matiereValues = Array.from(matiereSet);
+    const nMatieres = matiereValues.length;
+    let matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCool(0.15 + 0.7 * (i / (nMatieres - 1))));
+    matierePalette = d3.shuffle(matierePalette);
+
+    const formatValues = [
+        ...Object.keys(window.lotType.formats),
+        ...(window.moreFormats || [])
+    ].filter((v, i, arr) => arr.indexOf(v) === i);
+    const nFormats = formatValues.length;
+    const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
+
+    const allTypeValues = [];
+    formatValues.forEach(format => {
+        const types = Object.keys(window.lotType.formats[format]?.types || {});
+        types.forEach(type => {
+            if (!allTypeValues.includes(type)) allTypeValues.push(type);
+        });
+    });
+    if (window.moreTypes) {
+        window.moreTypes.forEach(type => {
+            if (!allTypeValues.includes(type)) allTypeValues.push(type);
+        });
+    }
+    const nTypes = allTypeValues.length;
+    const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
+
+    const fibreSet = new Set();
+    Object.values(window.lotType.formats).forEach(formatObj => {
+        Object.values(formatObj.types).forEach(typeObj => {
+            if (typeObj.matieres) {
+                Object.values(typeObj.matieres).forEach(matiereObj => {
+                    if (matiereObj.fibres) {
+                        Object.keys(matiereObj.fibres).forEach(fibre => fibreSet.add(fibre));
+                    }
+                });
+            }
+        });
+    });
+    const fibreValues = Array.from(fibreSet);
+    const nFibres = fibreValues.length;
+    const fibrePalette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
+
+    const qualiteValues = Object.keys(window.lotType.qualite || {});
+    const nQualite = qualiteValues.length;
+    const qualitePalette = Array.from({length: nQualite}, (_, i) => d3.interpolateOranges(0.2 + 0.6 * (i / (nQualite - 1))));
+
+    const propreteValues = Object.keys(window.lotType.proprete || {});
+    const nProprete = propreteValues.length;
+    const propretePalette = Array.from({length: nProprete}, (_, i) => d3.interpolateBlues(0.2 + 0.6 * (i / (nProprete - 1))));
+
+    // Mise à jour des échelles de couleurs
+    colorScales = {
+        matiere: d3.scaleOrdinal()
+            .domain(matiereValues)
+            .range(matierePalette),
+        format: d3.scaleOrdinal()
+            .domain(formatValues)
+            .range(formatPalette),
+        type: d3.scaleOrdinal()
+            .domain(allTypeValues)
+            .range(typePalette),
+        couleur: d3.scaleOrdinal()
+            .domain(Object.keys(couleurMap))
+            .range(Object.values(couleurMap)),
+        qualite: d3.scaleOrdinal()
+            .domain(qualiteValues)
+            .range(qualitePalette),
+        proprete: d3.scaleOrdinal()
+            .domain(propreteValues)
+            .range(propretePalette),
+        fibre: d3.scaleOrdinal()
+            .domain(fibreValues)
+            .range(fibrePalette)
+    };
+
     // Nettoyer le SVG
     svg.selectAll('*').remove();
 
@@ -487,6 +474,10 @@ function updateSankey(dimension) {
     });
 
     // Choix de la palette de couleurs selon la dimension
+    if (!colorScales.format || typeof colorScales.format !== 'function') {
+      console.warn('colorScales.format non initialisé, palettes manquantes');
+      // Optionnel : forcer une réinitialisation ici
+    }
     let colorAccessor = d => '#bbb';
     if (dimension === 'qualite') {
         colorAccessor = d => colorScales.qualite(d);
@@ -536,8 +527,8 @@ function updateSankey(dimension) {
             `;
             if (dimension === 'format') {
                 tooltipContent += `<br/><strong>Détails Format :</strong><br/>`;
-                if (d.target.lot && d.target.lot.format && typeof d.target.lot.format === 'object') {
-                  Object.entries(d.target.lot.format).forEach(([key, obj]) => {
+                if (d.target.lot && d.target.lot.formats && typeof d.target.lot.formats === 'object') {
+                  Object.entries(d.target.lot.formats).forEach(([key, obj]) => {
                     // Gestion des cas où obj est un nombre (parfois structure simplifiée)
                     const pct = typeof obj === 'number'
                       ? obj
@@ -551,8 +542,8 @@ function updateSankey(dimension) {
                 // Recalcule la distribution des types à la volée sur d.target.lot
                 const values = {};
                 let totalWithType = 0;
-                if (d.target.lot && d.target.lot.format) {
-                  Object.values(d.target.lot.format).forEach(formatObj => {
+                if (d.target.lot && d.target.lot.formats) {
+                  Object.values(d.target.lot.formats).forEach(formatObj => {
                     if (formatObj.types) {
                       Object.entries(formatObj.types).forEach(([type, typeObj]) => {
                         if (typeof typeObj.pourcentage === 'number') {
@@ -578,18 +569,14 @@ function updateSankey(dimension) {
             } else if (dimension === 'matiere') {
                 // Recalcule la distribution des matières à la volée sur d.target.lot
                 const values = {};
-                if (d.target.lot && d.target.lot.format) {
-                  Object.values(d.target.lot.format).forEach(formatObj => {
+                if (d.target.lot && d.target.lot.formats) {
+                  Object.values(d.target.lot.formats).forEach(formatObj => {
                     if (formatObj.types) {
-                      Object.values(formatObj.types).forEach(typeObj => {
-                        if (typeObj.matieres) {
-                          Object.entries(typeObj.matieres).forEach(([matiere, matiereObj]) => {
-                            if (typeof matiereObj.pourcentage === 'number') {
-                              // Pondération par le pourcentage du type et du format
-                              const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
-                              values[matiere] = (values[matiere] || 0) + pct;
-                            }
-                          });
+                      Object.entries(formatObj.types).forEach(([matiere, matiereObj]) => {
+                        if (typeof matiereObj.pourcentage === 'number') {
+                          // Pondération par le pourcentage du type et du format
+                          const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+                          values[matiere] = (values[matiere] || 0) + pct;
                         }
                       });
                     }
@@ -609,14 +596,17 @@ function updateSankey(dimension) {
             } else if (dimension === 'fibres') {
                 // Recalcule la distribution des fibres à la volée sur d.target.lot
                 const values = {};
-                if (d.target.lot && d.target.lot.format) {
-                  Object.entries(d.target.lot.format).forEach(([formatName, formatObj]) => {
+                if (d.target.lot && d.target.lot.formats) {
+                  Object.entries(d.target.lot.formats).forEach(([formatName, formatObj]) => {
                     if (formatObj.types) {
                       Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
                         if (typeObj.matieres) {
                           Object.entries(typeObj.matieres).forEach(([matiereName, matiereObj]) => {
                             if (matiereObj && matiereObj.fibres && Object.keys(matiereObj.fibres).length > 0) {
-                              Object.entries(matiereObj.fibres).forEach(([fibre, pctFibre]) => {
+                              Object.entries(matiereObj.fibres).forEach(([fibre, val]) => {
+                                let pctFibre = typeof val === 'object' && val !== null
+                                  ? (val.pourcentage !== undefined ? val.pourcentage : val.masse !== undefined ? val.masse : 0)
+                                  : val;
                                 // Pondération par le pourcentage de la matière, du type et du format
                                 const pct = (pctFibre / 100) * (matiereObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
                                 values[fibre] = (values[fibre] || 0) + pct;
@@ -643,8 +633,8 @@ function updateSankey(dimension) {
                 // Recalcule la distribution des couleurs à la volée sur d.target.lot
                 const values = {};
                 let totalWithCouleur = 0;
-                if (d.target.lot && d.target.lot.format) {
-                  Object.entries(d.target.lot.format).forEach(([formatName, formatObj]) => {
+                if (d.target.lot && d.target.lot.formats) {
+                  Object.entries(d.target.lot.formats).forEach(([formatName, formatObj]) => {
                     if (formatObj.types) {
                       Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
                         if (typeObj.couleurs) {
@@ -817,16 +807,16 @@ function updateSankey(dimension) {
                             const isMergedTarget = l.target.isTarget;
                             const lotToCheck = isMergedTarget ? (l.source.lot || {}) : (l.target.lot || {});
                             if (dimension === 'format') {
-                                return (lotToCheck.format && Object.keys(lotToCheck.format).includes(key)) ? 0.7 : 0.18;
+                                return (lotToCheck.formats && Object.keys(lotToCheck.formats).includes(key)) ? 0.7 : 0.18;
                             }
                             if (dimension === 'format_type' || dimension === 'type') {
-                                const hasType = lot => Object.values(lot.format || {}).some(f =>
+                                const hasType = lot => Object.values(lot.formats || {}).some(f =>
                                     f.types && Object.keys(f.types).includes(key)
                                 );
                                 return hasType(lotToCheck) ? 0.7 : 0.18;
                             }
                             if (dimension === 'matiere') {
-                                const hasMatiere = lot => Object.values(lot.format || {}).some(f =>
+                                const hasMatiere = lot => Object.values(lot.formats || {}).some(f =>
                                     f.types && Object.values(f.types).some(t =>
                                         t.matieres && Object.keys(t.matieres).includes(key)
                                     )
@@ -834,7 +824,7 @@ function updateSankey(dimension) {
                                 return hasMatiere(lotToCheck) ? 0.7 : 0.18;
                             }
                             if (dimension === 'fibres') {
-                                const hasFibre = lot => Object.values(lot.format || {}).some(f =>
+                                const hasFibre = lot => Object.values(lot.formats || {}).some(f =>
                                     f.types && Object.values(f.types).some(t =>
                                         t.matieres && Object.values(t.matieres).some(m =>
                                             m.fibres && Object.keys(m.fibres).includes(key)
@@ -844,7 +834,7 @@ function updateSankey(dimension) {
                                 return hasFibre(lotToCheck) ? 0.7 : 0.18;
                             }
                             if (dimension === 'couleur') {
-                                const hasCouleur = lot => Object.values(lot.format || {}).some(f =>
+                                const hasCouleur = lot => Object.values(lot.formats || {}).some(f =>
                                     f.types && Object.values(f.types).some(t =>
                                         t.couleurs && Object.keys(t.couleurs).includes(key)
                                     )

@@ -44,12 +44,10 @@
       });
       document.addEventListener('DOMContentLoaded', function() {
         console.log('[HTML] DOMContentLoaded');
-        function launchSankeyFromSelectors() {
-          const lot = window.lotType;
+        function launchSankeyFromSelectors(lot) {
           const scenarioIdx = document.getElementById('scenario-selector').value;
           const scenario = window.scenarios[scenarioIdx]?.scenario;
           const dimension = document.getElementById('dimension-selector').value;
-          console.log('[HTML] launchSankeyFromSelectors', { lot, scenarioIdx, scenario, dimension });
           if (typeof runSankey === 'function' && lot && scenario) {
             runSankey({
               lot,
@@ -60,12 +58,17 @@
           }
         }
 
-        // On attend un micro-délai pour que les selects soient remplis par scenario.js
-        setTimeout(() => {
-          launchSankeyFromSelectors();
-          document.getElementById('scenario-selector').addEventListener('change', launchSankeyFromSelectors);
-          document.getElementById('dimension-selector').addEventListener('change', launchSankeyFromSelectors);
-        }, 0);
+        // Charger le lot_type.json
+        fetch('../data/lot_type.json')
+          .then(r => r.json())
+          .then(lot => {
+            window.lotType = lot; // pour compatibilité temporaire
+            setTimeout(() => {
+              launchSankeyFromSelectors(lot);
+              document.getElementById('scenario-selector').addEventListener('change', () => launchSankeyFromSelectors(lot));
+              document.getElementById('dimension-selector').addEventListener('change', () => launchSankeyFromSelectors(lot));
+            }, 0);
+          });
       });
     </script>
 </body>

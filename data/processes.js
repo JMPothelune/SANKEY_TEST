@@ -28,7 +28,7 @@ function processDelissage(lot, keys = [], params = {}) {
     let totalMatiereMass = 0;
     let totalCouleurMass = 0;
     // Parcours tous les formats/types/matières/couleurs
-    Object.entries(lot.format || {}).forEach(([formatKey, formatObj]) => {
+    Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
       const formatMass = mass * (formatObj.pourcentage / 100);
       Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
         const typeMass = formatMass * (typeObj.pourcentage / 100);
@@ -80,7 +80,7 @@ function processDelissage(lot, keys = [], params = {}) {
   // Création du lot principal (morceaux de tissu)
   const mainLot = JSON.parse(JSON.stringify(lot));
   mainLot.total = total * yieldPct;
-  mainLot.format = {
+  mainlot.formats = {
     "tissu": {
       pourcentage: 100,
       types: {
@@ -94,19 +94,19 @@ function processDelissage(lot, keys = [], params = {}) {
   };
   // Applique la répartition fusionnée
   Object.entries(matieresPct).forEach(([matiere, pct]) => {
-    mainLot.format["tissu"].types["morceaux de tissu"].matieres[matiere] = {
+    mainlot.formats["tissu"].types["morceaux de tissu"].matieres[matiere] = {
       pourcentage: pct,
       fibres: fibresPct[matiere] || {}
     };
   });
-  mainLot.format["tissu"].types["morceaux de tissu"].couleurs = couleursPct;
+  mainlot.formats["tissu"].types["morceaux de tissu"].couleurs = couleursPct;
 
   // Création du coproduit (points durs)
   let coProductLot = null;
   if (yieldPct < 1) {
     coProductLot = JSON.parse(JSON.stringify(lot));
     coProductLot.total = total * (1 - yieldPct);
-    coProductLot.format = {
+    coProductlot.formats = {
       "tissu": {
         pourcentage: 100,
         types: {
@@ -119,12 +119,12 @@ function processDelissage(lot, keys = [], params = {}) {
       }
     };
     Object.entries(matieresPct).forEach(([matiere, pct]) => {
-      coProductLot.format["tissu"].types["points durs"].matieres[matiere] = {
+      coProductlot.formats["tissu"].types["points durs"].matieres[matiere] = {
         pourcentage: pct,
         fibres: fibresPct[matiere] || {}
       };
     });
-    coProductLot.format["tissu"].types["points durs"].couleurs = couleursPct;
+    coProductlot.formats["tissu"].types["points durs"].couleurs = couleursPct;
   }
 
   delete mainLot.titre;
@@ -137,7 +137,7 @@ function processSeparation(lot, keys = [], params = {}) {
   const total = lot.total || 0;
   const fibreLots = {};
 
-  Object.entries(lot.format || {}).forEach(([formatKey, formatObj]) => {
+  Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
     Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
       const typeMass = total * (formatObj.pourcentage / 100) * (typeObj.pourcentage / 100);
       const matieres = Object.entries(typeObj.matieres || {});

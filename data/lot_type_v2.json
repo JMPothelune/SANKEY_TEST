@@ -1,11 +1,13 @@
 {
   "title": "Lot type",
   "total": 1000,
-  "formats": {
-    "vêtements": {
+  "formats": [
+    {
+      "title": "vêtements",
       "pourcentage": 72.4,
-      "types": {
-        "autres pantalons, shorts et jupes": {
+      "types": [
+        {
+          "title": "autres pantalons, shorts et jupes",
           "pourcentage": 16,
           "matieres": {
             "100% coton": {
@@ -158,7 +160,8 @@
             }
           }
         },
-        "hauts type t-shirt": {
+        {
+          "title": "hauts type t-shirt",
           "pourcentage": 16,
           "matieres": {
             "100% coton": {
@@ -309,7 +312,8 @@
             }
           }
         },
-        "hauts type chemise": {
+        {
+          "title": "hauts type chemise",
           "pourcentage": 5,
           "matieres": {
             "100% coton": {
@@ -460,7 +464,8 @@
             }
           }
         },
-        "hauts type pull": {
+        {
+          "title": "hauts type pull",
           "pourcentage": 20,
           "matieres": {
             "100% acrylique": {
@@ -614,7 +619,8 @@
             }
           }
         },
-        "lingerie": {
+        {
+          "title": "lingerie",
           "pourcentage": 1,
           "matieres": {
             "polyamide/élasthanne": {
@@ -768,7 +774,8 @@
             }
           }
         },
-        "pantalons en jean": {
+        {
+          "title": "pantalons en jean",
           "pourcentage": 9,
           "matieres": {
             "coton/élasthanne": {
@@ -910,7 +917,8 @@
             }
           }
         },
-        "pyjama et ensembles de sport": {
+        {
+          "title": "pyjama et ensembles de sport",
           "pourcentage": 3,
           "matieres": {
             "100% coton": {
@@ -1064,7 +1072,8 @@
             }
           }
         },
-        "robes": {
+        {
+          "title": "robes",
           "pourcentage": 5,
           "matieres": {
             "100% coton": {
@@ -1218,7 +1227,8 @@
             }
           }
         },
-        "sous-vêtements": {
+        {
+          "title": "sous-vêtements",
           "pourcentage": 7,
           "matieres": {
             "100% coton": {
@@ -1375,7 +1385,8 @@
             }
           }
         },
-        "vestes, manteaux et costumes": {
+        {
+          "title": "vestes, manteaux et costumes",
           "pourcentage": 14,
           "matieres": {
             "100% polyester": {
@@ -1523,7 +1534,8 @@
             }
           }
         },
-        "vêtements bébé": {
+        {
+          "title": "vêtements bébé",
           "pourcentage": 4,
           "matieres": {
             "100% coton": {
@@ -1674,12 +1686,14 @@
             }
           }
         }
-      }
+      ]
     },
-    "linges et rideaux": {
+    {
+      "title": "linges et rideaux",
       "pourcentage": 9,
-      "types": {
-        "linge de bain / toilette": {
+      "types": [
+        {
+          "title": "linge de bain / toilette",
           "pourcentage": 14,
           "matieres": {
             "100% coton": {
@@ -1830,7 +1844,8 @@
             }
           }
         },
-        "linge de lit": {
+        {
+          "title": "linge de lit",
           "pourcentage": 60,
           "matieres": {
             "100% coton": {
@@ -1984,7 +1999,8 @@
             }
           }
         },
-        "rideaux et voilage": {
+        {
+          "title": "rideaux et voilage",
           "pourcentage": 11,
           "matieres": {
             "inconnu": {
@@ -2002,7 +2018,8 @@
             }
           }
         },
-        "autre linge de maison": {
+        {
+          "title": "autre linge de maison",
           "pourcentage": 14,
           "matieres": {
             "100% coton": {
@@ -2150,12 +2167,14 @@
             }
           }
         }
-      }
+      ]
     },
-    "chaussures et bottes": {
+    {
+      "title": "chaussures et bottes",
       "pourcentage": 9.4,
-      "types": {
-        "bottes": {
+      "types": [
+        {
+          "title": "bottes",
           "pourcentage": 26,
           "matieres": {
             "inconnu": {
@@ -2173,7 +2192,8 @@
             }
           }
         },
-        "basses": {
+        {
+          "title": "basses",
           "pourcentage": 22,
           "matieres": {
             "inconnu": {
@@ -2191,7 +2211,8 @@
             }
           }
         },
-        "basket": {
+        {
+          "title": "basket",
           "pourcentage": 27,
           "matieres": {
             "inconnu": {
@@ -2209,7 +2230,8 @@
             }
           }
         },
-        "été": {
+        {
+          "title": "été",
           "pourcentage": 17,
           "matieres": {
             "inconnu": {
@@ -2227,7 +2249,8 @@
             }
           }
         },
-        "intérieur": {
+        {
+          "title": "intérieur",
           "pourcentage": 4,
           "matieres": {
             "inconnu": {
@@ -2245,7 +2268,8 @@
             }
           }
         },
-        "bébé": {
+        {
+          "title": "bébé",
           "pourcentage": 4,
           "matieres": {
             "inconnu": {
@@ -2263,12 +2287,14 @@
             }
           }
         }
-      }
+      ]
     },
-    "non TLC": {
+    {
+      "title": "non TLC",
       "pourcentage": 9.2,
-      "types": {
-        "non TLC": {
+      "types": [
+        {
+          "title": "non TLC",
           "pourcentage": 100,
           "matieres": {
             "inconnu": {
@@ -2286,41 +2312,51 @@
             }
           }
         }
+      ]
+    }
+  ],
+  "qualite": [
+      {
+        "title": "neuf étiqueté",
+        "pourcentage": 5
+      },
+      {
+        "title": "parfait état",
+        "pourcentage": 15
+      },
+      {
+        "title": "bon état",
+        "pourcentage": 15
+      },
+      {
+        "title": "usé",
+        "pourcentage": 25
+      },
+      {
+        "title": "abîmé",
+        "pourcentage": 32
+      },
+      {
+        "title": "inutilisable",
+        "pourcentage": 8
       }
-    }
-  },
-  "qualite": {
-    "neuf étiqueté": {
-      "pourcentage": 5
-    },
-    "parfait état": {
-      "pourcentage": 15
-    },
-    "bon état": {
-      "pourcentage": 15
-    },
-    "usé": {
-      "pourcentage": 25
-    },
-    "abîmé": {
-      "pourcentage": 32
-    },
-    "inutilisable": {
-      "pourcentage": 8
-    }
-  },
-  "proprete": {
-    "propre": {
-      "pourcentage": 45
-    },
-    "légèrement souillé": {
-      "pourcentage": 40
-    },
-    "fortement souillé": {
-      "pourcentage": 10
-    },
-    "contaminé": {
-      "pourcentage": 5
-    }
-  }
+  ],
+  "proprete": [
+      {
+        "title": "propre",
+        "pourcentage": 45
+      },
+      {
+        "title": "légèrement souillé",
+        "pourcentage": 40
+      },
+      {
+        "title": "fortement souillé",
+        "pourcentage": 10
+      },
+      {
+        "title": "contaminé",
+        "pourcentage": 5
+      }
+  ]
 }
