@@ -142,7 +142,10 @@ const stackbarComponents = {
           Object.values(formatObj.types).forEach(typeObj => {
             if (typeObj.matieres && typeObj.matieres[key] && typeObj.matieres[key].fibres) {
               Object.entries(typeObj.matieres[key].fibres).forEach(([fibre, pct]) => {
-                fibresDistrib[fibre] = (fibresDistrib[fibre] || 0) + pct;
+                let pctValue = typeof pct === 'object' && pct !== null
+                  ? (pct.pourcentage !== undefined ? pct.pourcentage : 0)
+                  : pct;
+                fibresDistrib[fibre] = (fibresDistrib[fibre] || 0) + pctValue;
               });
             }
           });
@@ -159,10 +162,10 @@ const stackbarComponents = {
       if (Object.keys(fibresDistrib).length > 0) {
         fibresStr = '<br/><em>Fibres :</em><br/>' +
           Object.entries(fibresDistrib)
-            .map(([f, pct]) => `${f} : ${pct.toFixed(1)}%`)
+            .map(([f, pct]) => `${f} : ${Number(pct).toFixed(1)}%`)
             .join('<br/>');
       }
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg${fibresStr}`;
+      return `<strong>${key}</strong><br/>Pourcentage : ${Number(value).toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg${fibresStr}`;
     }
   },
   fibres: {
@@ -210,11 +213,18 @@ const stackbarComponents = {
     getStackValues: lot => {
       if (!lot.formats) return {};
       const values = {};
+      let totalLot = 0;
+      let totalSansCouleur = 0;
+
       Object.values(lot.formats).forEach(formatObj => {
+        const pctFormat = typeof formatObj.pourcentage === 'number' ? formatObj.pourcentage : 100;
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
-            if (typeObj.couleurs) {
-              const typePct = (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+            const pctType = typeof typeObj.pourcentage === 'number' ? typeObj.pourcentage : 100;
+            const masseType = pctFormat * pctType / 100;
+            totalLot += masseType;
+            if (typeObj.couleurs && Object.keys(typeObj.couleurs).length > 0) {
+              let sumCouleur = 0;
               Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
                 let pct = 0;
                 if (typeof couleurObj === 'object' && typeof couleurObj.pourcentage === 'number') {
@@ -222,24 +232,35 @@ const stackbarComponents = {
                 } else if (typeof couleurObj === 'number') {
                   pct = couleurObj;
                 }
-                values[couleur] = (values[couleur] || 0) + (pct / 100) * typePct * 100;
+                values[couleur] = (values[couleur] || 0) + (pct / 100) * masseType;
+                sumCouleur += (pct / 100) * masseType;
               });
+              // Si la somme des couleurs ne couvre pas toute la masse du type, le reste est inconnu
+              if (sumCouleur < masseType) {
+                totalSansCouleur += (masseType - sumCouleur);
+              }
+            } else {
+              // Pas de couleur renseignée pour ce type
+              totalSansCouleur += masseType;
             }
           });
         }
       });
-      // **Normalisation finale**
+
+      // Normalisation sur la masse totale du lot
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
-      if (sum > 0) {
+      if (totalLot > 0) {
         Object.keys(values).forEach(k => {
-          values[k] = values[k] / sum * 100;
+          values[k] = values[k] / totalLot * 100;
         });
       }
-      values._missing = 100 - (sum > 0 ? 100 : 0);
+      if (totalSansCouleur > 0 && totalLot > 0) {
+        values['inconnu'] = totalSansCouleur / totalLot * 100;
+      }
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+      return `<strong>${key}</strong><br/>Pourcentage : ${Number(value).toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
     }
   },
   qualite: {
@@ -642,11 +663,13 @@ function updateSankey(dimension) {
                           const typePct = (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
                           totalWithCouleur += typePct;
                           Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-                            if (typeof couleurObj.pourcentage === 'number') {
-                              // Pondération par la masse du type
-                              const pct = (couleurObj.pourcentage / 100) * typePct * 100;
-                              values[couleur] = (values[couleur] || 0) + pct;
+                            let pct = 0;
+                            if (typeof couleurObj === 'object' && typeof couleurObj.pourcentage === 'number') {
+                              pct = couleurObj.pourcentage;
+                            } else if (typeof couleurObj === 'number') {
+                              pct = couleurObj;
                             }
+                            values[couleur] = (values[couleur] || 0) + (pct / 100) * typePct * 100;
                           });
                         }
                       });
