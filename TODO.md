@@ -6,6 +6,7 @@
 ### Lot 
 - Passer le + à droite de la barre 
 - Pouvoir modifier le % en cliquant dessus 
+- Gestion des effets de bords, genre quand j'enlève tous les éléments d'un lot mais qu'il reste une dimension 
 
 ---
 ## Done 
