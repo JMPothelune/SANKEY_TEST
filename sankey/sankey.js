@@ -370,6 +370,22 @@ const stackbarComponents = {
   // Ajoute ici d'autres dimensions si besoin
 };
 
+// --- Fonction utilitaire pour injecter les icônes Phosphor ---
+function getIconSVG(name, className = '') {
+  const iconMap = {
+    'plus': 'ph-plus',
+    'trash': 'ph-trash',
+    'x': 'ph-x',
+    'caret-left': 'ph-caret-left',
+    'caret-right': 'ph-caret-right',
+    'arrows-split': 'ph-arrows-split',
+    'check-circle': 'ph-check-circle'
+  };
+  const iconClass = iconMap[name];
+  if (!iconClass) return '';
+  return `<i class="ph ${iconClass} ${className}"></i>`;
+}
+
 function updateSankey(dimension) {
     // Nettoyer le SVG
     svg.selectAll('*').remove();
@@ -924,164 +940,138 @@ function updateSankey(dimension) {
 
         // 1. Icônes pour les liens sortants (fork)
         const outgoingLinks = sankeyLinks.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
-        outgoingLinks.forEach((link, idx) => {
-            const linkY = link.y0 - d.y0;
-            nodeGroup.append('rect')
-                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
-                .attr('y', linkY - 12)
-                .attr('width', 24)
-                .attr('height', 24)
-                .attr('rx', 6)
-                .attr('ry', 6)
-                .style('fill', '#999')
-                .style('opacity', 1)
-                .on('mouseover', function(event) {
+        if (!(d.lot && d.lot.target) && !d.isTarget) {
+            outgoingLinks.forEach((link, idx) => {
+                const linkY = link.y0 - d.y0;
+                const fo = nodeGroup.append('foreignObject')
+                    .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+                    .attr('y', linkY - 14)
+                    .attr('width', 28)
+                    .attr('height', 28);
+                const div = document.createElement('div');
+                div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
+                div.innerHTML = getIconSVG('arrows-split', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
+                fo.node().appendChild(div);
+                div.addEventListener('mouseover', function(event) {
                     tooltip.transition()
                         .duration(200)
                         .style('opacity', .9);
-                    tooltip.html(`<strong>${link.target.name}</strong>`)
+                    tooltip.html('<strong>Voir les transformations</strong>')
                         .style('left', (event.pageX + 10) + 'px')
                         .style('top', (event.pageY - 28) + 'px');
-                })
-                .on('mouseout', function() {
+                });
+                div.addEventListener('mouseout', function() {
                     tooltip.transition()
                         .duration(500)
                         .style('opacity', 0);
                 });
-            nodeGroup.append('image')
-                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
-                .attr('y', linkY - 10)
-                .attr('width', 20)
-                .attr('height', 20)
-                .attr('href', 'assets/svg/arrows-split.svg')
-                .style('pointer-events', 'none');
-        });
+            });
+        }
 
         // 2. Icône + sur le lien "Reste" (coproduit)
         const resteLinks = sankeyLinks.filter(l => l.source.id === d.id && l.target.name.startsWith('Reste'));
         resteLinks.forEach((link, idx) => {
             const linkY = link.y0 - d.y0;
-            nodeGroup.append('rect')
-                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
-                .attr('y', linkY - 12)
-                .attr('width', 24)
-                .attr('height', 24)
-                .attr('rx', 6)
-                .attr('ry', 6)
-                .style('fill', '#999')
-                .style('opacity', 1)
-                .on('mouseover', function(event) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style('opacity', .9);
-                    tooltip.html(`<strong>Ajouter une transformation</strong>`)
-                        .style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 28) + 'px');
-                })
-                .on('mouseout', function() {
-                    tooltip.transition()
-                        .duration(500)
-                        .style('opacity', 0);
-                });
-            nodeGroup.append('image')
-                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
-                .attr('y', linkY - 10)
-                .attr('width', 20)
-                .attr('height', 20)
-                .attr('href', 'assets/svg/plus.svg')
-                .style('pointer-events', 'none');
+            const fo = nodeGroup.append('foreignObject')
+                .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+                .attr('y', linkY - 14)
+                .attr('width', 28)
+                .attr('height', 28);
+            const div = document.createElement('div');
+            div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
+            div.innerHTML = getIconSVG('plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
+            fo.node().appendChild(div);
+            div.addEventListener('mouseover', function(event) {
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                tooltip.html('<strong>Ajouter une transformation</strong>')
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            });
+            div.addEventListener('mouseout', function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
         });
 
         // 3. Icône + sur les nœuds feuilles sans target (aucun lien sortant)
         const hasOutgoing = sankeyLinks.some(l => l.source.id === d.id);
         if (!hasOutgoing && !(d.lot && d.lot.target) && !d.isTarget) {
-            const yPlus = nodeHeight / 2 - 12;
-            nodeGroup.append('rect')
-                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+            const yPlus = nodeHeight / 2 - 14;
+            const fo = nodeGroup.append('foreignObject')
+                .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
                 .attr('y', yPlus)
-                .attr('width', 24)
-                .attr('height', 24)
-                .attr('rx', 6)
-                .attr('ry', 6)
-                .style('fill', '#999')
-                .style('opacity', 1)
-                .on('mouseover', function(event) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style('opacity', .9);
-                    tooltip.html(`<strong>Ajouter une transformation</strong>`)
-                        .style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 28) + 'px');
-                })
-                .on('mouseout', function() {
-                    tooltip.transition()
-                        .duration(500)
-                        .style('opacity', 0);
-                });
-            nodeGroup.append('image')
-                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
-                .attr('y', yPlus + 2)
-                .attr('width', 20)
-                .attr('height', 20)
-                .attr('href', 'assets/svg/plus.svg')
-                .style('pointer-events', 'none');
+                .attr('width', 28)
+                .attr('height', 28);
+            const div = document.createElement('div');
+            div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
+            div.innerHTML = getIconSVG('plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
+            fo.node().appendChild(div);
+            div.addEventListener('mouseover', function(event) {
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                tooltip.html('<strong>Ajouter une transformation</strong>')
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            });
+            div.addEventListener('mouseout', function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
         }
 
         // 4. Icône check sur les nœuds valorisés ou agglomérés (isTarget)
         if ((d.lot && d.lot.target) || d.isTarget) {
-            const yCheck = nodeHeight / 2 - 12;
-            nodeGroup.append('rect')
-                .attr('x', stackbarWidth + (extraBlockWidth - 24) / 2)
+            const yCheck = nodeHeight / 2 - 14;
+            const fo = nodeGroup.append('foreignObject')
+                .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
                 .attr('y', yCheck)
-                .attr('width', 24)
-                .attr('height', 24)
-                .attr('rx', 6)
-                .attr('ry', 6)
-                .style('fill', '#4CAF50')
-                .style('opacity', 1)
-                .on('mouseover', function(event) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style('opacity', .9);
-                    // Ajout de la distribution selon la dimension
-                    let distributionHtml = '';
-                    const component = stackbarComponents[dimension];
-                    if (component && d.lot) {
-                        const dist = component.getStackValues(d.lot);
-                        const sum = Object.values(dist).reduce((a, b) => a + b, 0);
-                        if (Object.keys(dist).length > 0 && sum > 0) {
-                            distributionHtml += `<div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'><strong>Distribution ${dimension} :</strong><br/>`;
-                            Object.entries(dist)
-                                .filter(([key]) => !key.startsWith('_'))
-                                .sort((a, b) => b[1] - a[1])
-                                .forEach(([key, value]) => {
-                                    const poids = d.lot.total ? Math.round(d.lot.total * value / 100) : 0;
-                                    distributionHtml += `${key} : ${value.toFixed(1)}% (${poids} kg)<br/>`;
-                                });
-                            distributionHtml += '</div>';
-                        }
+                .attr('width', 28)
+                .attr('height', 28);
+            const div = document.createElement('div');
+            div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-green-100 hover:bg-green-200 border border-green-400 cursor-pointer';
+            div.innerHTML = getIconSVG('check-circle', 'w-7 h-7 text-[1.3rem] flex items-center justify-center text-green-600');
+            fo.node().appendChild(div);
+            div.addEventListener('mouseover', function(event) {
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                // Tooltip riche comme avant
+                let distributionHtml = '';
+                const component = stackbarComponents[dimension];
+                if (component && d.lot) {
+                    const dist = component.getStackValues(d.lot);
+                    const sum = Object.values(dist).reduce((a, b) => a + b, 0);
+                    if (Object.keys(dist).length > 0 && sum > 0) {
+                        distributionHtml += `<div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'><strong>Distribution ${dimension} :</strong><br/>`;
+                        Object.entries(dist)
+                            .filter(([key]) => !key.startsWith('_'))
+                            .sort((a, b) => b[1] - a[1])
+                            .forEach(([key, value]) => {
+                                const poids = d.lot.total ? Math.round(d.lot.total * value / 100) : 0;
+                                distributionHtml += `${key} : ${value.toFixed(1)}% (${poids} kg)<br/>`;
+                            });
+                        distributionHtml += '</div>';
                     }
-                    tooltip.html(`
-                        <strong>Destination validée</strong><br/>
-                        Target: ${(d.lot && d.lot.target) ? d.lot.target : d.name}<br/>
-                        <span style='font-size:12px;color:#666;'>Poids du lot: ${d.lot ? Math.round(d.lot.total) : ''} kg</span>
-                        ${distributionHtml}
-                    `)
-                        .style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 28) + 'px');
-                })
-                .on('mouseout', function() {
-                    tooltip.transition()
-                        .duration(500)
-                        .style('opacity', 0);
-                });
-            nodeGroup.append('image')
-                .attr('x', stackbarWidth + (extraBlockWidth - 20) / 2)
-                .attr('y', yCheck + 2)
-                .attr('width', 20)
-                .attr('height', 20)
-                .attr('href', 'assets/svg/check-circle.svg')
-                .style('pointer-events', 'none');
+                }
+                tooltip.html(`
+                    <strong>Destination validée</strong><br/>
+                    Target: ${(d.lot && d.lot.target) ? d.lot.target : d.name}<br/>
+                    <span style='font-size:12px;color:#666;'>Poids du lot: ${d.lot ? Math.round(d.lot.total) : ''} kg</span>
+                    ${distributionHtml}
+                `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            });
+            div.addEventListener('mouseout', function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
         }
     });
 

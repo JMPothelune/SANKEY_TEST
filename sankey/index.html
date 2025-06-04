@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisation Sankey - Valorisation Textile</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+</head>
+<body>
+    <div class="w-full flex justify-start p-4">
+        <a href="../index.html" class="inline-flex items-center px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm font-medium shadow-sm border border-gray-200">
+            ← Retour
+        </a>
+    </div>
+    <div class="container">
+        <div class="controls flex flex-wrap gap-4 items-center mb-4">
+            <select id="dimension-selector" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
+                <option value="format" selected>Format</option>
+                <option value="format_type">- Type</option>
+                <option value="matiere">-- Matière</option>
+                <option value="fibres">--- Fibres</option>
+                <option value="couleur">--Couleur</option>
+                <option value="qualite">Qualité</option>
+                <option value="proprete">Propreté</option>
+            </select>
+            <select id="scenario-selector" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
+            </select>
+        </div>
+        <div id="sankey-container"></div>
+    </div>
+    <script src="../data/processes.js"></script>
+    <script src="../data/scenario-data.js"></script>
+    <script src="../data/data.js"></script>
+    <script src="../data/scenario.js"></script>
+    <script src="sankey.js"></script>
+</body>
+</html> 
