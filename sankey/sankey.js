@@ -956,7 +956,20 @@ function updateSankey(dimension) {
                     tooltip.transition()
                         .duration(200)
                         .style('opacity', .9);
-                    tooltip.html('<strong>Voir les transformations</strong>')
+
+                    const d = link;
+                    const chemin = `${d.source.name} → ${d.target.name}`;
+                    const parties = chemin.split('→').map(s => s.trim());
+                    let transformation = '';
+                    if (parties.length === 3) {
+                        transformation = parties[1];
+                    } else if (parties.length === 2) {
+                        transformation = parties[1];
+                    } else {
+                        transformation = d.target.name;
+                    }
+
+                    tooltip.html(`<strong>${transformation}</strong>`)
                         .style('left', (event.pageX + 10) + 'px')
                         .style('top', (event.pageY - 28) + 'px');
                 });
