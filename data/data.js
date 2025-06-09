@@ -1,3 +1,19 @@
+// Structure de référence pour la construction d'un lot (bible de l'imbrication des dimensions)
+// À utiliser comme guide pour parser, générer ou valider les lots
+const lotStructure = {
+  formats: {
+    types: {
+      matieres: {
+        fibres: null,
+        couleurs: null,
+        perturbateurs: null
+      }
+    }
+  },
+  qualite: null,
+  proprete: null
+};
+
 window.dimensionTree = {
   selectByFormat: {
     selectByType: {
@@ -25,43 +41,81 @@ const formats_types = {
   "vêtements": {
     "pourcentage": 72.4,
     "types": {
-      "autres pantalons, shorts et jupes": 16,
-      "hauts type t-shirt": 16,
-      "hauts type chemise": 5,
-      "hauts type pull": 20,
-      "lingerie": 1,
-      "pantalons en jean": 9,
-      "pyjama et ensembles de sport": 3,
-      "robes": 5,
-      "sous-vêtements": 7,
-      "vestes, manteaux et costumes": 14,
-      "vêtements bébé": 4
+      "autres pantalons, shorts et jupes": {
+        "pourcentage": 16,
+      },
+      "hauts type t-shirt": {
+        "pourcentage": 16,
+      },
+      "hauts type chemise": {
+        "pourcentage": 5,
+      },
+      "hauts type pull": {
+        "pourcentage": 20,
+      },
+      "lingerie": {
+        "pourcentage": 1,
+      },
+      "pantalons en jean": {
+        "pourcentage": 9,
+      },
+      "pyjama et ensembles de sport": {
+        "pourcentage": 3,
+      },
+      "robes": {
+        "pourcentage": 5,
+      },
+      "vestes, manteaux et costumes": {
+        "pourcentage": 14,
+      },
+      "vêtements bébé": {
+        "pourcentage": 4,
+      }
     }
   },
   "linges et rideaux": {
     "pourcentage": 9,
     "types": {
-      "linge de bain / toilette": 14,
-      "linge de lit": 60,
-      "rideaux et voilage": 11,
-      "autre linge de maison": 14
+      "linge de bain / toilette": {
+        "pourcentage": 14,
+      },
+      "linge de lit": {
+        "pourcentage": 60,
+      },
+      "rideaux et voilage": {
+        "pourcentage": 12,
+      },
+      "autre linge de maison": {
+        "pourcentage": 14,
+      }
     }
   },
   "chaussures et bottes": {
     "pourcentage": 9.4,
     "types": {
-      "bottes": 26,
-      "basses": 22,
-      "basket": 27,
-      "été": 17,
-      "intérieur": 4,
-      "bébé": 4
+      "bottes": {
+        "pourcentage": 22,
+      },
+      "basket": {
+        "pourcentage": 27,
+      },
+      "été": {
+        "pourcentage": 17,
+      },
+      "intérieur": {
+        "pourcentage": 4,
+      },
+      "bébé": {
+        "pourcentage": 4,
+      }
     }
   },
   "non TLC": {
     "pourcentage": 9.2,
     "types": {
-      "non TLC": 100
+      "non TLC": {
+        "pourcentage": 100,
+      }
     }
   }
 };
@@ -76,139 +130,334 @@ Object.entries(formats_types).forEach(([format, obj]) => {
 const matieres_fibres = {
   "100% coton": {
     "pourcentage": 27.6,
-    "fibres": { "coton": 100 }
+    "fibres": { 
+      "coton": {
+      "pourcentage": 100
+      }
+    }
   },
   "100% polyester": {
     "pourcentage": 11.0,
-    "fibres": { "polyester": 100 }
+      "fibres": { 
+        "polyester": {
+          "pourcentage": 100
+      }
+    }
   },
   "coton/polyester": {
     "pourcentage": 8.8,
-    "fibres": { "coton": 57, "polyester": 43 }
+    "fibres": { 
+      "coton": {
+        "pourcentage": 57
+      },
+      "polyester": {
+        "pourcentage": 43
+      }
+    }
   },
   "coton/élasthanne": {
     "pourcentage": 4.9,
-    "fibres": { "coton": 96, "élasthanne": 4 }
+    "fibres": { 
+      "coton": {
+        "pourcentage": 96
+      },
+      "élasthanne": {
+        "pourcentage": 4
+      }
+    }
   },
   "laine/acrylique": {
     "pourcentage": 3.1,
-    "fibres": { "laine": 38, "acrylique": 62 }
+    "fibres": { 
+      "laine": {
+        "pourcentage": 38
+      },
+      "acrylique": {
+        "pourcentage": 62
+      }
+    }
   },
   "coton/acrylique": {
     "pourcentage": 2.3,
-    "fibres": { "coton": 45, "acrylique": 55 }
+    "fibres": { 
+      "coton": {
+        "pourcentage": 45
+      },
+      "acrylique": {
+        "pourcentage": 55
+      }
+    }
   },
   "coton/polyester/élasthanne": {
     "pourcentage": 1.7,
-    "fibres": { "coton": 71, "polyester": 26, "élasthanne": 3 }
+    "fibres": { 
+      "coton": {
+        "pourcentage": 71
+      },
+      "polyester": {
+        "pourcentage": 26
+      },
+      "élasthanne": {
+        "pourcentage": 3
+      }
+    }
   },
   "coton/viscose": {
     "pourcentage": 1.3,
-    "fibres": { "coton": 55, "viscose": 45 }
+    "fibres": { 
+      "coton": {
+        "pourcentage": 55
+      },
+      "viscose": {
+        "pourcentage": 45
+      }
+    }
   },
   "polyester/élasthanne": {
     "pourcentage": 1.3,
-    "fibres": { "polyester": 93, "élasthanne": 7 }
+    "fibres": { "polyester": {
+        "pourcentage": 93
+      },
+      "élasthanne": {
+        "pourcentage": 7
+      }
+    }
   },
   "laine/polyamide": {
     "pourcentage": 1.3,
-    "fibres": { "laine": 65, "polyamide": 35 }
+    "fibres": { "laine": {
+        "pourcentage": 65
+      },
+      "polyamide": {
+        "pourcentage": 35
+      }
+    }
   },
   "viscose/élasthanne": {
     "pourcentage": 1.2,
-    "fibres": { "viscose": 93, "élasthanne": 7 }
+    "fibres": { "viscose": {
+        "pourcentage": 93
+      },
+      "élasthanne": {
+        "pourcentage": 7
+      }
+    }
   },
   "viscose/polyamide": {
     "pourcentage": 1.2,
-    "fibres": { "viscose": 70, "polyamide": 30 }
+    "fibres": { "viscose": {
+        "pourcentage": 70
+      },
+      "polyamide": {
+        "pourcentage": 30
+      }
+    }
   },
   "coton/polyamide": {
     "pourcentage": 1.1,
-    "fibres": { "coton": 69, "polyamide": 31 }
+    "fibres": { "coton": {
+        "pourcentage": 69
+      },
+      "polyamide": {
+        "pourcentage": 31
+      }
+    }
   },
   "polyester/viscose": {
     "pourcentage": 1.0,
-    "fibres": { "polyester": 44, "viscose": 56 }
+    "fibres": { "polyester": {
+        "pourcentage": 44
+      },
+      "viscose": {
+        "pourcentage": 56
+      }
+    }
   },
   "polyester/viscose/élasthanne": {
     "pourcentage": 0.9,
-    "fibres": { "polyester": 59, "viscose": 37, "élasthanne": 4 }
+    "fibres": { "polyester": {
+        "pourcentage": 59
+      },
+      "viscose": {
+        "pourcentage": 37
+      },
+      "élasthanne": {
+        "pourcentage": 4
+      }
+    }
   },
   "polyester/laine": {
     "pourcentage": 0.7,
-    "fibres": { "polyester": 58, "laine": 42 }
+    "fibres": { "polyester": {
+        "pourcentage": 58
+      },
+      "laine": {
+        "pourcentage": 42
+      }
+    }
   },
   "polyester/acrylique": {
     "pourcentage": 0.7,
-    "fibres": { "polyester": 45, "acrylique": 55 }
+    "fibres": { "polyester": {
+        "pourcentage": 45
+      },
+      "acrylique": {
+        "pourcentage": 55
+      }
+    }
   },
   "acrylique/polyamide": {
     "pourcentage": 0.6,
-    "fibres": { "acrylique": 68, "polyamide": 32 }
+    "fibres": { "acrylique": {
+        "pourcentage": 68
+      },
+      "polyamide": {
+        "pourcentage": 32
+      }
+    }
   },
   "coton/polyamide/élasthanne": {
     "pourcentage": 0.6,
-    "fibres": { "coton": 72, "polyamide": 24, "élasthanne": 4 }
+    "fibres": { "coton": {
+        "pourcentage": 72
+      },
+      "polyamide": {
+        "pourcentage": 24
+      },
+      "élasthanne": {
+        "pourcentage": 4
+      }
+    }
   },
   "polyamide/élasthanne": {
     "pourcentage": 0.6,
-    "fibres": { "polyamide": 86, "élasthanne": 14 }
+    "fibres": { "polyamide": {
+        "pourcentage": 86
+      },
+      "élasthanne": {
+        "pourcentage": 14
+      }
+    }
   },
   "coton/laine": {
     "pourcentage": 0.5,
-    "fibres": { "coton": 57, "laine": 43 }
+    "fibres": { "coton": {
+        "pourcentage": 57
+      },
+      "laine": {
+        "pourcentage": 43
+      }
+    }
   },
   "laine/acrylique/polyamide": {
     "pourcentage": 0.4,
-    "fibres": { "laine": 27, "acrylique": 52, "polyamide": 21 }
+    "fibres": { "laine": {
+        "pourcentage": 27
+      },
+      "acrylique": {
+        "pourcentage": 52
+      },
+      "polyamide": {
+        "pourcentage": 21
+      }
+    }
   },
   "polyester/polyamide": {
     "pourcentage": 0.3,
-    "fibres": { "polyester": 60, "polyamide": 40 }
+    "fibres": { "polyester": {
+        "pourcentage": 60
+      },
+      "polyamide": {
+        "pourcentage": 40
+      }
+    }
   },
   "coton/autre": {
     "pourcentage": 0.4,
-    "fibres": { "coton": 60, "autre": 40 }
+    "fibres": { "coton": {
+        "pourcentage": 60
+      },
+      "autre": {
+        "pourcentage": 40
+      }
+    }
   },
   "viscose/polyamide/élasthanne": {
     "pourcentage": 0.3,
-    "fibres": { "viscose": 74, "polyamide": 21, "élasthanne": 5 }
+    "fibres": { 
+      "viscose": {
+        "pourcentage": 74
+      },
+      "polyamide": {
+        "pourcentage": 21
+      },
+      "élasthanne": {
+        "pourcentage": 5
+      }
+    }
   },
   "100% acrylique": {
     "pourcentage": 6.9, 
-    "fibres": { "acrylique": 100 } 
+    "fibres": { "acrylique": {
+        "pourcentage": 100
+      }
+    }
   },
   "inconnu": { 
     "pourcentage": 8.5, 
-    "fibres": { "autre": 100 } 
+    "fibres": { "autre": {
+        "pourcentage": 100
+      }
+    }
   },
   "100% laine": {
     "pourcentage": 1.9,
-    "fibres": { "laine": 100 } 
+    "fibres": { "laine": {
+        "pourcentage": 100
+      }
+    }
   },
   "100% viscose": {
     "pourcentage": 1.4, 
-    "fibres": { "viscose": 100 } 
+    "fibres": { "viscose": {
+        "pourcentage": 100
+      }
+    }
   },
   "100% polyamide": {
     "pourcentage": 1.3, 
-    "fibres": { "polyamide": 100 } 
+    "fibres": { "polyamide": {
+        "pourcentage": 100
+      }
+    }
   },
   "mélange 4 matières": {
      "pourcentage": 1.3, 
-     "fibres": { "autre": 100 } 
+     "fibres": { "autre": {
+        "pourcentage": 100
+      }
+    }
   },
   "autres compositions": {
     "pourcentage": 4.8, 
-    "fibres": { "autre": 100 } 
+    "fibres": { "autre": {
+        "pourcentage": 100
+      }
+    }
   },
   "100% autre": {
     "pourcentage": 0.4, 
-    "fibres": { "autre": 100 } 
+    "fibres": { "autre": {
+        "pourcentage": 100
+      }
+    }
   },
   "100% soie": {
     "pourcentage": 0.3, 
-    "fibres": { "soie": 100 } 
+    "fibres": { "soie": {
+        "pourcentage": 100
+      }
+    }
   }
 };
 
@@ -221,21 +470,41 @@ Object.values(matieres_fibres).forEach(obj => {
 // Distribution de la qualité
 
 const qualiteDistrib = {
-    "neuf étiqueté": 5,
-    "parfait état": 15,
-    "bon état": 15,
-    "usé": 25,
-    "abîmé": 32,
-    "inutilisable": 8
+    "neuf étiqueté": {
+        "pourcentage": 5
+    },
+    "parfait état": {
+        "pourcentage": 15
+    },
+    "bon état": {
+        "pourcentage": 15
+    },
+    "usé": {
+        "pourcentage": 25
+    },
+    "abîmé": {
+        "pourcentage": 32
+    },
+    "inutilisable": {
+        "pourcentage": 8
+    }
 };
 
 // Distribution de la propreté
 
 const propreteDistrib = {
-    "propre": 45,
-    "légèrement souillé": 40,
-    "fortement souillé": 10,
-    "contaminé": 5
+    "propre": {
+        "pourcentage": 45
+    },
+    "légèrement souillé": {
+        "pourcentage": 40
+    },
+    "fortement souillé": {
+        "pourcentage": 10
+    },
+    "contaminé": {
+        "pourcentage": 5
+    }
 }; 
 
 // Liste des distributions par type 
@@ -263,6 +532,9 @@ const repartitionParType = {
       { "nom": "gris", "pourcentage": 10 },
       { "nom": "vert", "pourcentage": 2 },
       { "nom": "autres", "pourcentage": 6 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 100 }
     ]
   },
   // Autre linge de maison
@@ -291,6 +563,10 @@ const repartitionParType = {
       { "nom": "rouge", "pourcentage": 3 },
       { "nom": "jaune", "pourcentage": 2 },
       { "nom": "gris", "pourcentage": 6 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche sans perturbateur", "pourcentage": 72 },
+      { "nom": "monocouche avec perturbateur", "pourcentage": 28 }
     ]
   },
   // Autres pantalons, shorts et jupes
@@ -319,6 +595,11 @@ const repartitionParType = {
       { "nom": "vert", "pourcentage": 5 },
       { "nom": "rouge", "pourcentage": 3 },
       { "nom": "violet", "pourcentage": 2 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 92 },
+      { "nom": "multicouche", "pourcentage": 4 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 4 }
     ]
   },
   "hauts type chemise": {
@@ -347,6 +628,10 @@ const repartitionParType = {
       { "nom": "rouge", "pourcentage": 3 },
       { "nom": "violet", "pourcentage": 3 },
       { "nom": "autre", "pourcentage": 2 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 98 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 2 }
     ]
   },
   "hauts type pull": {
@@ -376,6 +661,10 @@ const repartitionParType = {
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "orange", "pourcentage": 2 },
       { "nom": "autre", "pourcentage": 2 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 71 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 29 }
     ]
   },
   "hauts type t-shirt": {
@@ -404,6 +693,10 @@ const repartitionParType = {
       { "nom": "violet", "pourcentage": 3 },
       { "nom": "vert", "pourcentage": 3 },
       { "nom": "autre", "pourcentage": 4 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 73 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 27 }
     ]
   },
   "linge de bain / toilette": {
@@ -432,6 +725,10 @@ const repartitionParType = {
       { "nom": "jaune", "pourcentage": 3 },
       { "nom": "violet", "pourcentage": 8 },
       { "nom": "autre", "pourcentage" : 2}
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 45 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 55 }
     ]
   },
   "linge de lit": {
@@ -461,6 +758,11 @@ const repartitionParType = {
       { "nom": "orange", "pourcentage": 3 },
       { "nom": "rouge", "pourcentage": 3 },
       { "nom": "autre", "pourcentage": 3}
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 41 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 58 },
+      { "nom": "multicouche", "pourcentage": 1 }
     ]
   },
   "lingerie": {
@@ -490,6 +792,11 @@ const repartitionParType = {
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "orange", "pourcentage": 4 },
       { "nom": "autre", "pourcentage": 4 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 96 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 2 },
+      { "nom": "multicouche", "pourcentage": 2 }
     ]
   },
   "pyjama et ensembles de sport": {
@@ -518,6 +825,10 @@ const repartitionParType = {
       { "nom": "marron", "pourcentage": 4 },
       { "nom": "vert", "pourcentage": 4 },
       { "nom": "autre", "pourcentage": 5 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 88 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 12 }
     ]
   },
   "rideaux et voilages": {
@@ -546,6 +857,11 @@ const repartitionParType = {
       { "nom": "violet", "pourcentage": 5 },
       { "nom": "orange", "pourcentage": 5 },
       { "nom": "autre", "pourcentage": 3 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 84 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 10 },
+      { "nom": "multicouche", "pourcentage": 6 }
     ]
   },
   "robes": {
@@ -574,6 +890,11 @@ const repartitionParType = {
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "vert", "pourcentage": 3 },
       { "nom": "autre", "pourcentage": 1 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 71 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 24 },
+      { "nom": "multicouche", "pourcentage": 5 }
     ]
   },
   "sous-vêtements": {
@@ -602,6 +923,10 @@ const repartitionParType = {
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "vert", "pourcentage": 4 },
       { "nom": "autre", "pourcentage": 2 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 63 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 37 }
     ]
   },
   "vestes, manteaux et costumes": {
@@ -630,6 +955,11 @@ const repartitionParType = {
       { "nom": "rouge", "pourcentage": 4 },
       { "nom": "violet", "pourcentage": 2 },
       { "nom": "autre", "pourcentage": 2 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 41 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 2 },
+      { "nom": "multicouche", "pourcentage": 57 }
     ]
   },
   "vêtements bébé": {
@@ -659,6 +989,11 @@ const repartitionParType = {
       { "nom": "vert", "pourcentage": 3 },
       { "nom": "jaune", "pourcentage": 3 },
       { "nom": "autre", "pourcentage": 1 }
+    ],
+    "perturbateurs": [
+      { "nom": "monocouche avec perturbateur", "pourcentage": 89 },
+      { "nom": "monocouche sans perturbateur", "pourcentage": 7 },
+      { "nom": "multicouche", "pourcentage": 4 }
     ]
   }
 }
@@ -706,12 +1041,16 @@ Object.entries(formats_types).forEach(([format, formatObj]) => {
     lotType.formats[format].types[type] = {
       pourcentage: typePct,
       matieres,
-      couleurs
+      couleurs,
+      perturbateurs: repType.perturbateurs || []
     };
   });
 });
 
 console.log('lotType généré :', lotType);
+
+
+
 
 
 
