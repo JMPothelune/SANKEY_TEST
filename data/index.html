@@ -24,7 +24,7 @@
       return dims;
     }
 
-    // Fonction pour extraire la liste des noms d'une dimension dans lotType
+    // Fonction pour extraire la liste des noms d'une dimension 
     function extractNamesForDimension(dimension, data, structure) {
       if (!structure || typeof structure !== 'object') return [];
       if (Object.keys(structure).includes(dimension)) {
@@ -92,20 +92,24 @@
       return '#bbb';
     }
 
-    // Générateur de palette dynamique pour une liste de noms
-    function generatePalette(names, interpolator) {
-      const palette = {};
+    // Générateur de palette HSL avec variation de teinte, saturation et luminosité
+    function generateVarietyPalette(names, hCenter, hSpread=30, s=60, l=55, sSpread=20, lSpread=20) {
       const n = names.length;
+      const palette = {};
       names.forEach((name, i) => {
-        let c = window.d3 ? window.d3[interpolator](n === 1 ? 0.5 : (i / (n - 1))) : '#bbb';
-        palette[name] = toHex(c);
+        // Teinte
+        const h = hCenter - hSpread/2 + hSpread * (i / Math.max(1, n-1));
+        // Saturation et luminosité varient aussi
+        const sat = s - sSpread/2 + sSpread * ((i % Math.max(2, n-1)) / Math.max(1, n-1));
+        const lum = l - lSpread/2 + lSpread * ((i*3 % Math.max(2, n-1)) / Math.max(1, n-1));
+        palette[name] = d3.hsl(h, sat/100, lum/100).formatHex();
       });
       return palette;
     }
 
     function collectFormats() {
-      const formats = Object.keys(formats_types);
-      const palette = generatePalette(formats, 'interpolateYlGn');
+      const formats = Object.keys(allFormats);
+      const palette = generateVarietyPalette(formats, 140, 40, 60, 55); // verts variés
       const result = {};
       formats.forEach(format => {
         result[format] = {
@@ -118,14 +122,15 @@
 
     function collectTypes() {
       const types = [];
-      Object.values(formats_types).forEach(formatObj => {
+      Object.values(allFormats).forEach(formatObj => {
         if (formatObj.types) {
           Object.keys(formatObj.types).forEach(type => {
             if (!types.includes(type)) types.push(type);
           });
         }
       });
-      const palette = generatePalette(types, 'interpolatePlasma');
+      // Plus de variété : spread 80, saturation et luminosité varient
+      const palette = generateVarietyPalette(types, 210, 80, 65, 55, 30, 25); // bleus variés
       const result = {};
       types.forEach(type => {
         result[type] = {
@@ -140,7 +145,8 @@
 
     function collectMatieres() {
       const matieres = Object.keys(matieres_fibres);
-      const palette = generatePalette(matieres, 'interpolateCool');
+      // Plus de variété : spread 80, saturation et luminosité varient
+      const palette = generateVarietyPalette(matieres, 270, 80, 55, 55, 30, 25); // violets variés
       const result = {};
       matieres.forEach(matiere => {
         result[matiere] = {
@@ -159,7 +165,7 @@
         }
       });
       const fibres = Array.from(fibreSet);
-      const palette = generatePalette(fibres, 'interpolateRainbow');
+      const palette = generateVarietyPalette(fibres, 30, 40, 70, 55); // oranges variés
       const result = {};
       fibres.forEach(fibre => {
         result[fibre] = {
@@ -181,7 +187,7 @@
       const couleurs = Array.from(couleurSet);
       // Palette statique pour les couleurs connues, dynamique pour les autres
       const staticPalette = window.colorMappings?.couleur || {};
-      const dynamicPalette = generatePalette(couleurs.filter(c => !staticPalette[c]), 'interpolateSinebow');
+      const dynamicPalette = generateVarietyPalette(couleurs.filter(c => !staticPalette[c]), 0, 0, 0, 80); // gris par défaut
       const result = {};
       couleurs.forEach(nom => {
         result[nom] = {
@@ -201,12 +207,11 @@
         }
       });
       const perturbateurs = Array.from(perturbateurSet);
-      const staticPalette = window.colorMappings?.perturbateur || {};
-      const dynamicPalette = generatePalette(perturbateurs.filter(p => !staticPalette[p]), 'interpolateBlues');
+      const palette = generateVarietyPalette(perturbateurs, 10, 30, 70, 55); // rouges variés
       const result = {};
       perturbateurs.forEach(nom => {
         result[nom] = {
-          couleur: staticPalette[nom] || dynamicPalette[nom] || '#bbb'
+          couleur: palette[nom]
         };
       });
       return result;
@@ -214,12 +219,11 @@
 
     function collectQualite() {
       const qualites = Object.keys(qualiteDistrib);
-      const staticPalette = window.colorMappings?.qualite || {};
-      const dynamicPalette = generatePalette(qualites.filter(q => !staticPalette[q]), 'interpolateOranges');
+      const palette = generateVarietyPalette(qualites, 50, 30, 80, 60); // jaunes variés
       const result = {};
       qualites.forEach(q => {
         result[q] = {
-          couleur: staticPalette[q] || dynamicPalette[q] || '#bbb'
+          couleur: palette[q]
         };
       });
       return result;
@@ -227,15 +231,55 @@
 
     function collectProprete() {
       const propretes = Object.keys(propreteDistrib);
-      const staticPalette = window.colorMappings?.proprete || {};
-      const dynamicPalette = generatePalette(propretes.filter(p => !staticPalette[p]), 'interpolateBlues');
+      const palette = generateVarietyPalette(propretes, 180, 40, 60, 60); // turquoise variés
       const result = {};
       propretes.forEach(p => {
         result[p] = {
-          couleur: staticPalette[p] || dynamicPalette[p] || '#bbb'
+          couleur: palette[p]
         };
       });
       return result;
+    }
+
+    // Affichage en cartes verticales pour toutes les dimensions
+    function renderCardsForObject(obj) {
+      const container = document.createElement('div');
+      container.className = 'flex flex-col gap-2';
+      Object.entries(obj).forEach(([nom, val]) => {
+        const card = document.createElement('div');
+        card.className = 'rounded shadow px-3 py-2 text-xs font-mono border';
+        card.style.background = (val && typeof val === 'object' && val.couleur) ? val.couleur : '#fff';
+        card.style.color = (val && typeof val === 'object' && val.couleur) ? '#fff' : '#222';
+        card.style.minWidth = '180px';
+        card.style.maxWidth = '100%';
+        card.style.wordBreak = 'break-all';
+        // Affichage prettifié
+        const keySpan = document.createElement('span');
+        keySpan.textContent = `"${nom}": `;
+        keySpan.style.fontWeight = 'bold';
+        card.appendChild(keySpan);
+        const pre = document.createElement('pre');
+        pre.textContent = JSON.stringify(val, null, 2);
+        pre.style.display = 'block';
+        pre.style.background = 'transparent';
+        pre.style.color = 'inherit';
+        pre.style.margin = '0';
+        pre.style.padding = '0';
+        card.appendChild(pre);
+        container.appendChild(card);
+      });
+      return container;
+    }
+
+    // Surcharge de l'affichage du preview pour toutes les dimensions
+    function updatePreview(activeDimension, activeData) {
+      const preview = document.getElementById('json-preview');
+      preview.innerHTML = '';
+      if (activeData && typeof activeData === 'object' && !Array.isArray(activeData)) {
+        preview.appendChild(renderCardsForObject(activeData));
+      } else {
+        preview.textContent = JSON.stringify(activeData, null, 2);
+      }
     }
 
     // Fonction pour générer tous les JSONs et les proposer en téléchargement
@@ -265,8 +309,7 @@
       // Afficher uniquement la dimension active
       const activeDimension = document.querySelector('.dimension-btn.bg-blue-600').dataset.dim;
       const activeData = dimensionFunctions[activeDimension]();
-      previewText = JSON.stringify(activeData, null, 2);
-      document.getElementById('json-preview').textContent = previewText;
+      updatePreview(activeDimension, activeData);
     }
 
     // Fonction pour télécharger tous les JSONs d'un coup
@@ -318,7 +361,7 @@
               proprete: collectProprete
             };
             const activeData = dimensionFunctions[activeDimension]();
-            document.getElementById('json-preview').textContent = JSON.stringify(activeData, null, 2);
+            updatePreview(activeDimension, activeData);
           }
         });
       });
@@ -357,7 +400,7 @@
     
   <!-- Aperçu du JSON généré -->
   <div class="w-full flex justify-center">
-    <pre id="json-preview" class="bg-gray-100 rounded p-4 w-full max-w-3xl text-xs overflow-x-auto"></pre>
+    <pre id="json-preview" class="rounded p-4 w-full max-w-3xl text-xs overflow-x-auto"></pre>
   </div>
 
 </body>

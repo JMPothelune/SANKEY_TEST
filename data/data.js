@@ -28,19 +28,14 @@ window.dimensionTree = {
   selectByProprete: null
 };
 
-window.moreFormats = [
-  "tissu"
-]
-
 window.moreTypes = [
   "morceaux de tissu",
   "points durs",
   "matrice"
 ]
 
-const formats_types = {
+const allFormats = {
   "vêtements": {
-    "pourcentage": 72.4,
     "types": {
       "autres pantalons, shorts et jupes": {
         "pourcentage": 16,
@@ -75,7 +70,6 @@ const formats_types = {
     }
   },
   "linges et rideaux": {
-    "pourcentage": 9,
     "types": {
       "linge de bain / toilette": {
         "pourcentage": 14,
@@ -92,7 +86,6 @@ const formats_types = {
     }
   },
   "chaussures et bottes": {
-    "pourcentage": 9.4,
     "types": {
       "bottes": {
         "pourcentage": 22,
@@ -112,20 +105,29 @@ const formats_types = {
     }
   },
   "non TLC": {
-    "pourcentage": 9.2,
     "types": {
       "non TLC": {
         "pourcentage": 100,
       }
     }
+  },
+  "Chute de production": {
+    "types": {
+      "poussière de textile": {
+        "pourcentage": 25,
+      },
+      "cônes": {
+        "pourcentage": 25,
+      },
+      "rouleau": {
+        "pourcentage": 25,
+      },
+      "invendus": {
+        "pourcentage": 25,
+      }
+    }
   }
 };
-
-// Générer la distribution simple pour les formats à partir de formats_types
-const formatDistrib = {};
-Object.entries(formats_types).forEach(([format, obj]) => {
-  formatDistrib[format] = obj.pourcentage;
-});
 
 
 const matieres_fibres = {
@@ -469,7 +471,6 @@ Object.values(matieres_fibres).forEach(obj => {
 });
 
 // Distribution de la qualité
-
 const qualiteDistrib = {
     "neuf étiqueté": {
         "pourcentage": 5
@@ -492,7 +493,6 @@ const qualiteDistrib = {
 };
 
 // Distribution de la propreté
-
 const propreteDistrib = {
     "propre": {
         "pourcentage": 45
@@ -511,7 +511,7 @@ const propreteDistrib = {
 // Liste des distributions par type 
 
 const repartitionParType = {
-// Pantalon en jean 
+  // Pantalon en jean 
   "pantalons en jean": {
     "matieres": [
       { "nom": "coton/élasthanne", "pourcentage": 31.2 },
@@ -998,62 +998,4 @@ const repartitionParType = {
     ]
   }
 }
-
-// Génération de l'objet lotType au chargement
-const total = 1000;
-lotType = {
-  total,
-  format: {},
-  qualite: qualiteDistrib,
-  proprete: Object.fromEntries(
-    Object.entries(propreteDistrib).map(([k, v]) => [k, { pourcentage: v }])
-  )
-};
-
-console.log('lotType :', lotType);
-
-Object.entries(formats_types).forEach(([format, formatObj]) => {
-  lotType.formats[format] = {
-    pourcentage: formatObj.pourcentage,
-    types: {}
-  };
-  Object.entries(formatObj.types).forEach(([type, typePct]) => {
-    const repType = repartitionParType[type] || {};
-    // Matières
-    const matieres = {};
-    const matieresSource = (repType.matieres && repType.matieres.length)
-      ? repType.matieres
-      : [{ nom: 'inconnu', pourcentage: 100 }];
-    matieresSource.forEach(m => {
-      const matiereFibres = matieres_fibres[m.nom] || {};
-      matieres[m.nom] = {
-        pourcentage: m.pourcentage,
-        fibres: matiereFibres.fibres || {}
-      };
-    });
-    // Couleurs
-    const couleurs = {};
-    const couleursSource = (repType.couleurs && repType.couleurs.length)
-      ? repType.couleurs
-      : [{ nom: 'multicolore', pourcentage: 100 }];
-    couleursSource.forEach(c => {
-      couleurs[c.nom] = { pourcentage: c.pourcentage };
-    });
-    lotType.formats[format].types[type] = {
-      pourcentage: typePct,
-      matieres,
-      couleurs,
-      perturbateurs: repType.perturbateurs || []
-    };
-  });
-});
-
-console.log('lotType généré :', lotType);
-
-
-
-
-
-
-
 
