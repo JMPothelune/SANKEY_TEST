@@ -12,6 +12,7 @@
   <!-- Charger data.js pour avoir lotStructure -->
   <script src="data.js"></script>
   <script src="color_mappings.js"></script>
+  <script src="lot_type_creation.js"></script>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     function extractDimensions(structure, dims = new Set()) {
@@ -113,7 +114,7 @@
       const result = {};
       formats.forEach(format => {
         result[format] = {
-          couleur: palette[format],
+          color: palette[format],
           types: {}
         };
       });
@@ -134,7 +135,7 @@
       const result = {};
       types.forEach(type => {
         result[type] = {
-          couleur: palette[type],
+          color: palette[type],
           matieres: {},
           couleurs: {},
           perturbateurs: {}
@@ -150,7 +151,7 @@
       const result = {};
       matieres.forEach(matiere => {
         result[matiere] = {
-          couleur: palette[matiere],
+          color: palette[matiere],
           fibres: {}
         };
       });
@@ -169,7 +170,7 @@
       const result = {};
       fibres.forEach(fibre => {
         result[fibre] = {
-          couleur: palette[fibre]
+          color: palette[fibre]
         };
       });
       return result;
@@ -191,7 +192,7 @@
       const result = {};
       couleurs.forEach(nom => {
         result[nom] = {
-          couleur: staticPalette[nom] || dynamicPalette[nom] || '#bbb'
+          color: staticPalette[nom] || dynamicPalette[nom] || '#bbb'
         };
       });
       return result;
@@ -211,7 +212,7 @@
       const result = {};
       perturbateurs.forEach(nom => {
         result[nom] = {
-          couleur: palette[nom]
+          color: palette[nom]
         };
       });
       return result;
@@ -223,7 +224,7 @@
       const result = {};
       qualites.forEach(q => {
         result[q] = {
-          couleur: palette[q]
+          color: palette[q]
         };
       });
       return result;
@@ -235,7 +236,7 @@
       const result = {};
       propretes.forEach(p => {
         result[p] = {
-          couleur: palette[p]
+          color: palette[p]
         };
       });
       return result;
@@ -248,8 +249,8 @@
       Object.entries(obj).forEach(([nom, val]) => {
         const card = document.createElement('div');
         card.className = 'rounded shadow px-3 py-2 text-xs font-mono border';
-        card.style.background = (val && typeof val === 'object' && val.couleur) ? val.couleur : '#fff';
-        card.style.color = (val && typeof val === 'object' && val.couleur) ? '#fff' : '#222';
+        card.style.background = (val && typeof val === 'object' && val.color) ? val.color : '#fff';
+        card.style.color = (val && typeof val === 'object' && val.color) ? '#fff' : '#222';
         card.style.minWidth = '180px';
         card.style.maxWidth = '100%';
         card.style.wordBreak = 'break-all';
@@ -380,6 +381,12 @@
     document.getElementById('btn-telecharger').addEventListener('click', function() {
       downloadAllJsons();
     });
+
+    // Lier le bouton 'lot type' à la création et au téléchargement du lotType
+    document.getElementById('btn-lottype').addEventListener('click', function() {
+      const lotType = window.createLotType();
+      downloadJson(lotType, 'lotType.json');
+    });
   });
   </script>
 
@@ -395,6 +402,7 @@
     <div class="buttons">
       <button id="btn-creer" class="px-4 py-2 rounded bg-blue-600 text-white font-bold shadow hover:bg-blue-700">Créer</button>
       <button id="btn-telecharger" class="px-4 py-2 rounded bg-green-600 text-white font-bold shadow hover:bg-green-700">Télécharger</button>
+      <button id="btn-lottype" class="px-4 py-2 rounded bg-yellow-500 text-white font-bold shadow hover:bg-yellow-600">lot type</button>
     </div>
   </div>
     

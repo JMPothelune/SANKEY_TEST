@@ -111,7 +111,7 @@ const allFormats = {
       }
     }
   },
-  "Chute de production": {
+  "chute de production": {
     "types": {
       "poussière de textile": {
         "pourcentage": 25,
@@ -124,6 +124,13 @@ const allFormats = {
       },
       "invendus": {
         "pourcentage": 25,
+      }
+    }
+  },
+  "autres": {
+    "types": {
+      "autre": {
+        "pourcentage": 100,
       }
     }
   }
