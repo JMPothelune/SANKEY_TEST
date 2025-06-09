@@ -13,6 +13,7 @@ const lotStructure = {
   qualite: null,
   proprete: null
 };
+window.lotStructure = lotStructure;
 
 window.dimensionTree = {
   selectByFormat: {
