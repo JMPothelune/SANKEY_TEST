@@ -121,6 +121,16 @@
       return result;
     }
 
+    // Fonction pour charger la palette des types depuis types.json
+    function collectTypesPalette() {
+      // Si déjà chargée, ne rien faire
+      if (window.typesData) return window.typesData;
+      // Si le JSON est déjà chargé côté serveur, on peut l'injecter ici
+      // Sinon, il faudrait le charger dynamiquement (AJAX/fetch)
+      // Pour l'instant, on suppose qu'il est injecté côté serveur ou déjà dans window.typesData
+      return window.typesData || {};
+    }
+
     function collectTypes() {
       const types = [];
       Object.values(allFormats).forEach(formatObj => {
@@ -130,15 +140,43 @@
           });
         }
       });
-      // Plus de variété : spread 80, saturation et luminosité varient
-      const palette = generateVarietyPalette(types, 210, 80, 65, 55, 30, 25); // bleus variés
+      // Charger la vraie palette des types
+      const typesPalette = collectTypesPalette();
       const result = {};
       types.forEach(type => {
+        // Récupérer la répartition matière/fibre pour ce type
+        const repType = repartitionParType[type] || {};
+        const matieres = {};
+        (repType.matieres || []).forEach(m => {
+          const fibresData = matieres_fibres[m.nom]?.fibres || {};
+          const fibresPalette = window.fibresData || {};
+          const fibres = {};
+          Object.entries(fibresData).forEach(([fibre, obj]) => {
+            fibres[fibre] = {
+              pourcentage: obj.pourcentage,
+              color: (fibresPalette[fibre] && fibresPalette[fibre].color) || '#bbb'
+            };
+          });
+          matieres[m.nom] = {
+            pourcentage: m.pourcentage,
+            fibres: fibres
+          };
+        });
+        // Répartition couleurs
+        const couleurs = {};
+        (repType.couleurs || []).forEach(c => {
+          couleurs[c.nom] = { pourcentage: c.pourcentage };
+        });
+        // Répartition perturbateurs
+        const perturbateurs = {};
+        (repType.perturbateurs || []).forEach(p => {
+          perturbateurs[p.nom] = { pourcentage: p.pourcentage };
+        });
         result[type] = {
-          color: palette[type],
-          matieres: {},
-          couleurs: {},
-          perturbateurs: {}
+          color: (typesPalette[type] && typesPalette[type].color) || '#bbb',
+          matieres: matieres,
+          couleurs: couleurs,
+          perturbateurs: perturbateurs
         };
       });
       return result;
@@ -148,11 +186,21 @@
       const matieres = Object.keys(matieres_fibres);
       // Plus de variété : spread 80, saturation et luminosité varient
       const palette = generateVarietyPalette(matieres, 270, 80, 55, 55, 30, 25); // violets variés
+      const fibresPalette = window.fibresData || {};
       const result = {};
       matieres.forEach(matiere => {
+        // Récupérer la répartition des fibres pour cette matière
+        const fibresData = matieres_fibres[matiere]?.fibres || {};
+        const fibres = {};
+        Object.entries(fibresData).forEach(([fibre, obj]) => {
+          fibres[fibre] = {
+            pourcentage: obj.pourcentage,
+            color: (fibresPalette[fibre] && fibresPalette[fibre].color) || '#bbb'
+          };
+        });
         result[matiere] = {
           color: palette[matiere],
-          fibres: {}
+          fibres: fibres
         };
       });
       return result;
@@ -300,9 +348,21 @@
       const dimensions = Array.from(extractDimensions(structure));
       // Stocker les blobs dans un objet global
       window.jsonBlobs = {};
+      // 1. Générer d'abord les fibres et stocker l'objet dans window.fibresData
+      const fibresData = collectFibres();
+      window.fibresData = fibresData;
+      // 2. Générer la palette des types
+      window.typesData = collectTypesPalette();
+      // 3. Générer les autres dimensions dans l'ordre
       dimensions.forEach(dimension => {
-        const fn = dimensionFunctions[dimension];
-        const data = fn ? fn() : {};
+        let data;
+        if (dimension === 'fibres') {
+          data = fibresData;
+        } else if (dimension === 'types') {
+          data = collectTypes();
+        } else {
+          data = dimensionFunctions[dimension]();
+        }
         // Générer le JSON et stocker le blob
         const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
         window.jsonBlobs[dimension] = blob;

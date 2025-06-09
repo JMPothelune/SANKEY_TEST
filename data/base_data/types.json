@@ -1,150 +1,2390 @@
 {
   "autres pantalons, shorts et jupes": {
-    "color": "#36a391",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 18.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 13.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 12.1,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 11.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/élasthanne": {
+        "pourcentage": 3.9,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 93,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "coton/polyester/élasthanne": {
+        "pourcentage": 3.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 71,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 26,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 3,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/viscose/élasthanne": {
+        "pourcentage": 3.3,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 59,
+            "color": "#d2603a"
+          },
+          "viscose": {
+            "pourcentage": 37,
+            "color": "#e5ab5a"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "100% laine": {
+        "pourcentage": 2.2,
+        "fibres": {
+          "laine": {
+            "pourcentage": 100,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "polyester/laine": {
+        "pourcentage": 2.1,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 58,
+            "color": "#d2603a"
+          },
+          "laine": {
+            "pourcentage": 42,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "polyester/viscose": {
+        "pourcentage": 1.8,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 44,
+            "color": "#d2603a"
+          },
+          "viscose": {
+            "pourcentage": 56,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 9.8,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 17,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "noir": {
+        "pourcentage": 27
+      },
+      "gris": {
+        "pourcentage": 17
+      },
+      "bleu": {
+        "pourcentage": 16
+      },
+      "multicolore": {
+        "pourcentage": 12
+      },
+      "blanc": {
+        "pourcentage": 9
+      },
+      "marron": {
+        "pourcentage": 9
+      },
+      "vert": {
+        "pourcentage": 5
+      },
+      "rouge": {
+        "pourcentage": 3
+      },
+      "violet": {
+        "pourcentage": 2
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 92
+      },
+      "multicouche": {
+        "pourcentage": 4
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 4
+      }
+    }
   },
   "hauts type t-shirt": {
-    "color": "#39b0a3",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 57.6,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 6.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 6.5,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "viscose/élasthanne": {
+        "pourcentage": 5.1,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 93,
+            "color": "#e5ab5a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 3.2,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% viscose": {
+        "pourcentage": 2.4,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 100,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "coton/viscose": {
+        "pourcentage": 2.2,
+        "fibres": {
+          "coton": {
+            "pourcentage": 55,
+            "color": "#b8452e"
+          },
+          "viscose": {
+            "pourcentage": 45,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "polyester/élasthanne": {
+        "pourcentage": 1.7,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 93,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "100% acrylique": {
+        "pourcentage": 1.2,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "viscose/polyamide": {
+        "pourcentage": 1,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 70,
+            "color": "#e5ab5a"
+          },
+          "polyamide": {
+            "pourcentage": 30,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 3.7,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 8.6,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "blanc": {
+        "pourcentage": 34
+      },
+      "noir": {
+        "pourcentage": 14
+      },
+      "multicolore": {
+        "pourcentage": 13
+      },
+      "bleu": {
+        "pourcentage": 10
+      },
+      "gris": {
+        "pourcentage": 9
+      },
+      "marron": {
+        "pourcentage": 5
+      },
+      "rouge": {
+        "pourcentage": 5
+      },
+      "violet": {
+        "pourcentage": 3
+      },
+      "vert": {
+        "pourcentage": 3
+      },
+      "autres": {
+        "pourcentage": 4
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 73
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 27
+      }
+    }
   },
   "hauts type chemise": {
-    "color": "#3bbeb6",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 48.6,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 18.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 6.8,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% viscose": {
+        "pourcentage": 5.5,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 100,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 3.5,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/viscose": {
+        "pourcentage": 1.6,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 44,
+            "color": "#d2603a"
+          },
+          "viscose": {
+            "pourcentage": 56,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "100% polyamide": {
+        "pourcentage": 1.5,
+        "fibres": {
+          "polyamide": {
+            "pourcentage": 100,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "viscose/élasthanne": {
+        "pourcentage": 1.3,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 93,
+            "color": "#e5ab5a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/élasthanne": {
+        "pourcentage": 1.2,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 93,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "coton/autre": {
+        "pourcentage": 1.2,
+        "fibres": {
+          "coton": {
+            "pourcentage": 60,
+            "color": "#b8452e"
+          },
+          "autre": {
+            "pourcentage": 40,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 2.6,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 7.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "multicolore": {
+        "pourcentage": 31
+      },
+      "blanc": {
+        "pourcentage": 27
+      },
+      "bleu": {
+        "pourcentage": 16
+      },
+      "gris": {
+        "pourcentage": 5
+      },
+      "marron": {
+        "pourcentage": 5
+      },
+      "vert": {
+        "pourcentage": 4
+      },
+      "noir": {
+        "pourcentage": 4
+      },
+      "rouge": {
+        "pourcentage": 3
+      },
+      "violet": {
+        "pourcentage": 3
+      },
+      "autres": {
+        "pourcentage": 2
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 98
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 2
+      }
+    }
   },
   "hauts type pull": {
-    "color": "#42c6c6",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% acrylique": {
+        "pourcentage": 15.6,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "100% coton": {
+        "pourcentage": 15.1,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 8.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "laine/acrylique": {
+        "pourcentage": 8.1,
+        "fibres": {
+          "laine": {
+            "pourcentage": 38,
+            "color": "#cb6b27"
+          },
+          "acrylique": {
+            "pourcentage": 62,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 6.6,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/acrylique": {
+        "pourcentage": 5.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 45,
+            "color": "#b8452e"
+          },
+          "acrylique": {
+            "pourcentage": 55,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "100% laine": {
+        "pourcentage": 3.1,
+        "fibres": {
+          "laine": {
+            "pourcentage": 100,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "viscose/polyamide": {
+        "pourcentage": 2.7,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 70,
+            "color": "#e5ab5a"
+          },
+          "polyamide": {
+            "pourcentage": 30,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "laine/polyamide": {
+        "pourcentage": 2.4,
+        "fibres": {
+          "laine": {
+            "pourcentage": 65,
+            "color": "#cb6b27"
+          },
+          "polyamide": {
+            "pourcentage": 35,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "coton/polyamide": {
+        "pourcentage": 1.9,
+        "fibres": {
+          "coton": {
+            "pourcentage": 69,
+            "color": "#b8452e"
+          },
+          "polyamide": {
+            "pourcentage": 31,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 11.3,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 20.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "multicolore": {
+        "pourcentage": 18
+      },
+      "noir": {
+        "pourcentage": 17
+      },
+      "gris": {
+        "pourcentage": 15
+      },
+      "bleu": {
+        "pourcentage": 12
+      },
+      "blanc": {
+        "pourcentage": 10
+      },
+      "marron": {
+        "pourcentage": 8
+      },
+      "rouge": {
+        "pourcentage": 7
+      },
+      "vert": {
+        "pourcentage": 5
+      },
+      "violet": {
+        "pourcentage": 4
+      },
+      "orange": {
+        "pourcentage": 2
+      },
+      "autres": {
+        "pourcentage": 2
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 71
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 29
+      }
+    }
   },
   "lingerie": {
-    "color": "#4dc4cb",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "polyamide/élasthanne": {
+        "pourcentage": 28.4,
+        "fibres": {
+          "polyamide": {
+            "pourcentage": 86,
+            "color": "#df9f20"
+          },
+          "élasthanne": {
+            "pourcentage": 14,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/polyamide/élasthanne": {
+        "pourcentage": 9.6,
+        "fibres": {}
+      },
+      "coton/élasthanne": {
+        "pourcentage": 8.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "100% coton": {
+        "pourcentage": 7.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 7.4,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% polyamide": {
+        "pourcentage": 7.3,
+        "fibres": {
+          "polyamide": {
+            "pourcentage": 100,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "coton/polyamide/élasthanne": {
+        "pourcentage": 6.1,
+        "fibres": {
+          "coton": {
+            "pourcentage": 72,
+            "color": "#b8452e"
+          },
+          "polyamide": {
+            "pourcentage": 24,
+            "color": "#df9f20"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/élasthanne": {
+        "pourcentage": 4.7,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 93,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "mélange 4 matières": {
+        "pourcentage": 3.2,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "viscose/élasthanne": {
+        "pourcentage": 2,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 93,
+            "color": "#e5ab5a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 5.7,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 9.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "blanc": {
+        "pourcentage": 33
+      },
+      "noir": {
+        "pourcentage": 19
+      },
+      "multicolore": {
+        "pourcentage": 9
+      },
+      "gris": {
+        "pourcentage": 9
+      },
+      "bleu": {
+        "pourcentage": 6
+      },
+      "rouge": {
+        "pourcentage": 6
+      },
+      "marron": {
+        "pourcentage": 4
+      },
+      "vert": {
+        "pourcentage": 2
+      },
+      "violet": {
+        "pourcentage": 4
+      },
+      "orange": {
+        "pourcentage": 4
+      },
+      "autres": {
+        "pourcentage": 4
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 96
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 2
+      },
+      "multicouche": {
+        "pourcentage": 2
+      }
+    }
   },
   "pantalons en jean": {
-    "color": "#58c3d0",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "coton/élasthanne": {
+        "pourcentage": 31.2,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "100% coton": {
+        "pourcentage": 27.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/polyester/élasthanne": {
+        "pourcentage": 20.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 71,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 26,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 3,
+            "color": "#db8357"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 4.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "mélange 4 matières": {
+        "pourcentage": 4.2,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "coton/polyester/viscose": {
+        "pourcentage": 1.3,
+        "fibres": {}
+      },
+      "coton/autre": {
+        "pourcentage": 0.7,
+        "fibres": {
+          "coton": {
+            "pourcentage": 60,
+            "color": "#b8452e"
+          },
+          "autre": {
+            "pourcentage": 40,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "coton/autre/élasthanne": {
+        "pourcentage": 0.6,
+        "fibres": {}
+      },
+      "coton/viscose": {
+        "pourcentage": 0.2,
+        "fibres": {
+          "coton": {
+            "pourcentage": 55,
+            "color": "#b8452e"
+          },
+          "viscose": {
+            "pourcentage": 45,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "viscose/polyamide/élasthanne": {
+        "pourcentage": 0.1,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 74,
+            "color": "#e5ab5a"
+          },
+          "polyamide": {
+            "pourcentage": 21,
+            "color": "#df9f20"
+          },
+          "élasthanne": {
+            "pourcentage": 5,
+            "color": "#db8357"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 0.5,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 8.8,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "bleu": {
+        "pourcentage": 68
+      },
+      "noir": {
+        "pourcentage": 14
+      },
+      "gris": {
+        "pourcentage": 10
+      },
+      "vert": {
+        "pourcentage": 2
+      },
+      "autres": {
+        "pourcentage": 6
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 100
+      }
+    }
   },
   "pyjama et ensembles de sport": {
-    "color": "#63c2d5",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 37.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 20,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 16.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 4.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "100% acrylique": {
+        "pourcentage": 2.1,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "polyester/acrylique": {
+        "pourcentage": 1.7,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 45,
+            "color": "#d2603a"
+          },
+          "acrylique": {
+            "pourcentage": 55,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "100% viscose": {
+        "pourcentage": 1.4,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 100,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "viscose/élasthanne": {
+        "pourcentage": 1.4,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 93,
+            "color": "#e5ab5a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "coton/viscose": {
+        "pourcentage": 1.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 55,
+            "color": "#b8452e"
+          },
+          "viscose": {
+            "pourcentage": 45,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "coton/polyester/élasthanne": {
+        "pourcentage": 1,
+        "fibres": {
+          "coton": {
+            "pourcentage": 71,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 26,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 3,
+            "color": "#db8357"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 7,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 5.6,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "multicolore": {
+        "pourcentage": 29
+      },
+      "bleu": {
+        "pourcentage": 17
+      },
+      "blanc": {
+        "pourcentage": 11
+      },
+      "gris": {
+        "pourcentage": 9
+      },
+      "noir": {
+        "pourcentage": 8
+      },
+      "rouge": {
+        "pourcentage": 8
+      },
+      "violet": {
+        "pourcentage": 5
+      },
+      "marron": {
+        "pourcentage": 4
+      },
+      "vert": {
+        "pourcentage": 4
+      },
+      "autres": {
+        "pourcentage": 5
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 88
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 12
+      }
+    }
   },
   "robes": {
-    "color": "#6fc2da",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 11.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 11.4,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% acrylique": {
+        "pourcentage": 8.4,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "polyester/élasthanne": {
+        "pourcentage": 7,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 93,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "coton/viscose": {
+        "pourcentage": 5.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 55,
+            "color": "#b8452e"
+          },
+          "viscose": {
+            "pourcentage": 45,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "viscose/élasthanne": {
+        "pourcentage": 5.6,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 93,
+            "color": "#e5ab5a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/viscose/élasthanne": {
+        "pourcentage": 3.9,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 59,
+            "color": "#d2603a"
+          },
+          "viscose": {
+            "pourcentage": 37,
+            "color": "#e5ab5a"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "100% viscose": {
+        "pourcentage": 3.5,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 100,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 3.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 3.2,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 7.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 28.5,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "multicolore": {
+        "pourcentage": 30
+      },
+      "noir": {
+        "pourcentage": 24
+      },
+      "blanc": {
+        "pourcentage": 11
+      },
+      "gris": {
+        "pourcentage": 8
+      },
+      "marron": {
+        "pourcentage": 7
+      },
+      "bleu": {
+        "pourcentage": 7
+      },
+      "rouge": {
+        "pourcentage": 5
+      },
+      "violet": {
+        "pourcentage": 4
+      },
+      "vert": {
+        "pourcentage": 3
+      },
+      "autres": {
+        "pourcentage": 1
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 71
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 24
+      },
+      "multicouche": {
+        "pourcentage": 5
+      }
+    }
   },
   "vestes, manteaux et costumes": {
-    "color": "#2b89ad",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% polyester": {
+        "pourcentage": 31.1,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% coton": {
+        "pourcentage": 12,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 10.6,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% polyamide": {
+        "pourcentage": 4.7,
+        "fibres": {
+          "polyamide": {
+            "pourcentage": 100,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "100% viscose": {
+        "pourcentage": 3.1,
+        "fibres": {
+          "viscose": {
+            "pourcentage": 100,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "100% laine": {
+        "pourcentage": 3,
+        "fibres": {
+          "laine": {
+            "pourcentage": 100,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "polyester/viscose": {
+        "pourcentage": 2.3,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 44,
+            "color": "#d2603a"
+          },
+          "viscose": {
+            "pourcentage": 56,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "polyester/laine": {
+        "pourcentage": 2.2,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 58,
+            "color": "#d2603a"
+          },
+          "laine": {
+            "pourcentage": 42,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "laine/polyamide": {
+        "pourcentage": 1.9,
+        "fibres": {
+          "laine": {
+            "pourcentage": 65,
+            "color": "#cb6b27"
+          },
+          "polyamide": {
+            "pourcentage": 35,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "polyester/élasthanne": {
+        "pourcentage": 1.8,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 93,
+            "color": "#d2603a"
+          },
+          "élasthanne": {
+            "pourcentage": 7,
+            "color": "#db8357"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 9,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 18.3,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "noir": {
+        "pourcentage": 28
+      },
+      "bleu": {
+        "pourcentage": 15
+      },
+      "marron": {
+        "pourcentage": 12
+      },
+      "blanc": {
+        "pourcentage": 10
+      },
+      "multicolore": {
+        "pourcentage": 10
+      },
+      "gris": {
+        "pourcentage": 11
+      },
+      "vert": {
+        "pourcentage": 6
+      },
+      "rouge": {
+        "pourcentage": 4
+      },
+      "violet": {
+        "pourcentage": 2
+      },
+      "autres": {
+        "pourcentage": 2
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 41
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 2
+      },
+      "multicouche": {
+        "pourcentage": 57
+      }
+    }
   },
   "vêtements bébé": {
-    "color": "#2d8cbc",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 42.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 13.9,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% acrylique": {
+        "pourcentage": 10.1,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 5.8,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 4.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "coton/acrylique": {
+        "pourcentage": 3.6,
+        "fibres": {
+          "coton": {
+            "pourcentage": 45,
+            "color": "#b8452e"
+          },
+          "acrylique": {
+            "pourcentage": 55,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "laine/acrylique": {
+        "pourcentage": 2.2,
+        "fibres": {
+          "laine": {
+            "pourcentage": 38,
+            "color": "#cb6b27"
+          },
+          "acrylique": {
+            "pourcentage": 62,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "coton/polyamide": {
+        "pourcentage": 2,
+        "fibres": {
+          "coton": {
+            "pourcentage": 69,
+            "color": "#b8452e"
+          },
+          "polyamide": {
+            "pourcentage": 31,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "100% laine": {
+        "pourcentage": 1.6,
+        "fibres": {
+          "laine": {
+            "pourcentage": 100,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "mélange 4 matières": {
+        "pourcentage": 1.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 4.2,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 8.5,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "multicolore": {
+        "pourcentage": 22
+      },
+      "blanc": {
+        "pourcentage": 19
+      },
+      "bleu": {
+        "pourcentage": 17
+      },
+      "gris": {
+        "pourcentage": 11
+      },
+      "marron": {
+        "pourcentage": 7
+      },
+      "violet": {
+        "pourcentage": 7
+      },
+      "rouge": {
+        "pourcentage": 7
+      },
+      "noir": {
+        "pourcentage": 3
+      },
+      "vert": {
+        "pourcentage": 3
+      },
+      "jaune": {
+        "pourcentage": 3
+      },
+      "autres": {
+        "pourcentage": 1
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 89
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 7
+      },
+      "multicouche": {
+        "pourcentage": 4
+      }
+    }
   },
   "linge de bain / toilette": {
-    "color": "#2f8eca",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 81.5,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 9.1,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/polyamide": {
+        "pourcentage": 3.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 69,
+            "color": "#b8452e"
+          },
+          "polyamide": {
+            "pourcentage": 31,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 2.6,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/laine": {
+        "pourcentage": 0.5,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "laine": {
+            "pourcentage": 43,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 0.4,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/acrylique": {
+        "pourcentage": 0.3,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 45,
+            "color": "#d2603a"
+          },
+          "acrylique": {
+            "pourcentage": 55,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "100% acrylique": {
+        "pourcentage": 0.3,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "100% polyamide": {
+        "pourcentage": 0.2,
+        "fibres": {
+          "polyamide": {
+            "pourcentage": 100,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "coton/viscose": {
+        "pourcentage": 0.2,
+        "fibres": {
+          "coton": {
+            "pourcentage": 55,
+            "color": "#b8452e"
+          },
+          "viscose": {
+            "pourcentage": 45,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 1.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 0.3,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "blanc": {
+        "pourcentage": 29
+      },
+      "multicolore": {
+        "pourcentage": 22
+      },
+      "bleu": {
+        "pourcentage": 15
+      },
+      "gris": {
+        "pourcentage": 6
+      },
+      "marron": {
+        "pourcentage": 6
+      },
+      "rouge": {
+        "pourcentage": 5
+      },
+      "vert": {
+        "pourcentage": 4
+      },
+      "jaune": {
+        "pourcentage": 3
+      },
+      "violet": {
+        "pourcentage": 8
+      },
+      "autres": {
+        "pourcentage": 2
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 45
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 55
+      }
+    }
   },
   "linge de lit": {
-    "color": "#368dd3",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 60.8,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 10.6,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 10.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/viscose": {
+        "pourcentage": 2.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 55,
+            "color": "#b8452e"
+          },
+          "viscose": {
+            "pourcentage": 45,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "coton/laine": {
+        "pourcentage": 1.7,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "laine": {
+            "pourcentage": 43,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "100% laine": {
+        "pourcentage": 1.5,
+        "fibres": {
+          "laine": {
+            "pourcentage": 100,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "100% acrylique": {
+        "pourcentage": 1.2,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "coton/acrylique": {
+        "pourcentage": 1,
+        "fibres": {
+          "coton": {
+            "pourcentage": 45,
+            "color": "#b8452e"
+          },
+          "acrylique": {
+            "pourcentage": 55,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "polyester/viscose": {
+        "pourcentage": 0.8,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 44,
+            "color": "#d2603a"
+          },
+          "viscose": {
+            "pourcentage": 56,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 0.6,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 4.8,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 4.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "blanc": {
+        "pourcentage": 36
+      },
+      "multicolore": {
+        "pourcentage": 25
+      },
+      "bleu": {
+        "pourcentage": 8
+      },
+      "gris": {
+        "pourcentage": 6
+      },
+      "marron": {
+        "pourcentage": 5
+      },
+      "vert": {
+        "pourcentage": 4
+      },
+      "violet": {
+        "pourcentage": 4
+      },
+      "jaune": {
+        "pourcentage": 3
+      },
+      "orange": {
+        "pourcentage": 3
+      },
+      "rouge": {
+        "pourcentage": 3
+      },
+      "autres": {
+        "pourcentage": 3
+      }
+    },
+    "perturbateurs": {
+      "monocouche avec perturbateur": {
+        "pourcentage": 41
+      },
+      "monocouche sans perturbateur": {
+        "pourcentage": 58
+      },
+      "multicouche": {
+        "pourcentage": 1
+      }
+    }
   },
   "rideaux et voilage": {
-    "color": "#428cd7",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "autre linge de maison": {
-    "color": "#4d8cdb",
-    "matieres": {},
-    "couleurs": {},
-    "perturbateurs": {}
+    "color": "#bbb",
+    "matieres": {
+      "100% coton": {
+        "pourcentage": 53.1,
+        "fibres": {
+          "coton": {
+            "pourcentage": 100,
+            "color": "#b8452e"
+          }
+        }
+      },
+      "coton/viscose": {
+        "pourcentage": 12.3,
+        "fibres": {
+          "coton": {
+            "pourcentage": 55,
+            "color": "#b8452e"
+          },
+          "viscose": {
+            "pourcentage": 45,
+            "color": "#e5ab5a"
+          }
+        }
+      },
+      "100% polyester": {
+        "pourcentage": 11.2,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 100,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "coton/polyester": {
+        "pourcentage": 5.9,
+        "fibres": {
+          "coton": {
+            "pourcentage": 57,
+            "color": "#b8452e"
+          },
+          "polyester": {
+            "pourcentage": 43,
+            "color": "#d2603a"
+          }
+        }
+      },
+      "100% laine": {
+        "pourcentage": 2.2,
+        "fibres": {
+          "laine": {
+            "pourcentage": 100,
+            "color": "#cb6b27"
+          }
+        }
+      },
+      "polyester/polyamide": {
+        "pourcentage": 1.6,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 60,
+            "color": "#d2603a"
+          },
+          "polyamide": {
+            "pourcentage": 40,
+            "color": "#df9f20"
+          }
+        }
+      },
+      "100% acrylique": {
+        "pourcentage": 1.2,
+        "fibres": {
+          "acrylique": {
+            "pourcentage": 100,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "coton/élasthanne": {
+        "pourcentage": 1.1,
+        "fibres": {
+          "coton": {
+            "pourcentage": 96,
+            "color": "#b8452e"
+          },
+          "élasthanne": {
+            "pourcentage": 4,
+            "color": "#db8357"
+          }
+        }
+      },
+      "polyester/acrylique": {
+        "pourcentage": 0.9,
+        "fibres": {
+          "polyester": {
+            "pourcentage": 45,
+            "color": "#d2603a"
+          },
+          "acrylique": {
+            "pourcentage": 55,
+            "color": "#dd8c3c"
+          }
+        }
+      },
+      "coton/autre": {
+        "pourcentage": 0.9,
+        "fibres": {
+          "coton": {
+            "pourcentage": 60,
+            "color": "#b8452e"
+          },
+          "autre": {
+            "pourcentage": 40,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "inconnu": {
+        "pourcentage": 5.1,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      },
+      "autres compositions": {
+        "pourcentage": 4.4,
+        "fibres": {
+          "autre": {
+            "pourcentage": 100,
+            "color": "#e7bd3f"
+          }
+        }
+      }
+    },
+    "couleurs": {
+      "blanc": {
+        "pourcentage": 40
+      },
+      "multicolore": {
+        "pourcentage": 33
+      },
+      "bleu": {
+        "pourcentage": 6
+      },
+      "vert": {
+        "pourcentage": 4
+      },
+      "marron": {
+        "pourcentage": 3
+      },
+      "orange": {
+        "pourcentage": 3
+      },
+      "rouge": {
+        "pourcentage": 3
+      },
+      "jaune": {
+        "pourcentage": 2
+      },
+      "gris": {
+        "pourcentage": 6
+      }
+    },
+    "perturbateurs": {
+      "monocouche sans perturbateur": {
+        "pourcentage": 72
+      },
+      "monocouche avec perturbateur": {
+        "pourcentage": 28
+      }
+    }
   },
   "bottes": {
-    "color": "#598ddf",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "basket": {
-    "color": "#668fe3",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "été": {
-    "color": "#214bb8",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "intérieur": {
-    "color": "#2146c7",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "bébé": {
-    "color": "#2240d6",
+    "color": "#bbb",
+    "matieres": {},
+    "couleurs": {},
+    "perturbateurs": {}
+  },
+  "couettes et oreillers": {
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "non TLC": {
-    "color": "#2a3edf",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "poussière de textile": {
-    "color": "#3640e2",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "cônes": {
-    "color": "#4343e6",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "rouleau": {
-    "color": "#5850e9",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "invendus": {
-    "color": "#6d5dec",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
   },
   "autre": {
-    "color": "#4836a3",
+    "color": "#bbb",
     "matieres": {},
     "couleurs": {},
     "perturbateurs": {}
