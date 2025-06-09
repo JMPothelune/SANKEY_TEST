@@ -628,7 +628,7 @@ const repartitionParType = {
       { "nom": "noir", "pourcentage": 4 },
       { "nom": "rouge", "pourcentage": 3 },
       { "nom": "violet", "pourcentage": 3 },
-      { "nom": "autre", "pourcentage": 2 }
+      { "nom": "autres", "pourcentage": 2 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 98 },
@@ -661,7 +661,7 @@ const repartitionParType = {
       { "nom": "vert", "pourcentage": 5 },
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "orange", "pourcentage": 2 },
-      { "nom": "autre", "pourcentage": 2 }
+      { "nom": "autres", "pourcentage": 2 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 71 },
@@ -693,7 +693,7 @@ const repartitionParType = {
       { "nom": "rouge", "pourcentage": 5 },
       { "nom": "violet", "pourcentage": 3 },
       { "nom": "vert", "pourcentage": 3 },
-      { "nom": "autre", "pourcentage": 4 }
+      { "nom": "autres", "pourcentage": 4 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 73 },
@@ -725,7 +725,7 @@ const repartitionParType = {
       { "nom": "vert", "pourcentage": 4 },
       { "nom": "jaune", "pourcentage": 3 },
       { "nom": "violet", "pourcentage": 8 },
-      { "nom": "autre", "pourcentage" : 2}
+      { "nom": "autres", "pourcentage" : 2}
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 45 },
@@ -758,7 +758,7 @@ const repartitionParType = {
       { "nom": "jaune", "pourcentage": 3 },
       { "nom": "orange", "pourcentage": 3 },
       { "nom": "rouge", "pourcentage": 3 },
-      { "nom": "autre", "pourcentage": 3}
+      { "nom": "autres", "pourcentage": 3}
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 41 },
@@ -792,7 +792,7 @@ const repartitionParType = {
       { "nom": "vert", "pourcentage": 2 },
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "orange", "pourcentage": 4 },
-      { "nom": "autre", "pourcentage": 4 }
+      { "nom": "autres", "pourcentage": 4 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 96 },
@@ -825,7 +825,7 @@ const repartitionParType = {
       { "nom": "violet", "pourcentage": 5 },
       { "nom": "marron", "pourcentage": 4 },
       { "nom": "vert", "pourcentage": 4 },
-      { "nom": "autre", "pourcentage": 5 }
+      { "nom": "autres", "pourcentage": 5 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 88 },
@@ -857,7 +857,7 @@ const repartitionParType = {
       { "nom": "gris", "pourcentage": 5 },
       { "nom": "violet", "pourcentage": 5 },
       { "nom": "orange", "pourcentage": 5 },
-      { "nom": "autre", "pourcentage": 3 }
+      { "nom": "autres", "pourcentage": 3 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 84 },
@@ -890,7 +890,7 @@ const repartitionParType = {
       { "nom": "rouge", "pourcentage": 5 },
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "vert", "pourcentage": 3 },
-      { "nom": "autre", "pourcentage": 1 }
+      { "nom": "autres", "pourcentage": 1 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 71 },
@@ -923,7 +923,7 @@ const repartitionParType = {
       { "nom": "rouge", "pourcentage": 5 },
       { "nom": "violet", "pourcentage": 4 },
       { "nom": "vert", "pourcentage": 4 },
-      { "nom": "autre", "pourcentage": 2 }
+      { "nom": "autres", "pourcentage": 2 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 63 },
@@ -955,7 +955,7 @@ const repartitionParType = {
       { "nom": "vert", "pourcentage": 6 },
       { "nom": "rouge", "pourcentage": 4 },
       { "nom": "violet", "pourcentage": 2 },
-      { "nom": "autre", "pourcentage": 2 }
+      { "nom": "autres", "pourcentage": 2 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 41 },
@@ -989,7 +989,7 @@ const repartitionParType = {
       { "nom": "noir", "pourcentage": 3 },
       { "nom": "vert", "pourcentage": 3 },
       { "nom": "jaune", "pourcentage": 3 },
-      { "nom": "autre", "pourcentage": 1 }
+      { "nom": "autres", "pourcentage": 1 }
     ],
     "perturbateurs": [
       { "nom": "monocouche avec perturbateur", "pourcentage": 89 },

@@ -21,6 +21,167 @@
       }
       return dims;
     }
+
+    // Fonction pour extraire la liste des noms d'une dimension dans lotType
+    function extractNamesForDimension(dimension, data, structure) {
+      if (!structure || typeof structure !== 'object') return [];
+      if (Object.keys(structure).includes(dimension)) {
+        const branch = data[dimension] || data;
+        if (branch && typeof branch === 'object') {
+          return Object.keys(branch);
+        }
+        return [];
+      } else {
+        for (const key in structure) {
+          if (data[key]) {
+            return extractNamesForDimension(dimension, data[key], structure[key]);
+          }
+        }
+      }
+      return [];
+    }
+
+    function collectAllNamesForDimension(dimension, data, structure, result = new Set()) {
+      if (!structure || typeof structure !== 'object' || !data || typeof data !== 'object') return result;
+      if (Object.keys(structure).includes(dimension)) {
+        const branch = data[dimension] || data;
+        if (branch && typeof branch === 'object') {
+          Object.keys(branch).forEach(k => result.add(k));
+        }
+      }
+      // Parcours récursif sur toutes les sous-branches
+      for (const key in structure) {
+        if (data[key]) {
+          collectAllNamesForDimension(dimension, data[key], structure[key], result);
+        }
+      }
+      return result;
+    }
+
+    // Fonction pour collecter tous les noms d'une dimension, à n'importe quelle profondeur
+    function collectAllNamesDeep(dimension, data) {
+      let result = new Set();
+      if (!data || typeof data !== 'object') return result;
+      if (data.hasOwnProperty(dimension) && typeof data[dimension] === 'object') {
+        Object.keys(data[dimension]).forEach(k => result.add(k));
+      }
+      for (const key in data) {
+        if (typeof data[key] === 'object') {
+          collectAllNamesDeep(dimension, data[key]).forEach(k => result.add(k));
+        }
+      }
+      return result;
+    }
+
+    function collectFormats() {
+      return Object.keys(formats_types);
+    }
+
+    function collectTypes() {
+      const result = new Set();
+      Object.values(formats_types).forEach(formatObj => {
+        if (formatObj.types) {
+          Object.keys(formatObj.types).forEach(type => result.add(type));
+        }
+      });
+      return Array.from(result);
+    }
+
+    function collectMatieres() {
+      return Object.keys(matieres_fibres);
+    }
+
+    function collectFibres() {
+      const result = new Set();
+      Object.values(matieres_fibres).forEach(matiereObj => {
+        if (matiereObj.fibres) {
+          Object.keys(matiereObj.fibres).forEach(fibre => result.add(fibre));
+        }
+      });
+      return Array.from(result);
+    }
+
+    function collectCouleurs() {
+      const result = new Set();
+      Object.values(repartitionParType).forEach(typeObj => {
+        if (typeObj.couleurs) {
+          typeObj.couleurs.forEach(couleurObj => {
+            if (couleurObj.nom) result.add(couleurObj.nom);
+          });
+        }
+      });
+      return Array.from(result);
+    }
+
+    function collectPerturbateurs() {
+      const result = new Set();
+      Object.values(repartitionParType).forEach(typeObj => {
+        if (typeObj.perturbateurs) {
+          typeObj.perturbateurs.forEach(obj => {
+            if (obj.nom) result.add(obj.nom);
+          });
+        }
+      });
+      return Array.from(result);
+    }
+
+    function collectQualite() {
+      return Object.keys(qualiteDistrib);
+    }
+
+    function collectProprete() {
+      return Object.keys(propreteDistrib);
+    }
+
+    // Fonction pour générer tous les JSONs et les proposer en téléchargement
+    function createAllJsons() {
+      let previewText = '';
+      const dimensionFunctions = {
+        formats: collectFormats,
+        types: collectTypes,
+        matieres: collectMatieres,
+        fibres: collectFibres,
+        couleurs: collectCouleurs,
+        perturbateurs: collectPerturbateurs,
+        qualite: collectQualite,
+        proprete: collectProprete
+      };
+      const structure = window.lotStructure;
+      const dimensions = Array.from(extractDimensions(structure));
+      // Stocker les blobs dans un objet global
+      window.jsonBlobs = {};
+      dimensions.forEach(dimension => {
+        const fn = dimensionFunctions[dimension];
+        const names = fn ? fn() : [];
+        // Générer le JSON et stocker le blob
+        const blob = new Blob([JSON.stringify(names, null, 2)], {type: "application/json"});
+        window.jsonBlobs[dimension] = blob;
+      });
+      // Afficher uniquement la dimension active
+      const activeDimension = document.querySelector('.dimension-btn.bg-blue-600').dataset.dim;
+      const activeNames = dimensionFunctions[activeDimension]();
+      previewText = activeNames.map(name => `• ${name}`).join('\n');
+      document.getElementById('json-preview').textContent = previewText;
+    }
+
+    // Fonction pour télécharger tous les JSONs d'un coup
+    function downloadAllJsons() {
+      if (!window.jsonBlobs) {
+        alert('Veuillez d\'abord cliquer sur "Créer" pour générer les JSONs.');
+        return;
+      }
+      Object.entries(window.jsonBlobs).forEach(([dimension, blob]) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = dimension + ".json";
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
+    }
+
+    // Génération des boutons
     const btnGroup = document.getElementById('dimension-buttons');
     if (window.lotStructure && btnGroup) {
       const dimensions = Array.from(extractDimensions(window.lotStructure));
@@ -29,17 +190,49 @@
       ).join(' ');
       // Gestion de l'état actif
       const allBtns = btnGroup.querySelectorAll('.dimension-btn');
+      function setActive(btn) {
+        allBtns.forEach(b => b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600'));
+        allBtns.forEach(b => b.classList.add('bg-blue-100', 'text-blue-800', 'border-blue-200'));
+        btn.classList.remove('bg-blue-100', 'text-blue-800', 'border-blue-200');
+        btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+        // Mettre à jour l'affichage avec la nouvelle dimension active
+        const activeDimension = btn.dataset.dim;
+        const dimensionFunctions = {
+          formats: collectFormats,
+          types: collectTypes,
+          matieres: collectMatieres,
+          fibres: collectFibres,
+          couleurs: collectCouleurs,
+          perturbateurs: collectPerturbateurs,
+          qualite: collectQualite,
+          proprete: collectProprete
+        };
+        const activeNames = dimensionFunctions[activeDimension]();
+        document.getElementById('json-preview').textContent = activeNames.map(name => `• ${name}`).join('\n');
+      }
       allBtns.forEach(btn => {
         btn.addEventListener('click', function() {
-          allBtns.forEach(b => b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600'));
-          allBtns.forEach(b => b.classList.add('bg-blue-100', 'text-blue-800', 'border-blue-200'));
-          this.classList.remove('bg-blue-100', 'text-blue-800', 'border-blue-200');
-          this.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+          setActive(this);
         });
       });
+      // Afficher la première dimension par défaut
+      const firstBtn = allBtns[0];
+      if (firstBtn) {
+        setActive(firstBtn);
+      }
     } else {
       btnGroup.innerHTML = '<span class="text-red-600">Erreur : lotStructure non chargé</span>';
     }
+
+    // Lier le bouton 'Créer' à la génération de tous les JSONs
+    document.getElementById('btn-creer').addEventListener('click', function() {
+      createAllJsons();
+    });
+
+    // Lier le bouton 'Télécharger' au téléchargement de tous les JSONs
+    document.getElementById('btn-telecharger').addEventListener('click', function() {
+      downloadAllJsons();
+    });
   });
   </script>
 
@@ -49,9 +242,18 @@
     </a>
   </div>
 
-  <!-- Button group des dimensions -->
-  <div class="w-full flex justify-start p-4">
+  <!-- Button group des dimensions et bouton Créer -->
+  <div class="w-full flex justify-between items-center p-4">
     <div id="dimension-buttons" style="margin: 20px 0;"></div>
+    <div class="buttons">
+      <button id="btn-creer" class="px-4 py-2 rounded bg-blue-600 text-white font-bold shadow hover:bg-blue-700">Créer</button>
+      <button id="btn-telecharger" class="px-4 py-2 rounded bg-green-600 text-white font-bold shadow hover:bg-green-700">Télécharger</button>
+    </div>
+  </div>
+    
+  <!-- Aperçu du JSON généré -->
+  <div class="w-full flex justify-center">
+    <pre id="json-preview" class="bg-gray-100 rounded p-4 w-full max-w-3xl text-xs overflow-x-auto"></pre>
   </div>
 
 </body>
