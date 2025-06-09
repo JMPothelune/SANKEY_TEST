@@ -1,0 +1,38 @@
+{
+  "bleu": {
+    "color": "#2980b9"
+  },
+  "noir": {
+    "color": "#222"
+  },
+  "gris": {
+    "color": "#7f8c8d"
+  },
+  "vert": {
+    "color": "#27ae60"
+  },
+  "autres": {
+    "color": "#abbaba"
+  },
+  "blanc": {
+    "color": "#f5f5f5"
+  },
+  "multicolore": {
+    "color": "#fd79a8"
+  },
+  "marron": {
+    "color": "#8d5524"
+  },
+  "orange": {
+    "color": "#e67e22"
+  },
+  "rouge": {
+    "color": "#e74c3c"
+  },
+  "jaune": {
+    "color": "#f1c40f"
+  },
+  "violet": {
+    "color": "#8e44ad"
+  }
+}

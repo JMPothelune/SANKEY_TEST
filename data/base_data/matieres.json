@@ -1,0 +1,138 @@
+{
+  "100% coton": {
+    "color": "#414f98",
+    "fibres": {}
+  },
+  "100% polyester": {
+    "color": "#434fa1",
+    "fibres": {}
+  },
+  "coton/polyester": {
+    "color": "#464eaa",
+    "fibres": {}
+  },
+  "coton/élasthanne": {
+    "color": "#484db3",
+    "fibres": {}
+  },
+  "laine/acrylique": {
+    "color": "#4e4eb9",
+    "fibres": {}
+  },
+  "coton/acrylique": {
+    "color": "#5955be",
+    "fibres": {}
+  },
+  "coton/polyester/élasthanne": {
+    "color": "#645cc2",
+    "fibres": {}
+  },
+  "coton/viscose": {
+    "color": "#6f64c6",
+    "fibres": {}
+  },
+  "polyester/élasthanne": {
+    "color": "#7a6bca",
+    "fibres": {}
+  },
+  "laine/polyamide": {
+    "color": "#8573ce",
+    "fibres": {}
+  },
+  "viscose/élasthanne": {
+    "color": "#8f7bd2",
+    "fibres": {}
+  },
+  "viscose/polyamide": {
+    "color": "#5436a3",
+    "fibres": {}
+  },
+  "coton/polyamide": {
+    "color": "#5d38ac",
+    "fibres": {}
+  },
+  "polyester/viscose": {
+    "color": "#663ab6",
+    "fibres": {}
+  },
+  "polyester/viscose/élasthanne": {
+    "color": "#703bc0",
+    "fibres": {}
+  },
+  "polyester/laine": {
+    "color": "#7c41c6",
+    "fibres": {}
+  },
+  "polyester/acrylique": {
+    "color": "#8749ca",
+    "fibres": {}
+  },
+  "acrylique/polyamide": {
+    "color": "#9251cd",
+    "fibres": {}
+  },
+  "coton/polyamide/élasthanne": {
+    "color": "#9c59d1",
+    "fibres": {}
+  },
+  "polyamide/élasthanne": {
+    "color": "#a661d4",
+    "fibres": {}
+  },
+  "coton/laine": {
+    "color": "#b06ad7",
+    "fibres": {}
+  },
+  "laine/acrylique/polyamide": {
+    "color": "#b972db",
+    "fibres": {}
+  },
+  "polyester/polyamide": {
+    "color": "#892bad",
+    "fibres": {}
+  },
+  "coton/autre": {
+    "color": "#972db8",
+    "fibres": {}
+  },
+  "viscose/polyamide/élasthanne": {
+    "color": "#a52ec2",
+    "fibres": {}
+  },
+  "100% acrylique": {
+    "color": "#b42fcd",
+    "fibres": {}
+  },
+  "inconnu": {
+    "color": "#c035d2",
+    "fibres": {}
+  },
+  "100% laine": {
+    "color": "#ca3dd5",
+    "fibres": {}
+  },
+  "100% viscose": {
+    "color": "#d346d8",
+    "fibres": {}
+  },
+  "100% polyamide": {
+    "color": "#db4fdb",
+    "fibres": {}
+  },
+  "mélange 4 matières": {
+    "color": "#de57d8",
+    "fibres": {}
+  },
+  "autres compositions": {
+    "color": "#e160d6",
+    "fibres": {}
+  },
+  "100% autre": {
+    "color": "#e469d4",
+    "fibres": {}
+  },
+  "100% soie": {
+    "color": "#984189",
+    "fibres": {}
+  }
+}

@@ -35,49 +35,67 @@ const lotType = {
 
 console.log('lotType :', lotType);
 
-// Génération du lotType à partir des données globales
+// Modification de la fonction createLotType pour générer le lotType à partir de formats_types
 function createLotType() {
   const lotType = {
     formats: {},
-    qualite: window.qualiteDistrib,
-    proprete: Object.fromEntries(
-      Object.entries(window.propreteDistrib).map(([k, v]) => [k, { pourcentage: v }])
-    )
+    qualite: qualiteDistrib,
+    proprete: propreteDistrib
   };
-  Object.entries(window.allFormats).forEach(([format, formatObj]) => {
-    lotType.formats[format] = { types: {} };
-    Object.entries(formatObj.types).forEach(([type, typeObj]) => {
-      const repType = window.repartitionParType[type] || {};
+
+  // On part de formats_types qui existe déjà
+  Object.entries(formats_types).forEach(([format, formatObj]) => {
+    lotType.formats[format] = {
+      pourcentage: formatObj.pourcentage,
+      types: {}
+    };
+    
+    // Pour chaque format, on va chercher ses types dans allFormats
+    const formatTypes = allFormats[format]?.types || {};
+    Object.entries(formatTypes).forEach(([type, typeObj]) => {
+      const repType = repartitionParType[type] || {};
+      
       // Matières
       const matieres = {};
-      const matieresSource = (repType.matieres && repType.matieres.length)
-        ? repType.matieres
-        : [{ nom: 'inconnu', pourcentage: 100 }];
-      matieresSource.forEach(m => {
-        const matiereFibres = window.matieres_fibres[m.nom] || {};
+      (repType.matieres || []).forEach(m => {
         matieres[m.nom] = {
           pourcentage: m.pourcentage,
-          fibres: matiereFibres.fibres || {}
+          fibres: (matieres_fibres[m.nom] && matieres_fibres[m.nom].fibres) || {}
         };
       });
+
       // Couleurs
       const couleurs = {};
-      const couleursSource = (repType.couleurs && repType.couleurs.length)
-        ? repType.couleurs
-        : [{ nom: 'multicolore', pourcentage: 100 }];
-      couleursSource.forEach(c => {
+      (repType.couleurs || []).forEach(c => {
         couleurs[c.nom] = { pourcentage: c.pourcentage };
       });
+
+      // Perturbateurs
+      const perturbateurs = {};
+      (repType.perturbateurs || []).forEach(p => {
+        perturbateurs[p.nom] = { pourcentage: p.pourcentage };
+      });
+
       lotType.formats[format].types[type] = {
         pourcentage: typeObj.pourcentage,
         matieres,
         couleurs,
-        perturbateurs: repType.perturbateurs || []
+        perturbateurs
       };
     });
   });
-  return lotType;
+
+  // Téléchargement
+  const blob = new Blob([JSON.stringify(lotType, null, 2)], { type: "application/json" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "lotType.json";
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
+
 window.createLotType = createLotType;
 
 

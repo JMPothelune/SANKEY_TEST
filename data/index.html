@@ -384,8 +384,7 @@
 
     // Lier le bouton 'lot type' à la création et au téléchargement du lotType
     document.getElementById('btn-lottype').addEventListener('click', function() {
-      const lotType = window.createLotType();
-      downloadJson(lotType, 'lotType.json');
+      window.createLotType();
     });
   });
   </script>

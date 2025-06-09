@@ -106,8 +106,11 @@ const allFormats = {
   },
   "non TLC": {
     "types": {
+      "couettes et oreillers": {
+        "pourcentage": 20,
+      },
       "non TLC": {
-        "pourcentage": 100,
+        "pourcentage": 80,
       }
     }
   },
