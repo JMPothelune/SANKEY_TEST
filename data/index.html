@@ -5,11 +5,13 @@
   <title>Données (data)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
 
   <!-- Charger data.js pour avoir lotStructure -->
   <script src="data.js"></script>
+  <script src="color_mappings.js"></script>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     function extractDimensions(structure, dims = new Set()) {
@@ -73,64 +75,167 @@
       return result;
     }
 
+    // Utilitaire pour convertir une couleur D3 en hexadécimal
+    function toHex(color) {
+      if (!color) return '#bbb';
+      // Si déjà hex
+      if (typeof color === 'string' && color.startsWith('#')) return color;
+      // Si c'est un objet d3.color
+      if (typeof color === 'object' && color.formatHex) return color.formatHex();
+      // Si c'est un string rgb/rgba
+      if (typeof color === 'string' && color.startsWith('rgb')) {
+        const rgb = color.match(/\d+/g);
+        if (rgb && rgb.length >= 3) {
+          return '#' + rgb.slice(0,3).map(x => (+x).toString(16).padStart(2, '0')).join('');
+        }
+      }
+      return '#bbb';
+    }
+
+    // Générateur de palette dynamique pour une liste de noms
+    function generatePalette(names, interpolator) {
+      const palette = {};
+      const n = names.length;
+      names.forEach((name, i) => {
+        let c = window.d3 ? window.d3[interpolator](n === 1 ? 0.5 : (i / (n - 1))) : '#bbb';
+        palette[name] = toHex(c);
+      });
+      return palette;
+    }
+
     function collectFormats() {
-      return Object.keys(formats_types);
+      const formats = Object.keys(formats_types);
+      const palette = generatePalette(formats, 'interpolateYlGn');
+      const result = {};
+      formats.forEach(format => {
+        result[format] = {
+          couleur: palette[format],
+          types: {}
+        };
+      });
+      return result;
     }
 
     function collectTypes() {
-      const result = new Set();
+      const types = [];
       Object.values(formats_types).forEach(formatObj => {
         if (formatObj.types) {
-          Object.keys(formatObj.types).forEach(type => result.add(type));
+          Object.keys(formatObj.types).forEach(type => {
+            if (!types.includes(type)) types.push(type);
+          });
         }
       });
-      return Array.from(result);
+      const palette = generatePalette(types, 'interpolatePlasma');
+      const result = {};
+      types.forEach(type => {
+        result[type] = {
+          couleur: palette[type],
+          matieres: {},
+          couleurs: {},
+          perturbateurs: {}
+        };
+      });
+      return result;
     }
 
     function collectMatieres() {
-      return Object.keys(matieres_fibres);
+      const matieres = Object.keys(matieres_fibres);
+      const palette = generatePalette(matieres, 'interpolateCool');
+      const result = {};
+      matieres.forEach(matiere => {
+        result[matiere] = {
+          couleur: palette[matiere],
+          fibres: {}
+        };
+      });
+      return result;
     }
 
     function collectFibres() {
-      const result = new Set();
+      const fibreSet = new Set();
       Object.values(matieres_fibres).forEach(matiereObj => {
         if (matiereObj.fibres) {
-          Object.keys(matiereObj.fibres).forEach(fibre => result.add(fibre));
+          Object.keys(matiereObj.fibres).forEach(fibre => fibreSet.add(fibre));
         }
       });
-      return Array.from(result);
+      const fibres = Array.from(fibreSet);
+      const palette = generatePalette(fibres, 'interpolateRainbow');
+      const result = {};
+      fibres.forEach(fibre => {
+        result[fibre] = {
+          couleur: palette[fibre]
+        };
+      });
+      return result;
     }
 
     function collectCouleurs() {
-      const result = new Set();
+      const couleurSet = new Set();
       Object.values(repartitionParType).forEach(typeObj => {
         if (typeObj.couleurs) {
           typeObj.couleurs.forEach(couleurObj => {
-            if (couleurObj.nom) result.add(couleurObj.nom);
+            if (couleurObj.nom) couleurSet.add(couleurObj.nom);
           });
         }
       });
-      return Array.from(result);
+      const couleurs = Array.from(couleurSet);
+      // Palette statique pour les couleurs connues, dynamique pour les autres
+      const staticPalette = window.colorMappings?.couleur || {};
+      const dynamicPalette = generatePalette(couleurs.filter(c => !staticPalette[c]), 'interpolateSinebow');
+      const result = {};
+      couleurs.forEach(nom => {
+        result[nom] = {
+          couleur: staticPalette[nom] || dynamicPalette[nom] || '#bbb'
+        };
+      });
+      return result;
     }
 
     function collectPerturbateurs() {
-      const result = new Set();
+      const perturbateurSet = new Set();
       Object.values(repartitionParType).forEach(typeObj => {
         if (typeObj.perturbateurs) {
           typeObj.perturbateurs.forEach(obj => {
-            if (obj.nom) result.add(obj.nom);
+            if (obj.nom) perturbateurSet.add(obj.nom);
           });
         }
       });
-      return Array.from(result);
+      const perturbateurs = Array.from(perturbateurSet);
+      const staticPalette = window.colorMappings?.perturbateur || {};
+      const dynamicPalette = generatePalette(perturbateurs.filter(p => !staticPalette[p]), 'interpolateBlues');
+      const result = {};
+      perturbateurs.forEach(nom => {
+        result[nom] = {
+          couleur: staticPalette[nom] || dynamicPalette[nom] || '#bbb'
+        };
+      });
+      return result;
     }
 
     function collectQualite() {
-      return Object.keys(qualiteDistrib);
+      const qualites = Object.keys(qualiteDistrib);
+      const staticPalette = window.colorMappings?.qualite || {};
+      const dynamicPalette = generatePalette(qualites.filter(q => !staticPalette[q]), 'interpolateOranges');
+      const result = {};
+      qualites.forEach(q => {
+        result[q] = {
+          couleur: staticPalette[q] || dynamicPalette[q] || '#bbb'
+        };
+      });
+      return result;
     }
 
     function collectProprete() {
-      return Object.keys(propreteDistrib);
+      const propretes = Object.keys(propreteDistrib);
+      const staticPalette = window.colorMappings?.proprete || {};
+      const dynamicPalette = generatePalette(propretes.filter(p => !staticPalette[p]), 'interpolateBlues');
+      const result = {};
+      propretes.forEach(p => {
+        result[p] = {
+          couleur: staticPalette[p] || dynamicPalette[p] || '#bbb'
+        };
+      });
+      return result;
     }
 
     // Fonction pour générer tous les JSONs et les proposer en téléchargement
@@ -152,15 +257,15 @@
       window.jsonBlobs = {};
       dimensions.forEach(dimension => {
         const fn = dimensionFunctions[dimension];
-        const names = fn ? fn() : [];
+        const data = fn ? fn() : {};
         // Générer le JSON et stocker le blob
-        const blob = new Blob([JSON.stringify(names, null, 2)], {type: "application/json"});
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
         window.jsonBlobs[dimension] = blob;
       });
       // Afficher uniquement la dimension active
       const activeDimension = document.querySelector('.dimension-btn.bg-blue-600').dataset.dim;
-      const activeNames = dimensionFunctions[activeDimension]();
-      previewText = activeNames.map(name => `• ${name}`).join('\n');
+      const activeData = dimensionFunctions[activeDimension]();
+      previewText = JSON.stringify(activeData, null, 2);
       document.getElementById('json-preview').textContent = previewText;
     }
 
@@ -195,31 +300,30 @@
         allBtns.forEach(b => b.classList.add('bg-blue-100', 'text-blue-800', 'border-blue-200'));
         btn.classList.remove('bg-blue-100', 'text-blue-800', 'border-blue-200');
         btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
-        // Mettre à jour l'affichage avec la nouvelle dimension active
-        const activeDimension = btn.dataset.dim;
-        const dimensionFunctions = {
-          formats: collectFormats,
-          types: collectTypes,
-          matieres: collectMatieres,
-          fibres: collectFibres,
-          couleurs: collectCouleurs,
-          perturbateurs: collectPerturbateurs,
-          qualite: collectQualite,
-          proprete: collectProprete
-        };
-        const activeNames = dimensionFunctions[activeDimension]();
-        document.getElementById('json-preview').textContent = activeNames.map(name => `• ${name}`).join('\n');
       }
       allBtns.forEach(btn => {
         btn.addEventListener('click', function() {
           setActive(this);
+          // Ne mettre à jour l'affichage que si on a déjà cliqué sur Créer
+          if (window.jsonBlobs) {
+            const activeDimension = btn.dataset.dim;
+            const dimensionFunctions = {
+              formats: collectFormats,
+              types: collectTypes,
+              matieres: collectMatieres,
+              fibres: collectFibres,
+              couleurs: collectCouleurs,
+              perturbateurs: collectPerturbateurs,
+              qualite: collectQualite,
+              proprete: collectProprete
+            };
+            const activeData = dimensionFunctions[activeDimension]();
+            document.getElementById('json-preview').textContent = JSON.stringify(activeData, null, 2);
+          }
         });
       });
-      // Afficher la première dimension par défaut
-      const firstBtn = allBtns[0];
-      if (firstBtn) {
-        setActive(firstBtn);
-      }
+      // Ne rien afficher par défaut
+      document.getElementById('json-preview').textContent = '';
     } else {
       btnGroup.innerHTML = '<span class="text-red-600">Erreur : lotStructure non chargé</span>';
     }
