@@ -132,6 +132,11 @@
     }
 
     function collectTypes() {
+      // On récupère la structure des matières déjà enrichie par collectMatieres
+      const matieresData = collectMatieres();
+      const couleursPalette = window.colorMappings?.couleur || {};
+      const perturbateursPalette = window.colorMappings?.perturbateur || {};
+
       const types = [];
       Object.values(allFormats).forEach(formatObj => {
         if (formatObj.types) {
@@ -140,40 +145,48 @@
           });
         }
       });
-      // Charger la vraie palette des types
-      const typesPalette = collectTypesPalette();
+
+      // Palette pour les types (générée si absente)
+      let typePalette = window.colorMappings?.types || {};
+      if (Object.keys(typePalette).length === 0) {
+        types.forEach((type, i) => {
+          typePalette[type] = d3.interpolatePlasma(0.15 + 0.7 * (i / Math.max(1, types.length - 1)));
+        });
+      }
+
       const result = {};
       types.forEach(type => {
-        // Récupérer la répartition matière/fibre pour ce type
         const repType = repartitionParType[type] || {};
         const matieres = {};
         (repType.matieres || []).forEach(m => {
-          const fibresData = matieres_fibres[m.nom]?.fibres || {};
-          const fibresPalette = window.fibresData || {};
-          const fibres = {};
-          Object.entries(fibresData).forEach(([fibre, obj]) => {
-            fibres[fibre] = {
-              pourcentage: obj.pourcentage,
-              color: (fibresPalette[fibre] && fibresPalette[fibre].color) || '#bbb'
-            };
-          });
+          // On va chercher la couleur et les fibres déjà enrichis dans collectMatieres
           matieres[m.nom] = {
             pourcentage: m.pourcentage,
-            fibres: fibres
+            color: matieresData[m.nom]?.color || '#bbb',
+            fibres: matieresData[m.nom]?.fibres || {}
           };
         });
-        // Répartition couleurs
+
+        // Couleurs
         const couleurs = {};
         (repType.couleurs || []).forEach(c => {
-          couleurs[c.nom] = { pourcentage: c.pourcentage };
+          couleurs[c.nom] = {
+            pourcentage: c.pourcentage,
+            color: couleursPalette[c.nom] || '#bbb'
+          };
         });
-        // Répartition perturbateurs
+
+        // Perturbateurs
         const perturbateurs = {};
         (repType.perturbateurs || []).forEach(p => {
-          perturbateurs[p.nom] = { pourcentage: p.pourcentage };
+          perturbateurs[p.nom] = {
+            pourcentage: p.pourcentage,
+            color: perturbateursPalette[p.nom] || '#bbb'
+          };
         });
+
         result[type] = {
-          color: (typesPalette[type] && typesPalette[type].color) || '#bbb',
+          color: typePalette[type] || '#bbb',
           matieres: matieres,
           couleurs: couleurs,
           perturbateurs: perturbateurs
