@@ -24,6 +24,8 @@ Object.entries(formats_types).forEach(([format, obj]) => {
 
 // Génération de l'objet lotType au chargement
 const total = 1000;
+
+
 const lotType = {
   total,
   format: {},
@@ -47,6 +49,7 @@ function createLotType() {
   Object.entries(formats_types).forEach(([format, formatObj]) => {
     lotType.formats[format] = {
       pourcentage: formatObj.pourcentage,
+      color: window.colorMappings.formats[format].color,
       types: {}
     };
     
@@ -60,6 +63,7 @@ function createLotType() {
       (repType.matieres || []).forEach(m => {
         matieres[m.nom] = {
           pourcentage: m.pourcentage,
+          color: window.colorMappings.matieres[m.nom],
           fibres: (matieres_fibres[m.nom] && matieres_fibres[m.nom].fibres) || {}
         };
       });
@@ -67,17 +71,24 @@ function createLotType() {
       // Couleurs
       const couleurs = {};
       (repType.couleurs || []).forEach(c => {
-        couleurs[c.nom] = { pourcentage: c.pourcentage };
+        couleurs[c.nom] = { 
+          pourcentage: c.pourcentage,
+          color: window.colorMappings.couleur[c.nom]
+        };
       });
 
       // Perturbateurs
       const perturbateurs = {};
       (repType.perturbateurs || []).forEach(p => {
-        perturbateurs[p.nom] = { pourcentage: p.pourcentage };
+        perturbateurs[p.nom] = { 
+          pourcentage: p.pourcentage,
+          color: window.colorMappings.perturbateurs[p.nom]
+        };
       });
 
       lotType.formats[format].types[type] = {
         pourcentage: typeObj.pourcentage,
+        color: window.colorMappings.types[type].color,
         matieres,
         couleurs,
         perturbateurs

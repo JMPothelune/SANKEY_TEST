@@ -3,12 +3,19 @@
 - Affichage tooltip 
 - Standardiser les tooltips 
 - Passer en mode 'module' ready pour Bubble
+- Intégrer les couleurs 
 
 ### Lot 
 - Passer le + à droite de la barre 
 - Pouvoir modifier le % en cliquant dessus 
 - Gestion des effets de bords, genre quand j'enlève tous les éléments d'un lot mais qu'il reste une dimension -> griser la poubelle / empêcher l'action quand il en reste qu'un 
 - Enlever nom du lot pour qu'il soit géré par Bubble 
+- Intégrer les couleurs 
+
+### Data 
+- Passer le data en modulaire 
+- Ajouter les couleurs 
+- Pouvoir générer le lot type 
 
 ---
 ## Done 

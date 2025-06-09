@@ -109,13 +109,30 @@
     }
 
     function collectFormats() {
+      const typesData = collectTypes();
       const formats = Object.keys(allFormats);
-      const palette = generateVarietyPalette(formats, 140, 40, 60, 55); // verts variés
+      const formatsPalette = window.colorMappings?.formats || {};
+
+      // Générer une palette pour les formats si elle n'existe pas
+      if (Object.keys(formatsPalette).length === 0) {
+        formats.forEach((format, i) => {
+          formatsPalette[format] = toHex(d3.interpolateYlGn(0.2 + 0.6 * (i / Math.max(1, formats.length - 1))));
+        });
+      }
+
       const result = {};
       formats.forEach(format => {
+        const formatObj = allFormats[format];
+        const types = {};
+        Object.keys(formatObj.types || {}).forEach(type => {
+          types[type] = typesData[type] || {};
+          if (types[type]) {
+            types[type].pourcentage = formatObj.types[type].pourcentage;
+          }
+        });
         result[format] = {
-          color: palette[format],
-          types: {}
+          color: formatsPalette[format] || '#bbb',
+          types: types
         };
       });
       return result;
@@ -129,6 +146,32 @@
       // Sinon, il faudrait le charger dynamiquement (AJAX/fetch)
       // Pour l'instant, on suppose qu'il est injecté côté serveur ou déjà dans window.typesData
       return window.typesData || {};
+    }
+
+    function collectPerturbateurs() {
+      const perturbateurSet = new Set();
+      Object.values(repartitionParType).forEach(typeObj => {
+        if (typeObj.perturbateurs) {
+          typeObj.perturbateurs.forEach(obj => {
+            if (obj.nom) perturbateurSet.add(obj.nom);
+          });
+        }
+      });
+      const perturbateurs = Array.from(perturbateurSet);
+      const palette = generateVarietyPalette(perturbateurs, 10, 30, 70, 55); // rouges variés
+      const result = {};
+      perturbateurs.forEach(nom => {
+        result[nom] = {
+          color: palette[nom]
+        };
+      });
+      window.colorMappings.perturbateurs = result;
+      return result;
+    }
+
+    // S'assurer que la palette des perturbateurs est générée dès le début
+    if (!window.colorMappings.perturbateurs) {
+      collectPerturbateurs();
     }
 
     function collectTypes() {
@@ -181,7 +224,7 @@
         (repType.perturbateurs || []).forEach(p => {
           perturbateurs[p.nom] = {
             pourcentage: p.pourcentage,
-            color: perturbateursPalette[p.nom] || '#bbb'
+            color: window.colorMappings.perturbateurs[p.nom].color
           };
         });
 
@@ -254,26 +297,6 @@
       couleurs.forEach(nom => {
         result[nom] = {
           color: staticPalette[nom] || dynamicPalette[nom] || '#bbb'
-        };
-      });
-      return result;
-    }
-
-    function collectPerturbateurs() {
-      const perturbateurSet = new Set();
-      Object.values(repartitionParType).forEach(typeObj => {
-        if (typeObj.perturbateurs) {
-          typeObj.perturbateurs.forEach(obj => {
-            if (obj.nom) perturbateurSet.add(obj.nom);
-          });
-        }
-      });
-      const perturbateurs = Array.from(perturbateurSet);
-      const palette = generateVarietyPalette(perturbateurs, 10, 30, 70, 55); // rouges variés
-      const result = {};
-      perturbateurs.forEach(nom => {
-        result[nom] = {
-          color: palette[nom]
         };
       });
       return result;
