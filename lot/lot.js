@@ -106,8 +106,13 @@ function attacherHandlersHeader(titre, niveau) {
   if (btnAdd) {
     if (dims.length > 0) {
       btnAdd.onclick = () => {
-        const dimActive = cheminSelection[niveau]?.dimension || dims[0];
-        afficherModalAjout(niveau, dimActive);
+        // Passe la référence du nœud à la popup (niveau, cheminSelection, dimension courante)
+        const ref = {
+          niveau,
+          chemin: JSON.parse(JSON.stringify(cheminSelection)),
+          dimensionActive: cheminSelection[niveau]?.dimension || dims[0]
+        };
+        if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
       };
     } else {
       btnAdd.style.display = 'none';

@@ -781,6 +781,85 @@ function selectByProprete(lot, selectedProprete) {
     return { targetLot, coProductLot };
 }
 
+// Sélectionne un ou plusieurs perturbateurs dans un lot
+function selectByPerturbateur(lot, selectedPerturbateurs) {
+  // Deep clone pour ne pas modifier l'objet d'origine
+  const newLot = JSON.parse(JSON.stringify(lot));
+  let selectedPct = 0;
+  let restPct = 0;
+
+  // Parcourir tous les formats et types pour agréger les perturbateurs
+  Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
+    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
+      if (typeObj.perturbateurs) {
+        Object.entries(typeObj.perturbateurs).forEach(([perturbateur, perturbateurObj]) => {
+          const pct = perturbateurObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+          if (selectedPerturbateurs.includes(perturbateur)) {
+            selectedPct += pct;
+          } else {
+            restPct += pct;
+          }
+        });
+      }
+    });
+  });
+
+  // Création des deux lots
+  const targetLot = JSON.parse(JSON.stringify(lot));
+  const coProductLot = JSON.parse(JSON.stringify(lot));
+
+  // Mise à jour des perturbateurs dans les deux lots
+  Object.entries(targetLot.formats).forEach(([formatKey, formatObj]) => {
+    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
+      if (typeObj.perturbateurs) {
+        const selected = {};
+        const rest = {};
+        Object.entries(typeObj.perturbateurs).forEach(([perturbateur, perturbateurObj]) => {
+          if (selectedPerturbateurs.includes(perturbateur)) {
+            selected[perturbateur] = { ...perturbateurObj };
+            if (perturbateurObj.color) selected[perturbateur].color = perturbateurObj.color;
+          } else {
+            rest[perturbateur] = { ...perturbateurObj };
+            if (perturbateurObj.color) rest[perturbateur].color = perturbateurObj.color;
+          }
+        });
+        // Mettre à jour les perturbateurs dans le type
+        typeObj.perturbateurs = selected;
+      }
+    });
+  });
+
+  Object.entries(coProductLot.formats).forEach(([formatKey, formatObj]) => {
+    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
+      if (typeObj.perturbateurs) {
+        const selected = {};
+        const rest = {};
+        Object.entries(typeObj.perturbateurs).forEach(([perturbateur, perturbateurObj]) => {
+          if (selectedPerturbateurs.includes(perturbateur)) {
+            selected[perturbateur] = { ...perturbateurObj };
+            if (perturbateurObj.color) selected[perturbateur].color = perturbateurObj.color;
+          } else {
+            rest[perturbateur] = { ...perturbateurObj };
+            if (perturbateurObj.color) rest[perturbateur].color = perturbateurObj.color;
+          }
+        });
+        // Mettre à jour les perturbateurs dans le type
+        typeObj.perturbateurs = rest;
+      }
+    });
+  });
+
+  // Mise à jour des totaux
+  targetLot.total = lot.total * (selectedPct / 100);
+  coProductLot.total = lot.total * (restPct / 100);
+
+  if (Math.abs(lot.total - ((targetLot?.total || 0) + (coProductLot?.total || 0))) > 2) {
+    console.warn('[selectByPerturbateur] Poids incohérent : origine =', lot.total, 'target =', targetLot?.total || 0, 'reste =', coProductLot?.total || 0, 'somme =', (targetLot?.total || 0) + (coProductLot?.total || 0));
+  }
+
+  return { targetLot, coProductLot };
+}
+
 // Remplissage dynamique du dropdown de scénarios et gestion du changement
 window.addEventListener('DOMContentLoaded', function() {
   if (window.scenarios && Array.isArray(window.scenarios)) {

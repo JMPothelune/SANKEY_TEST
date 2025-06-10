@@ -771,6 +771,23 @@ function updateSankey(dimension) {
                         .duration(500)
                         .style('opacity', 0);
                 });
+                div.addEventListener('click', function(event) {
+                  event.stopPropagation();
+                  const ref = {
+                      nodeId: d.id,
+                      dimension: dimension,
+                      lot: d.lot,
+                      chemin: d.chemin || null,
+                      link: {
+                        ...link,
+                        target: {
+                          ...link.target,
+                          name: link.target.name.split('→')[0].trim() // On ne garde que la partie avant la flèche
+                        }
+                      }
+                  };
+                  if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
+              });
             });
         }
 
@@ -799,7 +816,24 @@ function updateSankey(dimension) {
                     tooltip.transition()
                         .duration(500)
                         .style('opacity', 0);
-                });
+            });
+            div.addEventListener('click', function(event) {
+              event.stopPropagation();
+              const ref = {
+                  nodeId: d.id,
+                  dimension: dimension,
+                  lot: d.lot,
+                  chemin: d.chemin || null,
+                  link: {
+                    ...link,
+                    target: {
+                      ...link.target,
+                      name: link.target.name.split('→')[0].trim() // On ne garde que la partie avant la flèche
+                    }
+                  }
+              };
+              if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
+          }); 
         });
 
         // 3. Icône + sur les nœuds feuilles sans target (aucun lien sortant)
@@ -827,7 +861,24 @@ function updateSankey(dimension) {
                     tooltip.transition()
                         .duration(500)
                         .style('opacity', 0);
-                });
+            });
+            div.addEventListener('click', function(event) {
+              event.stopPropagation();
+              const ref = {
+                  nodeId: d.id,
+                  dimension: dimension,
+                  lot: d.lot,
+                  chemin: d.chemin || null,
+                  link: {
+                    ...link,
+                    target: {
+                      ...link.target,
+                      name: link.target.name.split('→')[0].trim() // On ne garde que la partie avant la flèche
+                    }
+                  }
+              };
+              if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
+          });
         }
 
         // 4. Icône check sur les nœuds valorisés ou agglomérés (isTarget)
@@ -897,9 +948,6 @@ function updateSankey(dimension) {
             .style('fill', '#666')
             .style('pointer-events', 'none');
     });
-
-    // Trier les nœuds par depth puis par order
-    nodes.sort((a, b) => (a.depth - b.depth) || (a.order - b.order));
 }
 
 // Gestion du changement de dimension
