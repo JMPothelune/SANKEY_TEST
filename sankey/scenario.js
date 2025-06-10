@@ -764,7 +764,7 @@ function selectByProprete(lot, selectedProprete) {
     if (Math.abs(lot.total - ((targetLot?.total || 0) + (coProductLot?.total || 0))) > 2) {
       console.warn('[selectByProprete] Poids incohérent : origine =', lot.total, 'target =', targetLot?.total || 0, 'reste =', coProductLot?.total || 0, 'somme =', (targetLot?.total || 0) + (coProductLot?.total || 0));
     }
-
+    
     return { targetLot, coProductLot };
 }
 

@@ -482,6 +482,15 @@
     document.getElementById('btn-lottype').addEventListener('click', function() {
       window.createLotType();
     });
+
+    // Exposer les fonctions dans le scope global
+    window.collectTypesPalette = collectTypesPalette;
+    window.collectPerturbateurs = collectPerturbateurs;
+    window.collectCouleurs = collectCouleurs;
+    window.collectQualite = collectQualite;
+    window.collectProprete = collectProprete;
+    window.collectFormats = collectFormats;
+    window.createAllJsons = createAllJsons;
   });
   </script>
 

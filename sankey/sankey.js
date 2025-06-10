@@ -116,9 +116,9 @@ const stackbarComponents = {
                   : matiereObj;
                 let pctType = typeof typeObj.pourcentage === 'number' ? typeObj.pourcentage : 100;
                 let pctFormat = typeof formatObj.pourcentage === 'number' ? formatObj.pourcentage : 100;
-                // Pondération par le pourcentage du type et du format
+                  // Pondération par le pourcentage du type et du format
                 const pct = pctMatiere * (pctType / 100) * (pctFormat / 100);
-                values[matiere] = (values[matiere] || 0) + pct;
+                  values[matiere] = (values[matiere] || 0) + pct;
               });
             }
           });
@@ -171,7 +171,7 @@ const stackbarComponents = {
   fibres: {
     getStackValues: lot => {
       if (!lot.formats) return {};
-      const values = {};
+        const values = {};
       Object.values(lot.formats).forEach(formatObj => {
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
@@ -594,10 +594,10 @@ function updateSankey(dimension) {
                   Object.values(d.target.lot.formats).forEach(formatObj => {
                     if (formatObj.types) {
                       Object.entries(formatObj.types).forEach(([matiere, matiereObj]) => {
-                        if (typeof matiereObj.pourcentage === 'number') {
-                          // Pondération par le pourcentage du type et du format
-                          const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
-                          values[matiere] = (values[matiere] || 0) + pct;
+                            if (typeof matiereObj.pourcentage === 'number') {
+                              // Pondération par le pourcentage du type et du format
+                              const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
+                              values[matiere] = (values[matiere] || 0) + pct;
                         }
                       });
                     }
@@ -954,8 +954,8 @@ function updateSankey(dimension) {
         // 1. Icônes pour les liens sortants (fork)
         const outgoingLinks = sankeyLinks.filter(l => l.source.id === d.id && !l.target.name.startsWith('Reste'));
         if (!(d.lot && d.lot.target) && !d.isTarget) {
-            outgoingLinks.forEach((link, idx) => {
-                const linkY = link.y0 - d.y0;
+        outgoingLinks.forEach((link, idx) => {
+            const linkY = link.y0 - d.y0;
                 const fo = nodeGroup.append('foreignObject')
                     .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
                     .attr('y', linkY - 14)
@@ -1008,18 +1008,18 @@ function updateSankey(dimension) {
             div.innerHTML = getIconSVG('plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
             fo.node().appendChild(div);
             div.addEventListener('mouseover', function(event) {
-                tooltip.transition()
-                    .duration(200)
-                    .style('opacity', .9);
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
                 tooltip.html('<strong>Ajouter une transformation</strong>')
-                    .style('left', (event.pageX + 10) + 'px')
-                    .style('top', (event.pageY - 28) + 'px');
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
             });
             div.addEventListener('mouseout', function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style('opacity', 0);
-            });
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
         });
 
         // 3. Icône + sur les nœuds feuilles sans target (aucun lien sortant)
@@ -1036,18 +1036,18 @@ function updateSankey(dimension) {
             div.innerHTML = getIconSVG('plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
             fo.node().appendChild(div);
             div.addEventListener('mouseover', function(event) {
-                tooltip.transition()
-                    .duration(200)
-                    .style('opacity', .9);
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
                 tooltip.html('<strong>Ajouter une transformation</strong>')
-                    .style('left', (event.pageX + 10) + 'px')
-                    .style('top', (event.pageY - 28) + 'px');
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
             });
             div.addEventListener('mouseout', function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style('opacity', 0);
-            });
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
         }
 
         // 4. Icône check sur les nœuds valorisés ou agglomérés (isTarget)
@@ -1063,41 +1063,41 @@ function updateSankey(dimension) {
             div.innerHTML = getIconSVG('check-circle', 'w-7 h-7 text-[1.3rem] flex items-center justify-center text-green-600');
             fo.node().appendChild(div);
             div.addEventListener('mouseover', function(event) {
-                tooltip.transition()
-                    .duration(200)
-                    .style('opacity', .9);
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
                 // Tooltip riche comme avant
-                let distributionHtml = '';
-                const component = stackbarComponents[dimension];
-                if (component && d.lot) {
-                    const dist = component.getStackValues(d.lot);
-                    const sum = Object.values(dist).reduce((a, b) => a + b, 0);
-                    if (Object.keys(dist).length > 0 && sum > 0) {
-                        distributionHtml += `<div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'><strong>Distribution ${dimension} :</strong><br/>`;
-                        Object.entries(dist)
-                            .filter(([key]) => !key.startsWith('_'))
-                            .sort((a, b) => b[1] - a[1])
-                            .forEach(([key, value]) => {
-                                const poids = d.lot.total ? Math.round(d.lot.total * value / 100) : 0;
-                                distributionHtml += `${key} : ${value.toFixed(1)}% (${poids} kg)<br/>`;
-                            });
-                        distributionHtml += '</div>';
+                    let distributionHtml = '';
+                    const component = stackbarComponents[dimension];
+                    if (component && d.lot) {
+                        const dist = component.getStackValues(d.lot);
+                        const sum = Object.values(dist).reduce((a, b) => a + b, 0);
+                        if (Object.keys(dist).length > 0 && sum > 0) {
+                            distributionHtml += `<div style='margin-top:8px;padding-top:8px;border-top:1px solid #ddd;'><strong>Distribution ${dimension} :</strong><br/>`;
+                            Object.entries(dist)
+                                .filter(([key]) => !key.startsWith('_'))
+                                .sort((a, b) => b[1] - a[1])
+                                .forEach(([key, value]) => {
+                                    const poids = d.lot.total ? Math.round(d.lot.total * value / 100) : 0;
+                                    distributionHtml += `${key} : ${value.toFixed(1)}% (${poids} kg)<br/>`;
+                                });
+                            distributionHtml += '</div>';
+                        }
                     }
-                }
-                tooltip.html(`
-                    <strong>Destination validée</strong><br/>
-                    Target: ${(d.lot && d.lot.target) ? d.lot.target : d.name}<br/>
-                    <span style='font-size:12px;color:#666;'>Poids du lot: ${d.lot ? Math.round(d.lot.total) : ''} kg</span>
-                    ${distributionHtml}
-                `)
-                    .style('left', (event.pageX + 10) + 'px')
-                    .style('top', (event.pageY - 28) + 'px');
+                    tooltip.html(`
+                        <strong>Destination validée</strong><br/>
+                        Target: ${(d.lot && d.lot.target) ? d.lot.target : d.name}<br/>
+                        <span style='font-size:12px;color:#666;'>Poids du lot: ${d.lot ? Math.round(d.lot.total) : ''} kg</span>
+                        ${distributionHtml}
+                    `)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
             });
             div.addEventListener('mouseout', function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style('opacity', 0);
-            });
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                });
         }
     });
 

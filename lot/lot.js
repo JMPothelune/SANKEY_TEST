@@ -279,7 +279,7 @@ function afficherStackbars(lot, chemin) {
           nodeDimension: node[infos.dimension],
           keys: node[infos.dimension] ? Object.keys(node[infos.dimension]) : null
         });
-        break;
+      break;
       }
     }
   }

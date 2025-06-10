@@ -39,62 +39,46 @@ console.log('lotType :', lotType);
 
 // Modification de la fonction createLotType pour générer le lotType à partir de formats_types
 function createLotType() {
-  const lotType = {
-    formats: {},
-    qualite: qualiteDistrib,
-    proprete: propreteDistrib
-  };
-
-  // On part de formats_types qui existe déjà
-  Object.entries(formats_types).forEach(([format, formatObj]) => {
-    lotType.formats[format] = {
-      pourcentage: formatObj.pourcentage,
-      color: window.colorMappings.formats[format].color,
-      types: {}
-    };
-    
-    // Pour chaque format, on va chercher ses types dans allFormats
-    const formatTypes = allFormats[format]?.types || {};
-    Object.entries(formatTypes).forEach(([type, typeObj]) => {
-      const repType = repartitionParType[type] || {};
-      
-      // Matières
-      const matieres = {};
-      (repType.matieres || []).forEach(m => {
-        matieres[m.nom] = {
-          pourcentage: m.pourcentage,
-          color: window.colorMappings.matieres[m.nom],
-          fibres: (matieres_fibres[m.nom] && matieres_fibres[m.nom].fibres) || {}
-        };
-      });
-
-      // Couleurs
-      const couleurs = {};
-      (repType.couleurs || []).forEach(c => {
-        couleurs[c.nom] = { 
-          pourcentage: c.pourcentage,
-          color: window.colorMappings.couleur[c.nom]
-        };
-      });
-
-      // Perturbateurs
-      const perturbateurs = {};
-      (repType.perturbateurs || []).forEach(p => {
-        perturbateurs[p.nom] = { 
-          pourcentage: p.pourcentage,
-          color: window.colorMappings.perturbateurs[p.nom]
-        };
-      });
-
-      lotType.formats[format].types[type] = {
-        pourcentage: typeObj.pourcentage,
-        color: window.colorMappings.types[type].color,
-        matieres,
-        couleurs,
-        perturbateurs
-      };
-    });
+  // On s'assure que tous les JSONs sont créés dans le bon ordre
+  window.createAllJsons();
+  
+  // On récupère les données des formats qui ont été générées
+  const allFormatsData = window.collectFormats();
+  
+  // On ne garde que les formats définis dans formats_types
+  const formatsData = {};
+  Object.keys(formats_types).forEach(format => {
+    if (allFormatsData[format]) {
+      formatsData[format] = allFormatsData[format];
+    }
   });
+
+  // On récupère les palettes de couleurs pour qualite et proprete
+  const qualiteColors = window.collectQualite();
+  const propreteColors = window.collectProprete();
+
+  // On ajoute les couleurs pour qualite et proprete
+  const qualiteWithColors = {};
+  Object.entries(qualiteDistrib).forEach(([key, value]) => {
+    qualiteWithColors[key] = {
+      pourcentage: value.pourcentage,
+      color: qualiteColors[key]?.color || '#bbb'
+    };
+  });
+
+  const propreteWithColors = {};
+  Object.entries(propreteDistrib).forEach(([key, value]) => {
+    propreteWithColors[key] = {
+      pourcentage: value.pourcentage,
+      color: propreteColors[key]?.color || '#bbb'
+    };
+  });
+  
+  const lotType = {
+    formats: formatsData,
+    qualite: qualiteWithColors,
+    proprete: propreteWithColors
+  };
 
   // Téléchargement
   const blob = new Blob([JSON.stringify(lotType, null, 2)], { type: "application/json" });
@@ -107,6 +91,7 @@ function createLotType() {
   document.body.removeChild(a);
 }
 
+// Exposer la fonction dans le scope global
 window.createLotType = createLotType;
 
 
