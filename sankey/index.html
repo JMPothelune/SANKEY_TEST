@@ -78,41 +78,48 @@
         const modal = document.createElement('div');
         modal.className = 'bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6';
         
-        // Extraction de la transformation du lien
-        const transformation = ref.link ? ref.link.target.name : '';
-        // Séparation du type et des paramètres
-        const [type, ...params] = transformation.split(':').map(s => s.trim());
+        // Debug temporaire
+        console.log('[DEBUG popup] ref.chemin =', ref.chemin);
+        console.log('[DEBUG popup] ref.lot.transformations_appliquees =', ref.lot.transformations_appliquees);
+        
+        // Récupération de la dernière transformation appliquée
+        const lastTransfo = Array.isArray(ref.lot.transformations_appliquees) && ref.lot.transformations_appliquees.length > 0
+          ? ref.lot.transformations_appliquees[ref.lot.transformations_appliquees.length - 1]
+          : null;
         
         modal.innerHTML = `
-          <h3 class="text-lg font-semibold mb-4">Ajouter une transformation</h3>
-          <div class="space-y-4">
+          <h3 class=\"text-lg font-semibold mb-4\">Ajouter une transformation</h3>
+          <div class=\"space-y-4\">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Transformation actuelle</label>
-              <div class="p-2 bg-gray-100 rounded-lg text-gray-700">
-                <div class="font-medium">${type || 'Aucune transformation'}</div>
-                ${params.length > 0 ? `<div class="text-sm text-gray-600 mt-1">${params.join(', ')}</div>` : ''}
+              <label class=\"block text-sm font-medium text-gray-700 mb-1\">Transformation actuelle</label>
+              <div class=\"p-2 bg-gray-100 rounded-lg text-gray-700\">
+                ${lastTransfo ? `
+                  <div class=\\\"font-medium\\\">${lastTransfo.type}</div>
+                  <div class=\\\"text-sm text-gray-600 mt-1\\\">${Array.isArray(lastTransfo.keys) ? lastTransfo.keys.flat().join(', ') : ''}</div>
+                ` : '<div class=\\\"font-medium\\\">Aucune transformation</div>'}
+                <div class=\"text-xs text-gray-400 mt-2\">[debug] transfo: ${JSON.stringify(ref.lot.transformations_appliquees) || 'N/A'}</div>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Type de transformation</label>
-              <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-                <option value="selectByFormat">Sélection par format</option>
-                <option value="selectByType">Sélection par type</option>
-                <option value="selectByMatiere">Sélection par matière</option>
-                <option value="selectByFibre">Sélection par fibre</option>
-                <option value="selectByCouleur">Sélection par couleur</option>
-                <option value="selectByQualite">Sélection par qualité</option>
-                <option value="selectByProprete">Sélection par propreté</option>
+              <label class=\"block text-sm font-medium text-gray-700 mb-1\">Type de transformation</label>
+              <select id=\"transfo-type\" class=\"w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400\">
+                <option value=\"selectByFormat\">Sélection par format</option>
+                <option value=\"selectByType\">Sélection par type</option>
+                <option value=\"selectByMatiere\">Sélection par matière</option>
+                <option value=\"selectByFibre\">Sélection par fibre</option>
+                <option value=\"selectByCouleur\">Sélection par couleur</option>
+                <option value=\"selectByQualite\">Sélection par qualité</option>
+                <option value=\"selectByProprete\">Sélection par propreté</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
-              <input type="text" id="target-input" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" placeholder="Nom de la destination">
+              <label class=\"block text-sm font-medium text-gray-700 mb-1\">Destination</label>
+              <input type=\"text\" id=\"target-input\" class=\"w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400\" placeholder=\"Nom de la destination\">
             </div>
           </div>
-          <div class="mt-6 flex justify-end space-x-3">
-            <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
-            <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+          <div class=\"mt-6 flex justify-end space-x-3\">
+            <button id=\"cancel-btn\" class=\"px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300\">Annuler</button>
+            <button id=\"save-btn\" class=\"px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700\">Enregistrer</button>
           </div>
         `;
         backdrop.appendChild(modal);

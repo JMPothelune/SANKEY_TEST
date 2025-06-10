@@ -751,7 +751,7 @@ function updateSankey(dimension) {
                         .style('opacity', .9);
 
                     const d = link;
-                    const chemin = `${d.source.name} → ${d.target.name}`;
+                    const chemin = `${d.source && d.source.name ? d.source.name : '[source?]'} → ${d.target && d.target.name ? d.target.name : '[target?]'}`;
                     const parties = chemin.split('→').map(s => s.trim());
                     let transformation = '';
                     if (parties.length === 3) {
@@ -773,16 +773,17 @@ function updateSankey(dimension) {
                 });
                 div.addEventListener('click', function(event) {
                   event.stopPropagation();
+                  const chemin = `${d.name} → ${link.target.name}`;
                   const ref = {
                       nodeId: d.id,
                       dimension: dimension,
-                      lot: d.lot,
-                      chemin: d.chemin || null,
+                      lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
+                      chemin: chemin,
                       link: {
                         ...link,
                         target: {
                           ...link.target,
-                          name: link.target.name.split('→')[0].trim() // On ne garde que la partie avant la flèche
+                          name: link.target.name.split('→')[0].trim()
                         }
                       }
                   };
@@ -819,16 +820,17 @@ function updateSankey(dimension) {
             });
             div.addEventListener('click', function(event) {
               event.stopPropagation();
+              const chemin = `${d.name} → ${link.target.name}`;
               const ref = {
                   nodeId: d.id,
                   dimension: dimension,
-                  lot: d.lot,
-                  chemin: d.chemin || null,
+                  lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
+                  chemin: chemin,
                   link: {
                     ...link,
                     target: {
                       ...link.target,
-                      name: link.target.name.split('→')[0].trim() // On ne garde que la partie avant la flèche
+                      name: link.target.name.split('→')[0].trim()
                     }
                   }
               };
@@ -864,16 +866,15 @@ function updateSankey(dimension) {
             });
             div.addEventListener('click', function(event) {
               event.stopPropagation();
+              const chemin = `${d.name}`;
               const ref = {
                   nodeId: d.id,
                   dimension: dimension,
-                  lot: d.lot,
-                  chemin: d.chemin || null,
+                  lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
+                  chemin: chemin,
                   link: {
-                    ...link,
                     target: {
-                      ...link.target,
-                      name: link.target.name.split('→')[0].trim() // On ne garde que la partie avant la flèche
+                      name: ''
                     }
                   }
               };
