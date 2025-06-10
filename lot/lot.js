@@ -214,6 +214,7 @@ function afficherHeaderNiveau({ niveau, nodeParent, dimension, valeur, nom, pct,
 
 // --- Fonction centrale pour afficher les stackbars selon le chemin (refactorisée) ---
 function afficherStackbars(lot, chemin) {
+  console.log("Entrée dans afficherStackbars", lot, chemin);
   const container = rootContainer;
   container.innerHTML = '';
 
@@ -320,6 +321,7 @@ function afficherStackbars(lot, chemin) {
 
 // --- Fonction d'initialisation universelle ---
 function initLotUI(container, lotInitial) {
+  console.log("Entrée dans initLotUI", container, lotInitial);
   rootContainer = container;
   lotCourant = deepCopy(lotInitial);
   window.lotCourant = lotCourant;
@@ -330,6 +332,7 @@ function initLotUI(container, lotInitial) {
 
 // --- Fonction d'entrée plug&play ---
 function lancerLotUI(container, lotInitial) {
+  console.log("Entrée dans lancerLotUI", container, lotInitial);
   initLotUI(container, lotInitial);
 }
 
