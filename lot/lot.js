@@ -91,7 +91,6 @@ const CheminManager = {
 
 // Fonction utilitaire pour attacher les handlers aux boutons d'un header
 function attacherHandlersHeader(titre, niveau) {
-  // Bouton Ajouter
   const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
   let nodeParent = lotCourant;
   for (let i = 0; i < niveau; i++) {
@@ -104,7 +103,6 @@ function attacherHandlersHeader(titre, niveau) {
   }
   const dims = getDimensionsFromNode(nodeParent ? nodeParent : lotCourant);
   if (btnAdd) {
-    console.log("Handler bouton + trouvé", btnAdd, { niveau, dims });
     if (dims.length > 0) {
       btnAdd.onclick = () => {
         console.log("Bouton +", btnAdd, { niveau, dims });
@@ -208,7 +206,10 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
 function afficherHeaderNiveau({ niveau, nodeParent, dimension, valeur, nom, pct, kg, container }) {
   const titre = creerTitreStackbar(niveau, nom, pct, kg);
   container.appendChild(titre);
-  attacherHandlersHeader(titre, niveau);
+  // Attache les handlers après l'insertion dans le DOM
+  setTimeout(() => {
+    attacherHandlersHeader(titre, niveau);
+  }, 0);
 }
 
 // --- Fonction centrale pour afficher les stackbars selon le chemin (refactorisée) ---
