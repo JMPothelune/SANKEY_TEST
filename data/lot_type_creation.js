@@ -21,21 +21,8 @@ Object.entries(formats_types).forEach(([format, obj]) => {
   formatDistrib[format] = obj.pourcentage;
 });
 
-
 // Génération de l'objet lotType au chargement
 const total = 1000;
-
-
-const lotType = {
-  total,
-  format: {},
-  qualite: qualiteDistrib,
-  proprete: Object.fromEntries(
-    Object.entries(propreteDistrib).map(([k, v]) => [k, { pourcentage: v }])
-  )
-};
-
-console.log('lotType :', lotType);
 
 // Modification de la fonction createLotType pour générer le lotType à partir de formats_types
 function createLotType() {
@@ -48,9 +35,11 @@ function createLotType() {
   // On ne garde que les formats définis dans formats_types
   const formatsData = {};
   Object.keys(formats_types).forEach(format => {
-    if (allFormatsData[format]) {
-      formatsData[format] = allFormatsData[format];
-    }
+    // On copie tout l'objet du collecteur, même s'il a plus de sous-clés
+    const base = allFormatsData[format] ? { ...allFormatsData[format] } : {};
+    // On écrase/ajoute le pourcentage du mapping
+    base.pourcentage = formats_types[format].pourcentage;
+    formatsData[format] = base;
   });
 
   // On récupère les palettes de couleurs pour qualite et proprete
@@ -75,6 +64,7 @@ function createLotType() {
   });
   
   const lotType = {
+    total: total,
     formats: formatsData,
     qualite: qualiteWithColors,
     proprete: propreteWithColors
@@ -84,7 +74,7 @@ function createLotType() {
   const blob = new Blob([JSON.stringify(lotType, null, 2)], { type: "application/json" });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = "lotType.json";
+  a.download = "lot_type.json";
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();

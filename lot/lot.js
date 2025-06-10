@@ -237,7 +237,8 @@ function afficherStackbars(lot, chemin) {
         let repartition = keys.map(key => {
           const val = node[infos.dimension][key];
           let pct = typeof val === 'object' && val.pourcentage !== undefined ? val.pourcentage : (typeof val === 'number' ? val : 0);
-          return { name: key, key, percent: pct };
+          let color = typeof val === 'object' && val.color ? val.color : undefined;
+          return { name: key, key, percent: pct, color };
         });
         let selected = (infos.valeur && keys.includes(infos.valeur)) ? infos.valeur : null;
         renderStackbar(
@@ -320,6 +321,7 @@ function initLotUI(container, lotInitial) {
   lotCourant = deepCopy(lotInitial);
   window.lotCourant = lotCourant;
   cheminSelection = [];
+  console.log('lotCourant après init', window.lotCourant);
   afficherStackbars(lotCourant, cheminSelection);
 }
 
@@ -385,29 +387,13 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     segment.className = 'stackbar-segment flex items-center justify-center relative font-bold text-base transition-all duration-200';
     segment.setAttribute('data-idx', i);
     let fillColor;
-    const t = repartitionState.length > 1 ? i / (repartitionState.length - 1) : 0.5;
 
-    // Palette statique pour les couleurs
-    const couleurMap = {
-      'noir': '#222',
-      'blanc': '#f5f5f5',
-      'bleu': '#2980b9',
-      'gris': '#7f8c8d',
-      'marron': '#8d5524',
-      'rouge': '#e74c3c',
-      'vert': '#27ae60',
-      'violet': '#8e44ad',
-      'orange': '#e67e22',
-      'jaune': '#f1c40f',
-      'inconnu': '#b2bec3',
-      'multicolore': '#fd79a8'
-    };
-
-    if (dimension === 'couleur' || dimension === 'couleurs') {
-      fillColor = d3.color(couleurMap[item.name] || '#bbb');
-    } else if (colorMap && colorMap[item.name]) {
-      fillColor = d3.color(colorMap[item.name]);
-    } else {  
+    // On utilise directement la propriété color de l'objet
+    if (item.color) {
+      fillColor = d3.color(item.color);
+    } else {
+      // Fallback pour les objets sans couleur définie
+      const t = repartitionState.length > 1 ? i / (repartitionState.length - 1) : 0.5;
       if (dimension === 'format' || dimension === 'formats') {
         fillColor = d3.color(d3.interpolateYlGn(t));
       } else if (dimension === 'type' || dimension === 'types') {
@@ -425,6 +411,7 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
         fillColor = d3.color('#bbb');
       }
     }
+
     const isUnknown = ['inconnu', 'autre', 'autres compositions'].includes(item.name.toLowerCase());
     if (isUnknown) {
       segment.style.background = 'repeating-linear-gradient(135deg, #f5f5f5, #f5f5f5 2px, #e0e0e0 2px, #e0e0e0 4px)';

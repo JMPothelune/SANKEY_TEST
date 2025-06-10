@@ -58,6 +58,9 @@ const allFormats = {
       "pyjama et ensembles de sport": {
         "pourcentage": 3,
       },
+      "sous-vêtements": {
+        "pourcentage": 7,
+      },
       "robes": {
         "pourcentage": 5,
       },
@@ -88,6 +91,9 @@ const allFormats = {
   "chaussures et bottes": {
     "types": {
       "bottes": {
+        "pourcentage": 26,
+      },
+      "basses" : {
         "pourcentage": 22,
       },
       "basket": {
@@ -107,10 +113,40 @@ const allFormats = {
   "non TLC": {
     "types": {
       "couettes et oreillers": {
-        "pourcentage": 20,
+        "pourcentage": 20
       },
-      "non TLC": {
-        "pourcentage": 80,
+      "chuttes de tissu": {
+        "pourcentage": 13.6
+      },
+      "maroquinerie": {
+        "pourcentage": 23.3
+      },
+      "vêtements professionnels": {
+        "pourcentage": 5.7
+      },
+      "livres": {
+        "pourcentage": 5.9
+      },
+      "jouets (non éléctriques)": {
+        "pourcentage": 5.4
+      },
+      "emballages": {
+        "pourcentage": 7.5
+      },
+      "sacs en textile": {
+        "pourcentage": 4.7
+      },
+      "tapis": {
+        "pourcentage": 1.8
+      },
+      "DEEE": {
+        "pourcentage": 1.4
+      },
+      "bibelots et ustentiles": {
+        "pourcentage": 0.7
+      },
+      "reste non TLC": {
+        "pourcentage": 10
       }
     }
   },
@@ -127,13 +163,6 @@ const allFormats = {
       },
       "invendus": {
         "pourcentage": 25,
-      }
-    }
-  },
-  "autres": {
-    "types": {
-      "autre": {
-        "pourcentage": 100,
       }
     }
   }

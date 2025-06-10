@@ -200,34 +200,42 @@
       const result = {};
       types.forEach(type => {
         const repType = repartitionParType[type] || {};
+
+        // Matières
         const matieres = {};
-        (repType.matieres || []).forEach(m => {
-          // On va chercher la couleur et les fibres déjà enrichis dans collectMatieres
-          matieres[m.nom] = {
-            pourcentage: m.pourcentage,
-            color: matieresData[m.nom]?.color || '#bbb',
-            fibres: matieresData[m.nom]?.fibres || {}
-          };
-        });
+        if (repType.matieres) {
+          repType.matieres.forEach(m => {
+            matieres[m.nom] = {
+              pourcentage: m.pourcentage,
+              color: matieresData[m.nom]?.color || '#bbb',
+              fibres: matieresData[m.nom]?.fibres || {}
+            };
+          });
+        }
 
         // Couleurs
         const couleurs = {};
-        (repType.couleurs || []).forEach(c => {
-          couleurs[c.nom] = {
-            pourcentage: c.pourcentage,
-            color: couleursPalette[c.nom] || '#bbb'
-          };
-        });
+        if (repType.couleurs) {
+          repType.couleurs.forEach(c => {
+            couleurs[c.nom] = {
+              pourcentage: c.pourcentage,
+              color: couleursPalette[c.nom] || '#bbb'
+            };
+          });
+        }
 
         // Perturbateurs
         const perturbateurs = {};
-        (repType.perturbateurs || []).forEach(p => {
-          perturbateurs[p.nom] = {
-            pourcentage: p.pourcentage,
-            color: window.colorMappings.perturbateurs[p.nom].color
-          };
-        });
+        if (repType.perturbateurs) {
+          repType.perturbateurs.forEach(p => {
+            perturbateurs[p.nom] = {
+              pourcentage: p.pourcentage,
+              color: window.colorMappings.perturbateurs[p.nom]?.color || '#bbb'
+            };
+          });
+        }
 
+        // Toujours retourner un objet, même si tout est vide
         result[type] = {
           color: typePalette[type] || '#bbb',
           matieres: matieres,
@@ -430,9 +438,28 @@
     const btnGroup = document.getElementById('dimension-buttons');
     if (window.lotStructure && btnGroup) {
       const dimensions = Array.from(extractDimensions(window.lotStructure));
-      btnGroup.innerHTML = dimensions.map((dim, i) =>
-        `<button type="button" class="dimension-btn px-3 py-1 m-1 rounded border text-sm font-medium ${i === 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200'}" data-dim="${dim}">${dim}</button>`
-      ).join(' ');
+      btnGroup.innerHTML = dimensions.map((dim, i) => {
+        // Ajout du compteur si le collecteur a été exécuté
+        let count = '';
+        if (window.jsonBlobs && window.jsonBlobs[dim]) {
+          try {
+            // On lit le blob pour compter les éléments
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              try {
+                const data = JSON.parse(e.target.result);
+                let n = 0;
+                if (Array.isArray(data)) n = data.length;
+                else if (typeof data === 'object' && data !== null) n = Object.keys(data).length;
+                const btn = btnGroup.querySelector(`button[data-dim='${dim}']`);
+                if (btn) btn.innerHTML = `${dim} <span class='text-xs text-gray-500'>(${n})</span>`;
+              } catch {}
+            };
+            reader.readAsText(window.jsonBlobs[dim]);
+          } catch {}
+        }
+        return `<button type="button" class="dimension-btn px-3 py-1 m-1 rounded border text-sm font-medium ${i === 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200'}" data-dim="${dim}">${dim}</button>`;
+      }).join(' ');
       // Gestion de l'état actif
       const allBtns = btnGroup.querySelectorAll('.dimension-btn');
       function setActive(btn) {
@@ -471,6 +498,7 @@
     // Lier le bouton 'Créer' à la génération de tous les JSONs
     document.getElementById('btn-creer').addEventListener('click', function() {
       createAllJsons();
+      setTimeout(updateDimensionCounts, 100);
     });
 
     // Lier le bouton 'Télécharger' au téléchargement de tous les JSONs
@@ -481,6 +509,7 @@
     // Lier le bouton 'lot type' à la création et au téléchargement du lotType
     document.getElementById('btn-lottype').addEventListener('click', function() {
       window.createLotType();
+      setTimeout(updateDimensionCounts, 100);
     });
 
     // Exposer les fonctions dans le scope global
@@ -491,6 +520,33 @@
     window.collectProprete = collectProprete;
     window.collectFormats = collectFormats;
     window.createAllJsons = createAllJsons;
+
+    function updateDimensionCounts() {
+      const btnGroup = document.getElementById('dimension-buttons');
+      if (!window.jsonBlobs) return;
+      const allBtns = btnGroup.querySelectorAll('.dimension-btn');
+      allBtns.forEach(btn => {
+        const dim = btn.dataset.dim;
+        if (window.jsonBlobs[dim]) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            try {
+              const data = JSON.parse(e.target.result);
+              let n = 0;
+              if (Array.isArray(data)) n = data.length;
+              else if (typeof data === 'object' && data !== null) n = Object.keys(data).length;
+              // Met à jour le texte du bouton
+              btn.innerHTML = `${dim} <span class='text-xs text-gray-500'>(${n})</span>`;
+            } catch {
+              btn.innerHTML = dim;
+            }
+          };
+          reader.readAsText(window.jsonBlobs[dim]);
+        } else {
+          btn.innerHTML = dim;
+        }
+      });
+    }
   });
   </script>
 
