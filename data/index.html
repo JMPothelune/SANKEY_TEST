@@ -340,25 +340,30 @@
       container.className = 'flex flex-col gap-2';
       Object.entries(obj).forEach(([nom, val]) => {
         const card = document.createElement('div');
-        card.className = 'rounded shadow px-3 py-2 text-xs font-mono border';
+        card.className = 'rounded shadow px-3 py-2 text-xs font-mono border cursor-pointer collapsible-card';
         card.style.background = (val && typeof val === 'object' && val.color) ? val.color : '#fff';
         card.style.color = (val && typeof val === 'object' && val.color) ? '#fff' : '#222';
         card.style.minWidth = '180px';
         card.style.maxWidth = '100%';
         card.style.wordBreak = 'break-all';
-        // Affichage prettifié
+        // Titre
         const keySpan = document.createElement('span');
-        keySpan.textContent = `"${nom}": `;
+        keySpan.textContent = `"${nom}"`;
         keySpan.style.fontWeight = 'bold';
         card.appendChild(keySpan);
+        // Détail JSON (caché par défaut)
         const pre = document.createElement('pre');
         pre.textContent = JSON.stringify(val, null, 2);
-        pre.style.display = 'block';
+        pre.style.display = 'none';
         pre.style.background = 'transparent';
         pre.style.color = 'inherit';
         pre.style.margin = '0';
         pre.style.padding = '0';
         card.appendChild(pre);
+        // Toggle au clic sur toute la carte
+        card.addEventListener('click', (e) => {
+          pre.style.display = (pre.style.display === 'none') ? 'block' : 'none';
+        });
         container.appendChild(card);
       });
       return container;
@@ -570,6 +575,15 @@
   <div class="w-full flex justify-center">
     <pre id="json-preview" class="rounded p-4 w-full max-w-3xl text-xs overflow-x-auto"></pre>
   </div>
+
+  <style>
+    .collapsible-card:hover {
+      box-shadow: 0 2px 8px #0002;
+    }
+    .collapsible-card pre {
+      transition: all 0.2s;
+    }
+  </style>
 
 </body>
 </html> 
