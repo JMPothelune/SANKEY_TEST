@@ -219,7 +219,7 @@
           "pourcentage": 16
         },
         "hauts type t-shirt": {
-          "color": "#6100a7",
+          "color": "#5e01a6",
           "matieres": {
             "100% coton": {
               "pourcentage": 57.6,
@@ -421,7 +421,7 @@
           "pourcentage": 16
         },
         "hauts type chemise": {
-          "color": "#6a00a8",
+          "color": "#6600a7",
           "matieres": {
             "100% coton": {
               "pourcentage": 48.6,
@@ -623,7 +623,7 @@
           "pourcentage": 5
         },
         "hauts type pull": {
-          "color": "#7501a8",
+          "color": "#6e00a8",
           "matieres": {
             "100% acrylique": {
               "pourcentage": 15.6,
@@ -829,7 +829,7 @@
           "pourcentage": 20
         },
         "lingerie": {
-          "color": "#7e03a8",
+          "color": "#7501a8",
           "matieres": {
             "polyamide/élasthanne": {
               "pourcentage": 28.4,
@@ -1034,7 +1034,7 @@
           "pourcentage": 1
         },
         "pantalons en jean": {
-          "color": "#8808a6",
+          "color": "#7d03a8",
           "matieres": {
             "coton/élasthanne": {
               "pourcentage": 31.2,
@@ -1210,7 +1210,7 @@
           "pourcentage": 9
         },
         "pyjama et ensembles de sport": {
-          "color": "#920fa3",
+          "color": "#8405a7",
           "matieres": {
             "100% coton": {
               "pourcentage": 37.4,
@@ -1416,7 +1416,7 @@
           "pourcentage": 3
         },
         "sous-vêtements": {
-          "color": "#9a169f",
+          "color": "#8b0aa5",
           "matieres": {
             "100% coton": {
               "pourcentage": 16.4,
@@ -1626,7 +1626,7 @@
           "pourcentage": 7
         },
         "robes": {
-          "color": "#a31e9a",
+          "color": "#920fa3",
           "matieres": {
             "100% coton": {
               "pourcentage": 11.8,
@@ -1836,7 +1836,7 @@
           "pourcentage": 5
         },
         "vestes, manteaux et costumes": {
-          "color": "#ac2694",
+          "color": "#99159f",
           "matieres": {
             "100% polyester": {
               "pourcentage": 31.1,
@@ -2038,7 +2038,7 @@
           "pourcentage": 14
         },
         "vêtements bébé": {
-          "color": "#b32c8e",
+          "color": "#a01a9c",
           "matieres": {
             "100% coton": {
               "pourcentage": 42.4,
@@ -2247,10 +2247,10 @@
       "pourcentage": 72.4
     },
     "linges et rideaux": {
-      "color": "#c0e597",
+      "color": "#b5e092",
       "types": {
         "linge de bain / toilette": {
-          "color": "#bb3488",
+          "color": "#a62098",
           "matieres": {
             "100% coton": {
               "pourcentage": 81.5,
@@ -2452,7 +2452,7 @@
           "pourcentage": 14
         },
         "linge de lit": {
-          "color": "#c23c81",
+          "color": "#ac2694",
           "matieres": {
             "100% coton": {
               "pourcentage": 60.8,
@@ -2662,14 +2662,14 @@
           "pourcentage": 60
         },
         "rideaux et voilage": {
-          "color": "#c8437b",
+          "color": "#b22b8f",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
           "pourcentage": 12
         },
         "autre linge de maison": {
-          "color": "#ce4b75",
+          "color": "#b7318a",
           "matieres": {
             "100% coton": {
               "pourcentage": 53.1,
@@ -2870,45 +2870,45 @@
       "pourcentage": 9
     },
     "chaussures et bottes": {
-      "color": "#91d183",
+      "color": "#78c578",
       "types": {
         "bottes": {
-          "color": "#d45270",
+          "color": "#bd3786",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
           "pourcentage": 26
         },
         "basses": {
-          "color": "#da5a6a",
+          "color": "#c23c81",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
           "pourcentage": 22
         },
         "basket": {
-          "color": "#df6263",
+          "color": "#c7427c",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
           "pourcentage": 27
         },
         "été": {
-          "color": "#e4695e",
+          "color": "#cc4778",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
           "pourcentage": 17
         },
         "intérieur": {
-          "color": "#e97158",
+          "color": "#cf4c74",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
           "pourcentage": 4
         },
         "bébé": {
-          "color": "#ed7a52",
+          "color": "#d45270",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
@@ -2918,21 +2918,91 @@
       "pourcentage": 9.4
     },
     "non TLC": {
-      "color": "#5eb96b",
+      "color": "#3da258",
       "types": {
         "couettes et oreillers": {
-          "color": "#f1814d",
+          "color": "#d8576b",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
           "pourcentage": 20
         },
-        "non TLC": {
-          "color": "#f58b47",
+        "chuttes de tissu": {
+          "color": "#dc5d67",
           "matieres": {},
           "couleurs": {},
           "perturbateurs": {},
-          "pourcentage": 80
+          "pourcentage": 13.6
+        },
+        "maroquinerie": {
+          "color": "#e06363",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 23.3
+        },
+        "vêtements professionnels": {
+          "color": "#e4695e",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 5.7
+        },
+        "livres": {
+          "color": "#e76f5a",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 5.9
+        },
+        "jouets (non éléctriques)": {
+          "color": "#eb7556",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 5.4
+        },
+        "emballages": {
+          "color": "#ee7b51",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 7.5
+        },
+        "sacs en textile": {
+          "color": "#f1814d",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 4.7
+        },
+        "tapis": {
+          "color": "#f48849",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 1.8
+        },
+        "DEEE": {
+          "color": "#f68f44",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 1.4
+        },
+        "bibelots et ustentiles": {
+          "color": "#f89540",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 0.7
+        },
+        "reste non TLC": {
+          "color": "#fa9c3c",
+          "matieres": {},
+          "couleurs": {},
+          "perturbateurs": {},
+          "pourcentage": 10
         }
       },
       "pourcentage": 9.2

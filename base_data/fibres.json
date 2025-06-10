@@ -1,0 +1,29 @@
+{
+  "coton": {
+    "color": "#b8452e"
+  },
+  "polyester": {
+    "color": "#d2603a"
+  },
+  "élasthanne": {
+    "color": "#db8357"
+  },
+  "laine": {
+    "color": "#cb6b27"
+  },
+  "acrylique": {
+    "color": "#dd8c3c"
+  },
+  "viscose": {
+    "color": "#e5ab5a"
+  },
+  "polyamide": {
+    "color": "#df9f20"
+  },
+  "autre": {
+    "color": "#e7bd3f"
+  },
+  "soie": {
+    "color": "#b8a12e"
+  }
+}

@@ -902,9 +902,44 @@ function naviguerSiblingStackbar(niveau, direction) {
   afficherStackbars(lotCourant, cheminSelection);
 }
 
+// Fonction pour charger les données de base
+async function chargerDonneesBase(dimension) {
+  try {
+    const response = await fetch(`/base_data/${dimension}.json`);
+    if (!response.ok) throw new Error('Erreur de chargement des données');
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors du chargement des données de base:', error);
+    return {};
+  }
+}
+
 // Fonction pour afficher la modal d'ajout
-function afficherModalAjout(niveau, dimension) {
-  if (!dimension) return; // On ne fait rien si pas de dimension
+async function afficherModalAjout(niveau, dimension) {
+  if (!dimension) return;
+
+  // Charger les données de base
+  const donneesBase = await chargerDonneesBase(dimension);
+  
+  // Récupérer les éléments existants
+  let nodeParent = lotCourant;
+  for (let i = 0; i < niveau; i++) {
+    const { dimension: dim, valeur } = cheminSelection[i];
+    if (!nodeParent[dim] || !valeur || !nodeParent[dim][valeur]) {
+      nodeParent = null;
+      break;
+    }
+    nodeParent = nodeParent[dim][valeur];
+  }
+  
+  const elementsExistants = nodeParent && nodeParent[dimension] 
+    ? Object.keys(nodeParent[dimension]).filter(k => k !== 'title')
+    : [];
+  
+  // Filtrer les éléments disponibles
+  const elementsDisponibles = Object.keys(donneesBase).filter(key => 
+    !elementsExistants.includes(key)
+  );
 
   // Créer le backdrop
   const backdrop = document.createElement('div');
@@ -930,12 +965,29 @@ function afficherModalAjout(niveau, dimension) {
   content.innerHTML = `
     <div class="space-y-4">
       <div>
-        <label for="nom" class="block text-sm font-medium text-gray-700">Nom</label>
-        <input type="text" id="nom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="Entrez un nom">
+        <label for="element" class="block text-sm font-medium text-gray-700 mb-1">Élément</label>
+        <div class="relative">
+          <select id="element" class="block w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer">
+            <option value="" class="text-gray-500">Sélectionnez un élément</option>
+            ${elementsDisponibles.map(elem => `
+              <option value="${elem}" class="py-1">${elem}</option>
+            `).join('')}
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </div>
-      <div>
-        <label for="pourcentage" class="block text-sm font-medium text-gray-700">Pourcentage</label>
-        <input type="number" id="pourcentage" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" placeholder="0" min="0" max="100" step="0.1">
+      <div id="pourcentage-container">
+        <label for="pourcentage" class="block text-sm font-medium text-gray-700 mb-1">Pourcentage</label>
+        <div class="relative">
+          <input type="number" id="pourcentage" class="block w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" max="100" step="0.1">
+          <div class="absolute inset-y-0 right-0 flex items-center pr-2">
+            <span class="bg-white border border-gray-200 rounded-md px-2 py-0.5 text-gray-500 text-sm font-medium">%</span>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -959,8 +1011,15 @@ function afficherModalAjout(niveau, dimension) {
   const btnFermer = header.querySelector('button');
   const btnAnnuler = footer.querySelector('button:first-child');
   const btnAjouter = footer.querySelector('button:last-child');
-  const inputNom = content.querySelector('#nom');
+  const selectElement = content.querySelector('#element');
   const inputPourcentage = content.querySelector('#pourcentage');
+  const pourcentageContainer = content.querySelector('#pourcentage-container');
+  
+  // Gérer l'affichage du champ pourcentage
+  const estPremierElement = elementsExistants.length === 0;
+  if (estPremierElement) {
+    pourcentageContainer.style.display = 'none';
+  }
   
   function fermerModal() {
     backdrop.remove();
@@ -973,22 +1032,22 @@ function afficherModalAjout(niveau, dimension) {
   };
   
   btnAjouter.onclick = () => {
-    const nom = inputNom.value.trim();
-    const pourcentage = parseFloat(inputPourcentage.value);
+    const elementSelectionne = selectElement.value;
+    const pourcentage = estPremierElement ? 100 : parseFloat(inputPourcentage.value);
     
-    if (nom && !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100) {
-      ajouterElementEtRepartir(niveau, dimension, nom, pourcentage);
+    if (elementSelectionne && (!estPremierElement ? !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100 : true)) {
+      ajouterElementEtRepartir(niveau, dimension, elementSelectionne, pourcentage, donneesBase[elementSelectionne]);
       fermerModal();
       afficherStackbars(lotCourant, cheminSelection);
     }
   };
   
-  // Focus sur le premier input
-  inputNom.focus();
+  // Focus sur le select
+  selectElement.focus();
 }
 
 // Fonction pour ajouter un élément et répartir les pourcentages
-function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage) {
+function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage, donneesBase) {
   let node = lotCourant;
   for (let i = 0; i < niveau; i++) {
     const { dimension: dim, valeur } = cheminSelection[i];
@@ -1012,7 +1071,10 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage) {
 
   // Si c'est le premier élément, on met 100%
   if (totalAvant === 0) {
-    node[dimension][nom] = { pourcentage: 100 };
+    node[dimension][nom] = {
+      ...donneesBase,
+      pourcentage: 100
+    };
     return;
   }
 
@@ -1045,8 +1107,11 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage) {
       }
     }
   }
-  // Ajoute le nouvel élément
-  node[dimension][nom] = { pourcentage: pourcentage };
+  // Ajoute le nouvel élément avec sa structure complète
+  node[dimension][nom] = {
+    ...donneesBase,
+    pourcentage: pourcentage
+  };
   publierEtatLot();
   window.lotCourant = lotCourant;
 }

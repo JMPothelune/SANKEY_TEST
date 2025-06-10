@@ -1,0 +1,14 @@
+{
+  "propre": {
+    "color": "#40bf95"
+  },
+  "légèrement souillé": {
+    "color": "#37c8b8"
+  },
+  "fortement souillé": {
+    "color": "#2fbed0"
+  },
+  "contaminé": {
+    "color": "#4095bf"
+  }
+}
