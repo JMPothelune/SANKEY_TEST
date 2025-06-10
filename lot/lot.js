@@ -902,24 +902,21 @@ function naviguerSiblingStackbar(niveau, direction) {
   afficherStackbars(lotCourant, cheminSelection);
 }
 
-// Fonction pour charger les données de base
-async function chargerDonneesBase(dimension) {
-  try {
-    const response = await fetch(`/base_data/${dimension}.json`);
-    if (!response.ok) throw new Error('Erreur de chargement des données');
-    return await response.json();
-  } catch (error) {
-    console.error('Erreur lors du chargement des données de base:', error);
-    return {};
+// Fonction pour charger les données de base (synchrone, depuis window.baseData)
+function chargerDonneesBase(dimension) {
+  if (window.baseData && window.baseData[dimension]) {
+    return window.baseData[dimension];
   }
+  console.warn('Aucune donnée de base trouvée pour la dimension', dimension);
+  return {};
 }
 
 // Fonction pour afficher la modal d'ajout
-async function afficherModalAjout(niveau, dimension) {
+function afficherModalAjout(niveau, dimension) {
   if (!dimension) return;
 
-  // Charger les données de base
-  const donneesBase = await chargerDonneesBase(dimension);
+  // Charger les données de base (synchrone)
+  const donneesBase = chargerDonneesBase(dimension);
   
   // Récupérer les éléments existants
   let nodeParent = lotCourant;

@@ -2868,42 +2868,42 @@
   "chaussures et bottes": {
     "color": "#78c578",
     "types": {
-      "bottes": {
+      "bottes et bottines": {
         "color": "#bd3786",
         "matieres": {},
         "couleurs": {},
         "perturbateurs": {},
         "pourcentage": 26
       },
-      "basses": {
+      "chaussures basses": {
         "color": "#c23c81",
         "matieres": {},
         "couleurs": {},
         "perturbateurs": {},
         "pourcentage": 22
       },
-      "basket": {
+      "baskets": {
         "color": "#c7427c",
         "matieres": {},
         "couleurs": {},
         "perturbateurs": {},
         "pourcentage": 27
       },
-      "été": {
+      "chaussures d'été": {
         "color": "#cc4778",
         "matieres": {},
         "couleurs": {},
         "perturbateurs": {},
         "pourcentage": 17
       },
-      "intérieur": {
+      "chaussures d'intérieure": {
         "color": "#cf4c74",
         "matieres": {},
         "couleurs": {},
         "perturbateurs": {},
         "pourcentage": 4
       },
-      "bébé": {
+      "chaussures de bébé": {
         "color": "#d45270",
         "matieres": {},
         "couleurs": {},

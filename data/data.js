@@ -90,22 +90,22 @@ const allFormats = {
   },
   "chaussures et bottes": {
     "types": {
-      "bottes": {
+      "bottes et bottines": {
         "pourcentage": 26,
       },
-      "basses" : {
+      "chaussures basses" : {
         "pourcentage": 22,
       },
-      "basket": {
+      "baskets": {
         "pourcentage": 27,
       },
-      "été": {
+      "chaussures d'été": {
         "pourcentage": 17,
       },
-      "intérieur": {
+      "chaussures d'intérieure": {
         "pourcentage": 4,
       },
-      "bébé": {
+      "chaussures de bébé": {
         "pourcentage": 4,
       }
     }
