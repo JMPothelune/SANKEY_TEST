@@ -290,6 +290,51 @@ const stackbarComponents = {
       return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
     }
   },
+  perturbateurs: {
+    getStackValues: lot => {
+      // On cherche les perturbateurs dans chaque type de chaque format
+      if (!lot.formats) return {};
+      const values = {};
+      let total = 0;
+      let totalSansPerturbateur = 0;
+      Object.values(lot.formats).forEach(formatObj => {
+        if (formatObj.types) {
+          Object.values(formatObj.types).forEach(typeObj => {
+            const pctType = typeof typeObj.pourcentage === 'number' ? typeObj.pourcentage : 100;
+            if (typeObj.perturbateurs && Object.keys(typeObj.perturbateurs).length > 0) {
+              let sumPert = 0;
+              Object.entries(typeObj.perturbateurs).forEach(([pert, pertObj]) => {
+                let pct = typeof pertObj === 'object' && pertObj.pourcentage !== undefined ? pertObj.pourcentage : (typeof pertObj === 'number' ? pertObj : 0);
+                values[pert] = (values[pert] || 0) + pct * (pctType / 100);
+                sumPert += pct * (pctType / 100);
+              });
+              total += sumPert;
+              if (sumPert < pctType) {
+                totalSansPerturbateur += (pctType - sumPert);
+              }
+            } else {
+              // Pas de perturbateur renseigné pour ce type
+              totalSansPerturbateur += pctType;
+            }
+          });
+        }
+      });
+      // Normalisation pour que la somme fasse 100%
+      const sum = total + totalSansPerturbateur;
+      if (sum > 0) {
+        Object.keys(values).forEach(k => {
+          values[k] = values[k] / sum * 100;
+        });
+        if (totalSansPerturbateur > 0) {
+          values['inconnu'] = totalSansPerturbateur / sum * 100;
+        }
+      }
+      return values;
+    },
+    getTooltipContent: (lot, key, value, total) => {
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round(total * value / 100)} kg`;
+    }
+  },
   // Ajoute ici d'autres dimensions si besoin
 };
 
@@ -310,91 +355,6 @@ function getIconSVG(name, className = '') {
 }
 
 function updateSankey(dimension) {
-    // Initialisation des palettes de couleurs
-    const matiereSet = new Set();
-    Object.values(window.lotType.formats).forEach(formatObj => {
-        Object.values(formatObj.types).forEach(typeObj => {
-            if (typeObj.matieres) {
-                Object.keys(typeObj.matieres).forEach(matiere => matiereSet.add(matiere));
-            }
-        });
-    });
-    const matiereValues = Array.from(matiereSet);
-    const nMatieres = matiereValues.length;
-    let matierePalette = Array.from({length: nMatieres}, (_, i) => d3.interpolateCool(0.15 + 0.7 * (i / (nMatieres - 1))));
-    matierePalette = d3.shuffle(matierePalette);
-
-    const formatValues = [
-        ...Object.keys(window.lotType.formats),
-        ...(window.moreFormats || [])
-    ].filter((v, i, arr) => arr.indexOf(v) === i);
-    const nFormats = formatValues.length;
-    const formatPalette = Array.from({length: nFormats}, (_, i) => d3.interpolateYlGn(0.2 + 0.6 * (i / (nFormats - 1))));
-
-    const allTypeValues = [];
-    formatValues.forEach(format => {
-        const types = Object.keys(window.lotType.formats[format]?.types || {});
-        types.forEach(type => {
-            if (!allTypeValues.includes(type)) allTypeValues.push(type);
-        });
-    });
-    if (window.moreTypes) {
-        window.moreTypes.forEach(type => {
-            if (!allTypeValues.includes(type)) allTypeValues.push(type);
-        });
-    }
-    const nTypes = allTypeValues.length;
-    const typePalette = Array.from({length: nTypes}, (_, i) => d3.interpolatePlasma(0.15 + 0.7 * (i / (nTypes - 1))));
-
-    const fibreSet = new Set();
-    Object.values(window.lotType.formats).forEach(formatObj => {
-        Object.values(formatObj.types).forEach(typeObj => {
-            if (typeObj.matieres) {
-                Object.values(typeObj.matieres).forEach(matiereObj => {
-                    if (matiereObj.fibres) {
-                        Object.keys(matiereObj.fibres).forEach(fibre => fibreSet.add(fibre));
-                    }
-                });
-            }
-        });
-    });
-    const fibreValues = Array.from(fibreSet);
-    const nFibres = fibreValues.length;
-    const fibrePalette = Array.from({length: nFibres}, (_, i) => d3.interpolateViridis(0.15 + 0.7 * (i / (nFibres - 1))));
-
-    const qualiteValues = Object.keys(window.lotType.qualite || {});
-    const nQualite = qualiteValues.length;
-    const qualitePalette = Array.from({length: nQualite}, (_, i) => d3.interpolateOranges(0.2 + 0.6 * (i / (nQualite - 1))));
-
-    const propreteValues = Object.keys(window.lotType.proprete || {});
-    const nProprete = propreteValues.length;
-    const propretePalette = Array.from({length: nProprete}, (_, i) => d3.interpolateBlues(0.2 + 0.6 * (i / (nProprete - 1))));
-
-    // Mise à jour des échelles de couleurs
-    colorScales = {
-        matiere: d3.scaleOrdinal()
-            .domain(matiereValues)
-            .range(matierePalette),
-        format: d3.scaleOrdinal()
-            .domain(formatValues)
-            .range(formatPalette),
-        type: d3.scaleOrdinal()
-            .domain(allTypeValues)
-            .range(typePalette),
-        couleur: d3.scaleOrdinal()
-            .domain(Object.keys(couleurMap))
-            .range(Object.values(couleurMap)),
-        qualite: d3.scaleOrdinal()
-            .domain(qualiteValues)
-            .range(qualitePalette),
-        proprete: d3.scaleOrdinal()
-            .domain(propreteValues)
-            .range(propretePalette),
-        fibre: d3.scaleOrdinal()
-            .domain(fibreValues)
-            .range(fibrePalette)
-    };
-
     // Nettoyer le SVG
     svg.selectAll('*').remove();
 
@@ -494,28 +454,6 @@ function updateSankey(dimension) {
         }
     });
 
-    // Choix de la palette de couleurs selon la dimension
-    if (!colorScales.format || typeof colorScales.format !== 'function') {
-      console.warn('colorScales.format non initialisé, palettes manquantes');
-      // Optionnel : forcer une réinitialisation ici
-    }
-    let colorAccessor = d => '#bbb';
-    if (dimension === 'qualite') {
-        colorAccessor = d => colorScales.qualite(d);
-    } else if (dimension === 'proprete') {
-        colorAccessor = d => colorScales.proprete(d);
-    } else if (dimension === 'matiere') {
-        colorAccessor = d => colorScales.matiere(d);
-    } else if (dimension === 'format') {
-        colorAccessor = d => colorScales.format(d);
-    } else if (dimension === 'type' || dimension === 'format_type') {
-        colorAccessor = d => colorScales.type(d);
-    } else if (dimension === 'fibres') {
-        colorAccessor = d => colorScales.fibre(d);
-    } else if (dimension === 'couleur') {
-        colorAccessor = d => colorScales.couleur(d);
-    }
-
     // Création des liens
     svg.append('g')
         .selectAll('path')
@@ -525,222 +463,7 @@ function updateSankey(dimension) {
         .attr('d', d3.sankeyLinkHorizontal())
         .attr('stroke-width', d => Math.max(1, d.width))
         .style('stroke', '#000')
-        .style('stroke-opacity', 0.18)
-        .on('mouseover', function(event, d) {
-            tooltip.transition()
-                .duration(200)
-                .style('opacity', .9);
-
-            // Récupérer la position du SVG dans la page
-            const svgRect = svg.node().ownerSVGElement.getBoundingClientRect();
-
-            // Largeur d'un noeud (stackbar + extraBlock)
-            const nodeWidth = 80 + 30; // stackbarWidth + extraBlockWidth
-
-            // Coordonnées du point de départ du path (source), décalées à droite du noeud
-            const x = d.source.x1 + 20; // x1 = bord droit du noeud source
-            const y = d.y0 + 20 - (d.width ? d.width / 2 : 0); // remonter de la moitié de la largeur du path
-
-            let tooltipContent = `
-                <strong>${d.source.name} → ${d.target.name}</strong><br/>
-                Quantité: ${Math.round(d.value)} kg<br/>
-                Pourcentage: ${(d.source.lot && d.source.lot.total ? (d.value / d.source.lot.total * 100).toFixed(1) : '0')}%<br/>
-            `;
-            if (dimension === 'format') {
-                tooltipContent += `<br/><strong>Détails Format :</strong><br/>`;
-                if (d.target.lot && d.target.lot.formats && typeof d.target.lot.formats === 'object') {
-                  Object.entries(d.target.lot.formats).forEach(([key, obj]) => {
-                    // Gestion des cas où obj est un nombre (parfois structure simplifiée)
-                    const pct = typeof obj === 'number'
-                      ? obj
-                      : (typeof obj.pourcentage === 'number' ? obj.pourcentage : null);
-                    if (pct !== null) {
-                      tooltipContent += `${key}: ${pct.toFixed(1)}%<br/>`;
-                    }
-                  });
-                }
-            } else if (dimension === 'format_type') {
-                // Recalcule la distribution des types à la volée sur d.target.lot
-                const values = {};
-                let totalWithType = 0;
-                if (d.target.lot && d.target.lot.formats) {
-                  Object.values(d.target.lot.formats).forEach(formatObj => {
-                    if (formatObj.types) {
-                      Object.entries(formatObj.types).forEach(([type, typeObj]) => {
-                        if (typeof typeObj.pourcentage === 'number') {
-                          const typePct = typeObj.pourcentage * (formatObj.pourcentage / 100);
-                          if (typePct > 0) {
-                            values[type] = (values[type] || 0) + typePct;
-                            totalWithType += typePct;
-                          }
-                        }
-                      });
-                    }
-                  });
-                }
-                if (totalWithType > 0) {
-                  Object.keys(values).forEach(k => {
-                    values[k] = values[k] / totalWithType * 100;
-                  });
-                }
-                tooltipContent += `<br/><strong>Détails Type :</strong><br/>`;
-                Object.entries(values).forEach(([key, value]) => {
-                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
-                });
-            } else if (dimension === 'matiere') {
-                // Recalcule la distribution des matières à la volée sur d.target.lot
-                const values = {};
-                if (d.target.lot && d.target.lot.formats) {
-                  Object.values(d.target.lot.formats).forEach(formatObj => {
-                    if (formatObj.types) {
-                      Object.entries(formatObj.types).forEach(([matiere, matiereObj]) => {
-                            if (typeof matiereObj.pourcentage === 'number') {
-                              // Pondération par le pourcentage du type et du format
-                              const pct = matiereObj.pourcentage * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
-                              values[matiere] = (values[matiere] || 0) + pct;
-                        }
-                      });
-                    }
-                  });
-                }
-                // Normalisation pour que la somme fasse 100
-                const sum = Object.values(values).reduce((a, b) => a + b, 0);
-                if (sum > 0) {
-                  Object.keys(values).forEach(k => {
-                    values[k] = values[k] / sum * 100;
-                  });
-                }
-                tooltipContent += `<br/><strong>Détails Matière :</strong><br/>`;
-                Object.entries(values).forEach(([key, value]) => {
-                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
-                });
-            } else if (dimension === 'fibres') {
-                // Recalcule la distribution des fibres à la volée sur d.target.lot
-                const values = {};
-                if (d.target.lot && d.target.lot.formats) {
-                  Object.entries(d.target.lot.formats).forEach(([formatName, formatObj]) => {
-                    if (formatObj.types) {
-                      Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
-                        if (typeObj.matieres) {
-                          Object.entries(typeObj.matieres).forEach(([matiereName, matiereObj]) => {
-                            if (matiereObj && matiereObj.fibres && Object.keys(matiereObj.fibres).length > 0) {
-                              Object.entries(matiereObj.fibres).forEach(([fibre, val]) => {
-                                let pctFibre = typeof val === 'object' && val !== null
-                                  ? (val.pourcentage !== undefined ? val.pourcentage : val.masse !== undefined ? val.masse : 0)
-                                  : val;
-                                // Pondération par le pourcentage de la matière, du type et du format
-                                const pct = (pctFibre / 100) * (matiereObj.pourcentage / 100) * (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100) * 100;
-                                values[fibre] = (values[fibre] || 0) + pct;
-                              });
-                            }
-                          });
-                        }
-                      });
-                    }
-                  });
-                }
-                // Normalisation pour que la somme fasse 100% de la part du lot qui a des fibres
-                const sum = Object.values(values).reduce((a, b) => a + b, 0);
-                if (sum > 0) {
-                  Object.keys(values).forEach(k => {
-                    values[k] = values[k] / sum * 100;
-                  });
-                }
-                tooltipContent += `<br/><strong>Détails Fibres :</strong><br/>`;
-                Object.entries(values).forEach(([key, value]) => {
-                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
-                });
-            } else if (dimension === 'couleur') {
-                // Recalcule la distribution des couleurs à la volée sur d.target.lot
-                const values = {};
-                let totalWithCouleur = 0;
-                if (d.target.lot && d.target.lot.formats) {
-                  Object.entries(d.target.lot.formats).forEach(([formatName, formatObj]) => {
-                    if (formatObj.types) {
-                      Object.entries(formatObj.types).forEach(([typeName, typeObj]) => {
-                        if (typeObj.couleurs) {
-                          // Masse de ce type dans le lot
-                          const typePct = (typeObj.pourcentage / 100) * (formatObj.pourcentage / 100);
-                          totalWithCouleur += typePct;
-                          Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-                            let pct = 0;
-                            if (typeof couleurObj === 'object' && typeof couleurObj.pourcentage === 'number') {
-                              pct = couleurObj.pourcentage;
-                            } else if (typeof couleurObj === 'number') {
-                              pct = couleurObj;
-                            }
-                            values[couleur] = (values[couleur] || 0) + (pct / 100) * typePct * 100;
-                          });
-                        }
-                      });
-                    }
-                  });
-                }
-                // Normalisation pour que la somme fasse 100% de la part du lot qui a des couleurs
-                const sum = Object.values(values).reduce((a, b) => a + b, 0);
-                if (sum > 0) {
-                  Object.keys(values).forEach(k => {
-                    values[k] = values[k] / sum * 100;
-                  });
-                }
-                tooltipContent += `<br/><strong>Détails Couleur :</strong><br/>`;
-                Object.entries(values).forEach(([key, value]) => {
-                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
-                });
-            } else if (dimension === 'qualite') {
-                // Recalcule la distribution des qualités à la volée sur d.target.lot
-                const values = {};
-                let totalQualite = 0;
-                if (d.target.lot && d.target.lot.qualite) {
-                  Object.entries(d.target.lot.qualite).forEach(([qual, pct]) => {
-                    // pct peut être un nombre ou un objet (selon la structure)
-                    const val = typeof pct === 'number' ? pct : (pct.pourcentage || 0);
-                    values[qual] = val;
-                    totalQualite += val;
-                  });
-                }
-                // Normalisation pour que la somme fasse 100
-                if (totalQualite > 0) {
-                  Object.keys(values).forEach(k => {
-                    values[k] = values[k] / totalQualite * 100;
-                  });
-                }
-                tooltipContent += `<br/><strong>Détails Qualité :</strong><br/>`;
-                Object.entries(values).forEach(([key, value]) => {
-                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
-                });
-            } else if (dimension === 'proprete') {
-                // Recalcule la distribution des propretés à la volée sur d.target.lot
-                const values = {};
-                let totalProprete = 0;
-                if (d.target.lot && d.target.lot.proprete) {
-                  Object.entries(d.target.lot.proprete).forEach(([prop, pct]) => {
-                    // pct peut être un nombre ou un objet (selon la structure)
-                    const val = typeof pct === 'number' ? pct : (pct.pourcentage || 0);
-                    values[prop] = val;
-                    totalProprete += val;
-                  });
-                }
-                // Normalisation pour que la somme fasse 100
-                if (totalProprete > 0) {
-                  Object.keys(values).forEach(k => {
-                    values[k] = values[k] / totalProprete * 100;
-                  });
-                }
-                tooltipContent += `<br/><strong>Détails Propreté :</strong><br/>`;
-                Object.entries(values).forEach(([key, value]) => {
-                  tooltipContent += `${key}: ${value.toFixed(1)}%<br/>`;
-                });
-            }
-            tooltip.html(tooltipContent)
-                .style('left', (svgRect.left + x) + 'px')
-                .style('top', (svgRect.top + y) + 'px');
-        })
-        .on('mouseout', function() {
-            tooltip.transition()
-                .duration(500)
-                .style('opacity', 0);
-        });
+        .style('stroke-opacity', 0.18);
 
     // Création des nœuds
     const node = svg.append('g')
@@ -766,8 +489,6 @@ function updateSankey(dimension) {
         // Stackbars pour la dimension sélectionnée
         let yOffset = 0;
         const component = stackbarComponents[dimension];
-        
-        // On affiche les stackbars pour tous les nœuds, y compris les targets
         const dimensionValues = component ? component.getStackValues(d.lot) : {};
         const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
         const sortedEntries = Object.entries(dimensionValues)
@@ -789,13 +510,72 @@ function updateSankey(dimension) {
                 .style('opacity', 1);
         }
 
+        // Affichage des segments stackbar avec couleur du JSON
         sortedEntries.forEach(([key, value]) => {
             const height = sum > 0 ? (value / sum) * nodeHeight : 0;
-            const fillColor = d3.color(colorAccessor(key));
-            const fillColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.6)`;
-            const strokeColorStr = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
+            // Chercher la couleur dans le JSON du lot
+            let color = '#bbb';
+            if (dimension === 'format' && d.lot.formats && d.lot.formats[key] && d.lot.formats[key].color) {
+                color = d.lot.formats[key].color;
+            } else if ((dimension === 'type' || dimension === 'format_type') && d.lot.formats) {
+                // Trouver le type dans chaque format
+                Object.values(d.lot.formats).forEach(formatObj => {
+                    if (formatObj.types && formatObj.types[key] && formatObj.types[key].color) {
+                        color = formatObj.types[key].color;
+                    }
+                });
+            } else if (dimension === 'matiere' && d.lot.formats) {
+                Object.values(d.lot.formats).forEach(formatObj => {
+                    if (formatObj.types) {
+                        Object.values(formatObj.types).forEach(typeObj => {
+                            if (typeObj.matieres && typeObj.matieres[key] && typeObj.matieres[key].color) {
+                                color = typeObj.matieres[key].color;
+                            }
+                        });
+                    }
+                });
+            } else if (dimension === 'fibres' && d.lot.formats) {
+                Object.values(d.lot.formats).forEach(formatObj => {
+                    if (formatObj.types) {
+                        Object.values(formatObj.types).forEach(typeObj => {
+                            if (typeObj.matieres) {
+                                Object.values(typeObj.matieres).forEach(matiereObj => {
+                                    if (matiereObj.fibres && matiereObj.fibres[key] && matiereObj.fibres[key].color) {
+                                        color = matiereObj.fibres[key].color;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            } else if (dimension === 'couleur' && d.lot.formats) {
+                Object.values(d.lot.formats).forEach(formatObj => {
+                    if (formatObj.types) {
+                        Object.values(formatObj.types).forEach(typeObj => {
+                            if (typeObj.couleurs && typeObj.couleurs[key] && typeObj.couleurs[key].color) {
+                                color = typeObj.couleurs[key].color;
+                            }
+                        });
+                    }
+                });
+            } else if (dimension === 'qualite' && d.lot.qualite && d.lot.qualite[key] && d.lot.qualite[key].color) {
+                color = d.lot.qualite[key].color;
+            } else if (dimension === 'proprete' && d.lot.proprete && d.lot.proprete[key] && d.lot.proprete[key].color) {
+                color = d.lot.proprete[key].color;
+            } else if (dimension === 'perturbateurs' && d.lot.formats) {
+                Object.values(d.lot.formats).forEach(formatObj => {
+                    if (formatObj.types) {
+                        Object.values(formatObj.types).forEach(typeObj => {
+                            if (typeObj.perturbateurs && typeObj.perturbateurs[key] && typeObj.perturbateurs[key].color) {
+                                color = typeObj.perturbateurs[key].color;
+                            }
+                        });
+                    }
+                });
+            }
+            const fillColorStr = color + (color.length === 7 ? '99' : ''); // Opacité 60% si hex, sinon rgba déjà
+            const strokeColorStr = color;
             const isUnknown = key.toLowerCase() === 'inconnu' || key.toLowerCase() === 'autre';
-            
             nodeGroup.append('rect')
                 .attr('x', 0)
                 .attr('y', yOffset)

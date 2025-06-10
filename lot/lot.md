@@ -45,8 +45,43 @@ Exemple simplifié :
 
 ---
 
-## Navigation et UX
+## Intégration et gestion des données de base
 
+### Chargement des données de base
+
+- Les données de base (formats, types, matières, fibres, etc.) sont stockées dans `/base_data` sous forme de fichiers JSON.
+- Au chargement de la page `/lot`, tous ces fichiers sont chargés via `fetch` (ou injectés via Bubble) et stockés dans `window.baseData`.
+- Le module lit toujours les données de base via `window.baseData` pour garantir la compatibilité local/Bubble.
+
+**Exemple d’initialisation dans `index.html` :**
+```js
+const baseFiles = {
+  types: '../base_data/types.json',
+  formats: '../base_data/formats.json',
+  matieres: '../base_data/matieres.json',
+  fibres: '../base_data/fibres.json',
+  qualite: '../base_data/qualite.json',
+  proprete: '../base_data/proprete.json',
+  perturbateurs: '../base_data/perturbateurs.json',
+  couleurs: '../base_data/couleurs.json'
+};
+Promise.all(
+  Object.entries(baseFiles).map(([key, path]) =>
+    fetch(path).then(r => r.json()).then(data => [key, data])
+  )
+).then(entries => {
+  window.baseData = Object.fromEntries(entries);
+  // ...
+});
+```
+
+**Pour Bubble** : injecter les données dans `window.baseData` via `<script type="application/json">` ou via les states Bubble.
+
+---
+
+## Fonctionnement de l’UI et logique d’ajout
+
+### Navigation et interaction
 - La navigation se fait via un chemin (`cheminSelection`) : tableau d’objets `{ dimension, valeur }`.
 - À chaque niveau, l’UI lit dynamiquement les dimensions accessibles à partir du nœud courant.
 - Le button group central affiche toutes les dimensions accessibles, la dimension active étant en "selected".
@@ -55,6 +90,20 @@ Exemple simplifié :
 - Les pourcentages sont toujours cohérents et recalculés à chaque modification (ajout/suppression/drag).
 - Les modifications sont répercutées en temps réel dans le JSON du lot.
 
+### Ajout d’un élément (popup)
+- Lorsqu’on clique sur le bouton +, une popup s’ouvre pour ajouter un élément à la dimension courante.
+- Le champ texte a été remplacé par un dropdown listant les éléments disponibles dans la donnée de base correspondante (ex : tous les types si on est sur la dimension "types").
+- Les éléments déjà présents dans l’objet courant sont exclus de la liste.
+- L’utilisateur sélectionne un élément dans le dropdown :
+  - Si c’est le premier élément de la dimension, le champ pourcentage est masqué et la valeur est fixée à 100 %.
+  - Sinon, l’utilisateur renseigne un pourcentage (input stylé, suffixe %).
+- Lors de la validation, la structure complète de l’élément (profondeur incluse) est copiée depuis la donnée de base dans l’objet courant, avec le pourcentage renseigné.
+- Si d’autres éléments existent déjà, leurs pourcentages sont réajustés pour que le total fasse 100 %.
+
+### Suppression et renommage
+- La suppression d’un segment réajuste automatiquement les pourcentages restants.
+- Le renommage d’un segment met à jour la clé dans l’objet parent et dans le chemin de navigation.
+
 ---
 
 ## Composants principaux
@@ -62,16 +111,25 @@ Exemple simplifié :
 - **Stackbar** : Affiche la répartition d’une dimension (ex : types d’un format) sous forme de segments proportionnels.
 - **Header** : Affiche le titre, le pourcentage, le poids, les boutons de navigation et d’édition.
 - **Button group** : Permet de changer dynamiquement de dimension à chaque niveau.
-- **Modal d’ajout** : Permet d’ajouter un segment à une dimension, avec gestion automatique des pourcentages.
+- **Modal d’ajout** : Permet d’ajouter un segment à une dimension, avec gestion automatique des pourcentages et sélection dans la donnée de base.
 
 ---
 
-## Bonnes pratiques d’intégration
+## Compatibilité Bubble et bonnes pratiques
 
-- Le module ne dépend que de la structure du lot : il s’adapte à tout JSON conforme.
-- Les classes CSS sont minimisées pour éviter les conflits (voir `styles.css`).
-- L’UI peut être intégrée dans Bubble ou tout autre environnement web.
-- Pour initialiser : `lancerLotUI(container, lotInitial)`.
+- Le module fonctionne aussi bien en local que dans Bubble, à condition que `window.baseData` soit correctement initialisé.
+- Toujours mettre à jour les fichiers de base dans `/base_data` pour ajouter ou modifier des valeurs disponibles.
+- Pour Bubble, privilégier l’injection des données via `<script type="application/json">` ou via les states Bubble.
+- L’UI peut être intégrée dans n’importe quelle page web ou plugin Bubble.
+
+---
+
+## Exemples d’utilisation
+
+```js
+// Initialisation dans une page web
+lancerLotUI(document.getElementById('stackbar-container'), window.lotInitial);
+```
 
 ---
 
@@ -86,21 +144,6 @@ Exemple simplifié :
 
 ---
 
-## Exemples d’utilisation
-
-```js
-// Initialisation dans une page web
-lancerLotUI(document.getElementById('stackbar-container'), window.lotInitial);
-```
-
----
-
-## Historique et évolutions
-- Navigation refactorisée pour supporter `{ dimension, valeur }`.
-- Affichage dynamique des dimensions et titres.
-- Gestion robuste des renommages, couleurs et pourcentages.
-- Suppression des dépendances inutiles dans le CSS.
-- Prise en compte du champ `title` pour l’affichage.
-- Adaptation à l’intégration Bubble.
+Pour toute évolution de la logique ou de l’UI, adapter ce fichier en conséquence.
 
 
