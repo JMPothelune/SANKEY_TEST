@@ -1,3 +1,5 @@
+console.log("lot.js chargé !");
+
 // --- Nouvelle structure pour le chemin ---
 let cheminSelection = [];
 
