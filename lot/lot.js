@@ -107,6 +107,7 @@ function attacherHandlersHeader(titre, niveau) {
     console.log("Handler bouton + trouvé", btnAdd, { niveau, dims });
     if (dims.length > 0) {
       btnAdd.onclick = () => {
+        console.log("Bouton +", btnAdd, { niveau, dims });
         const dimActive = cheminSelection[niveau]?.dimension || dims[0];
         afficherModalAjout(niveau, dimActive);
       }
