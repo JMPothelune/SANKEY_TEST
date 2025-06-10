@@ -38,15 +38,16 @@ function processDelissage(lot, keys = [], params = {}) {
           matieres[matiereKey] = (matieres[matiereKey] || 0) + matiereMass;
           totalMatiereMass += matiereMass;
           // Fibres
-          Object.entries(matiereObj.fibres || {}).forEach(([fibreKey, fibrePct]) => {
-            const fibreMass = matiereMass * (fibrePct / 100);
+          Object.entries(matiereObj.fibres || {}).forEach(([fibreKey, fibreObj]) => {
+            const pctFibre = typeof fibreObj === 'object' && fibreObj !== null ? (fibreObj.pourcentage !== undefined ? fibreObj.pourcentage : fibreObj) : fibreObj;
+            const fibreMass = matiereMass * (pctFibre / 100);
             if (!fibres[matiereKey]) fibres[matiereKey] = {};
             fibres[matiereKey][fibreKey] = (fibres[matiereKey][fibreKey] || 0) + fibreMass;
           });
         });
         // Couleurs
         Object.entries(typeObj.couleurs || {}).forEach(([couleurKey, couleurObj]) => {
-          const couleurPct = typeof couleurObj === 'number' ? couleurObj : couleurObj.pourcentage;
+          const couleurPct = typeof couleurObj === 'object' && couleurObj !== null ? (couleurObj.pourcentage !== undefined ? couleurObj.pourcentage : couleurObj) : couleurObj;
           const couleurMass = typeMass * (couleurPct / 100);
           couleurs[couleurKey] = (couleurs[couleurKey] || 0) + couleurMass;
           totalCouleurMass += couleurMass;
@@ -67,9 +68,20 @@ function processDelissage(lot, keys = [], params = {}) {
         fibresPct[matiereKey][fibreKey] = matiereMass > 0 ? (fibreMass / matiereMass) * 100 : 0;
       });
     });
+    // Couleurs imbriquées avec color
     const couleursPct = {};
     Object.entries(couleurs).forEach(([k, v]) => {
-      couleursPct[k] = totalCouleurMass > 0 ? (v / totalCouleurMass) * 100 : 0;
+      // Chercher la couleur dans le lot d'origine
+      let color = null;
+      Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
+        Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
+          if (typeObj.couleurs && typeObj.couleurs[k] && typeObj.couleurs[k].color) color = typeObj.couleurs[k].color;
+        });
+      });
+      couleursPct[k] = {
+        pourcentage: totalCouleurMass > 0 ? (v / totalCouleurMass) * 100 : 0
+      };
+      if (color) couleursPct[k].color = color;
     });
     return { matieresPct, fibresPct, couleursPct };
   }
@@ -80,51 +92,67 @@ function processDelissage(lot, keys = [], params = {}) {
   // Création du lot principal (morceaux de tissu)
   const mainLot = JSON.parse(JSON.stringify(lot));
   mainLot.total = total * yieldPct;
-  mainlot.formats = {
+  mainLot.formats = {
     "tissu": {
       pourcentage: 100,
       types: {
         "morceaux de tissu": {
           pourcentage: 100,
           matieres: {},
-          couleurs: {},
+          couleurs: {}
         }
       }
     }
   };
   // Applique la répartition fusionnée
   Object.entries(matieresPct).forEach(([matiere, pct]) => {
-    mainlot.formats["tissu"].types["morceaux de tissu"].matieres[matiere] = {
+    // Chercher la couleur de la matière
+    let matiereColor = null;
+    Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
+      Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
+        if (typeObj.matieres && typeObj.matieres[matiere] && typeObj.matieres[matiere].color) matiereColor = typeObj.matieres[matiere].color;
+      });
+    });
+    mainLot.formats["tissu"].types["morceaux de tissu"].matieres[matiere] = {
       pourcentage: pct,
       fibres: fibresPct[matiere] || {}
     };
+    if (matiereColor) mainLot.formats["tissu"].types["morceaux de tissu"].matieres[matiere].color = matiereColor;
   });
-  mainlot.formats["tissu"].types["morceaux de tissu"].couleurs = couleursPct;
+  mainLot.formats["tissu"].types["morceaux de tissu"].couleurs = couleursPct;
 
   // Création du coproduit (points durs)
   let coProductLot = null;
   if (yieldPct < 1) {
     coProductLot = JSON.parse(JSON.stringify(lot));
     coProductLot.total = total * (1 - yieldPct);
-    coProductlot.formats = {
+    coProductLot.formats = {
       "tissu": {
         pourcentage: 100,
         types: {
           "points durs": {
             pourcentage: 100,
             matieres: {},
-            couleurs: {},
+            couleurs: {}
           }
         }
       }
     };
     Object.entries(matieresPct).forEach(([matiere, pct]) => {
-      coProductlot.formats["tissu"].types["points durs"].matieres[matiere] = {
+      // Chercher la couleur de la matière
+      let matiereColor = null;
+      Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
+        Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
+          if (typeObj.matieres && typeObj.matieres[matiere] && typeObj.matieres[matiere].color) matiereColor = typeObj.matieres[matiere].color;
+        });
+      });
+      coProductLot.formats["tissu"].types["points durs"].matieres[matiere] = {
         pourcentage: pct,
         fibres: fibresPct[matiere] || {}
       };
+      if (matiereColor) coProductLot.formats["tissu"].types["points durs"].matieres[matiere].color = matiereColor;
     });
-    coProductlot.formats["tissu"].types["points durs"].couleurs = couleursPct;
+    coProductLot.formats["tissu"].types["points durs"].couleurs = couleursPct;
   }
 
   delete mainLot.titre;

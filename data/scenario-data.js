@@ -245,7 +245,10 @@ const scenario3 = {
     title: 'Reste',
   }
 };
-
+const emptyScenario = {
+  transformations: [],
+  coproduct_scenario: {}
+};
 
 // Puis l'array des scénarios, sur window pour accessibilité globale
 window.scenarios = [
@@ -260,5 +263,9 @@ window.scenarios = [
   {
     title: 'Test processes',
     scenario: scenario3
+  },
+  {
+    title: 'Empty',
+    scenario: emptyScenario
   }
 ];
