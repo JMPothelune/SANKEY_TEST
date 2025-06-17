@@ -33,8 +33,9 @@ function getDimensionsFromNode(node) {
     return [];
   }
   const dims = Object.keys(node).filter(k => {
-    if (["pourcentage", "percent", "name", "titre", "title", "total"].includes(k)) return false;
     const v = node[k];
+    console.log("Clé:", k, "| typeof v:", typeof v, "| v === null:", v === null, "| v.constructor:", v && v.constructor && v.constructor.name, "| v:", v);
+    if (["pourcentage", "percent", "name", "titre", "title", "total"].includes(k)) return false;
     return typeof v === "object" && v !== null;
   });
   console.log("Dimensions trouvées:", dims);
