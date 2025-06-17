@@ -26,17 +26,26 @@ function getIconSVG(name, className = '') {
 
 // --- Fonction utilitaire pour obtenir les dimensions accessibles à partir d'un nœud (hors pourcentage, total, title)
 function getDimensionsFromNode(node) {
-  console.log("getDimensionsFromNode reçoit:", node);
-  console.log("Type de node :", typeof node, "| Array.isArray(node):", Array.isArray(node), "| node === null:", node === null);
-  if (!node || typeof node !== 'object' || Array.isArray(node)) {
+  // Si node est une string, on essaie de la parser
+  if (typeof node === 'string') {
+    try {
+      node = JSON.parse(node);
+    } catch (e) {
+      console.error("Erreur de parsing JSON:", e);
+      return [];
+    }
+  }
+
+  console.log("Node après parsing:", node);
+  if (!node || typeof node !== 'object') {
     console.log("Node invalide:", node);
     return [];
   }
+
   const dims = Object.keys(node).filter(k => {
-    const v = node[k];
-    console.log("Clé:", k, "| typeof v:", typeof v, "| v === null:", v === null, "| v.constructor:", v && v.constructor && v.constructor.name, "| v:", v);
     if (["pourcentage", "percent", "name", "titre", "title", "total"].includes(k)) return false;
-    return typeof v === "object" && v !== null;
+    const v = node[k];
+    return v && (typeof v === "object" || typeof v === "function") && !Array.isArray(v);
   });
   console.log("Dimensions trouvées:", dims);
   return dims;
@@ -335,6 +344,17 @@ function afficherStackbars(lot, chemin) {
 function initLotUI(container, lotInitial) {
   console.log("Entrée dans initLotUI", container, lotInitial);
   rootContainer = container;
+  
+  // Parse si c'est une string
+  if (typeof lotInitial === 'string') {
+    try {
+      lotInitial = JSON.parse(lotInitial);
+    } catch (e) {
+      console.error("Erreur de parsing du lot initial:", e);
+      return;
+    }
+  }
+  
   lotCourant = deepCopy(lotInitial);
   window.lotCourant = lotCourant;
   cheminSelection = [];
