@@ -3,24 +3,6 @@ const margin = { top: 20, right: 40, bottom: 20, left: 0 };
 let width = window.innerWidth - margin.left - margin.right;
 let height = document.getElementById('sankey-container').offsetHeight - margin.top - margin.bottom;
 
-// Palette pour les couleurs (statique)
-const couleurMap = {
-    'noir': '#222',
-    'blanc': '#f5f5f5',
-    'bleu': '#2980b9',
-    'gris': '#7f8c8d',
-    'marron': '#8d5524',
-    'rouge': '#e74c3c',
-    'vert': '#27ae60',
-    'violet': '#8e44ad',
-    'orange': '#e67e22',
-    'jaune': '#f1c40f',
-    'inconnu': '#b2bec3',
-    'multicolore': '#fd79a8'
-};
-
-// Palette de couleurs pour les dimensions
-let colorScales = {};
 
 // Création du SVG
 const svg = d3.select('#sankey-container')
@@ -736,60 +718,55 @@ function updateSankey(dimension) {
         if (!(d.lot && d.lot.target) && !d.isTarget) {
         outgoingLinks.forEach((link, idx) => {
             const linkY = link.y0 - d.y0;
-                const fo = nodeGroup.append('foreignObject')
-                    .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
-                    .attr('y', linkY - 14)
-                    .attr('width', 28)
-                    .attr('height', 28);
-                const div = document.createElement('div');
-                div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
-                div.innerHTML = getIconSVG('arrows-split', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
-                fo.node().appendChild(div);
-                div.addEventListener('mouseover', function(event) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style('opacity', .9);
-
-                    const d = link;
-                    const chemin = `${d.source && d.source.name ? d.source.name : '[source?]'} → ${d.target && d.target.name ? d.target.name : '[target?]'}`;
-                    const parties = chemin.split('→').map(s => s.trim());
-                    let transformation = '';
-                    if (parties.length === 3) {
-                        transformation = parties[1];
-                    } else if (parties.length === 2) {
-                        transformation = parties[1];
-                    } else {
-                        transformation = d.target.name;
-                    }
-
-                    tooltip.html(`<strong>${transformation}</strong>`)
-                        .style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 28) + 'px');
-                });
-                div.addEventListener('mouseout', function() {
-                    tooltip.transition()
-                        .duration(500)
-                        .style('opacity', 0);
-                });
-                div.addEventListener('click', function(event) {
-                  event.stopPropagation();
-                  const chemin = `${d.name} → ${link.target.name}`;
-                  const ref = {
-                      nodeId: d.id,
-                      dimension: dimension,
-                      lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
-                      chemin: chemin,
-                      link: {
+            const fo = nodeGroup.append('foreignObject')
+                .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+                .attr('y', linkY - 14)
+                .attr('width', 28)
+                .attr('height', 28);
+            const div = document.createElement('div');
+            div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
+            const isFork = !!link.transformation;  // La transformation est sur le lien sortant
+            div.innerHTML = getIconSVG(isFork ? 'arrows-split' : 'plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
+            fo.node().appendChild(div);
+            div.addEventListener('mouseover', function(event) {
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                let tooltipContent = '';
+                if (isFork && link.transformation) {  // Utilise la transformation du lien sortant
+                    tooltipContent = `<strong>Transformation</strong><br/>${JSON.stringify(link.transformation, null, 2)}`;
+                } else {
+                    tooltipContent = '<strong>Ajouter une transformation</strong>';
+                }
+                tooltip.html(tooltipContent)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            });
+            div.addEventListener('mouseout', function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
+            div.addEventListener('click', function(event) {
+                event.stopPropagation();
+                const chemin = `${d.name} → ${link.target.name}`;
+                const ref = {
+                    nodeId: d.id,
+                    dimension: dimension,
+                    lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
+                    chemin: chemin,
+                    link: {
                         ...link,
                         target: {
-                          ...link.target,
-                          name: link.target.name.split('→')[0].trim()
+                            ...link.target,
+                            name: link.target.name.split('→')[0].trim()
                         }
-                      }
-                  };
-                  if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
-              });
+                    },
+                    transformation: link.transformation || null  // Utilise la transformation du lien sortant
+                };
+                if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, isFork ? 'view' : 'add');
             });
+        });
         }
 
         // 2. Icône + sur le lien "Reste" (coproduit)

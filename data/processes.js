@@ -1,3 +1,10 @@
+
+
+
+
+
+// Les processes 
+
 function processLavage(lot, keys = [], params = {}) {
   // params.yield = rendement (par défaut 1)
   const yieldPct = params.yield !== undefined ? params.yield : 1;

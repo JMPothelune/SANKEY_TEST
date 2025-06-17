@@ -687,7 +687,7 @@ const repartitionParType = {
       { "nom": "laine/polyamide", "pourcentage": 2.4 },
       { "nom": "coton/polyamide", "pourcentage": 1.9 },
       { "nom": "inconnu", "pourcentage": 11.3 },
-      { "nom": "autres compositions", "pourcentage": 20.4 }
+      { "nom": "autres compositions", "pourcentage": 19.4 }
     ],
     "couleurs": [
       { "nom": "multicolore", "pourcentage": 18 },

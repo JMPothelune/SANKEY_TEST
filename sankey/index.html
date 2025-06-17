@@ -82,10 +82,8 @@
         console.log('[DEBUG popup] ref.chemin =', ref.chemin);
         console.log('[DEBUG popup] ref.lot.transformations_appliquees =', ref.lot.transformations_appliquees);
         
-        // Récupération de la dernière transformation appliquée
-        const lastTransfo = Array.isArray(ref.lot.transformations_appliquees) && ref.lot.transformations_appliquees.length > 0
-          ? ref.lot.transformations_appliquees[ref.lot.transformations_appliquees.length - 1]
-          : null;
+        // Récupération de la transformation du lien cliqué
+        const lastTransfo = ref.transformation || null;
         
         modal.innerHTML = `
           <h3 class=\"text-lg font-semibold mb-4\">Ajouter une transformation</h3>
@@ -97,7 +95,7 @@
                   <div class=\\\"font-medium\\\">${lastTransfo.type}</div>
                   <div class=\\\"text-sm text-gray-600 mt-1\\\">${Array.isArray(lastTransfo.keys) ? lastTransfo.keys.flat().join(', ') : ''}</div>
                 ` : '<div class=\\\"font-medium\\\">Aucune transformation</div>'}
-                <div class=\"text-xs text-gray-400 mt-2\">[debug] transfo: ${JSON.stringify(ref.lot.transformations_appliquees) || 'N/A'}</div>
+                <div class=\"text-xs text-gray-400 mt-2\">[debug] transfo: ${JSON.stringify(lastTransfo) || 'N/A'}</div>
               </div>
             </div>
             <div>

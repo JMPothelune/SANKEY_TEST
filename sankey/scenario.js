@@ -149,14 +149,21 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     // Ajout de l'ID au lot
     targetLot.id = nodeId;
     
+    // On crée d'abord le nœud
     nodes.push({ 
       id: nodeId, 
       name: nodeName, 
       lot: targetLot, 
-      transformations_appliquees: newTransformations 
+      transformations_appliquees: newTransformations
     });
     
-    links.push({ source: parentNodeId, target: nodeId, value: targetLot.total });
+    // Puis le lien qui part du parent vers ce nœud
+    links.push({ 
+      source: parentNodeId, 
+      target: nodeId, 
+      value: targetLot.total,
+      transformation: transfo  // La transformation qui part du parent vers ce nœud
+    });
     totalChildren += targetLot.total;
 
     // Sous-scenario récursif (sur le lot sélectionné, relié à ce nœud)
@@ -195,7 +202,12 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
       transformations_appliquees: transformations_appliquees 
     });
     
-    links.push({ source: parentNodeId, target: coproductNodeId, value: resteLot.total });
+    links.push({ 
+      source: parentNodeId, 
+      target: coproductNodeId, 
+      value: resteLot.total,
+      transformation: scenario.coproduct_scenario?.transformations?.[0] || null  // La transformation du coproduit si elle existe
+    });
     totalChildren += resteLot.total;
     
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.transformations && scenario.coproduct_scenario.transformations.length > 0) {
@@ -286,6 +298,8 @@ function crossDistrib(lot, formats, formatsMass, lotMass) {
 
     return newLot;
 }
+
+
 
 // Nouvelle transformation adaptée à lotType : sélection par format
 function selectByFormat(lot, selectedFormats) {
@@ -1192,4 +1206,3 @@ function mergeLots(lots) {
 
     return result;
 }
-
