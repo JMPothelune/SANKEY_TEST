@@ -219,14 +219,14 @@ const scenario3 = {
           },
           {
             title: 'Nettoyage',
-            type: ['lavage'],
+            type: ['processLavage'],
             keys: [[]],
             yield: 1,
             scenario: {
               transformations: [
                 {
                   title: 'Délissage',
-                  type: ['delissage'],
+                  type: ['processDelissage'],
                   yield: 0.8,
                   keys: [[]],
                 }
