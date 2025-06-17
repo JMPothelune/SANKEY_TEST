@@ -26,12 +26,18 @@ function getIconSVG(name, className = '') {
 
 // --- Fonction utilitaire pour obtenir les dimensions accessibles à partir d'un nœud (hors pourcentage, total, title)
 function getDimensionsFromNode(node) {
-  if (!node || typeof node !== 'object') return [];
-  return Object.keys(node).filter(k => {
+  console.log("getDimensionsFromNode reçoit:", node);
+  if (!node || typeof node !== 'object') {
+    console.log("Node invalide:", node);
+    return [];
+  }
+  const dims = Object.keys(node).filter(k => {
     if (["pourcentage", "percent", "name", "titre", "title", "total"].includes(k)) return false;
     const v = node[k];
     return typeof v === "object" && v !== null;
   });
+  console.log("Dimensions trouvées:", dims);
+  return dims;
 }
 
 // --- Fonction utilitaire pour obtenir le title d'une dimension ou d'une valeur
@@ -217,6 +223,7 @@ function afficherHeaderNiveau({ niveau, nodeParent, dimension, valeur, nom, pct,
 // --- Fonction centrale pour afficher les stackbars selon le chemin (refactorisée) ---
 function afficherStackbars(lot, chemin) {
   console.log("Entrée dans afficherStackbars", lot, chemin);
+  console.log("cheminSelection.length =", chemin.length);
   const container = rootContainer;
   container.innerHTML = '';
 
@@ -224,8 +231,8 @@ function afficherStackbars(lot, chemin) {
   let totalKg = lot.total || 0;
   let pctCumul = 100;
 
-  // Si le chemin est vide, on commence par la première dimension
   if (cheminSelection.length === 0) {
+    console.log("cheminSelection est vide, on va appeler getDimensionsFromNode");
     const dims = getDimensionsFromNode(node);
     if (dims.length > 0) {
       CheminManager.ajouterDimension(dims[0]);
