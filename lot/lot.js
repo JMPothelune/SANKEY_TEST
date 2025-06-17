@@ -232,8 +232,9 @@ function afficherStackbars(lot, chemin) {
   let pctCumul = 100;
 
   if (cheminSelection.length === 0) {
-    console.log("cheminSelection est vide, on va appeler getDimensionsFromNode");
+    console.log("cheminSelection est vide, on va appeler getDimensionsFromNode avec node =", node);
     const dims = getDimensionsFromNode(node);
+    console.log("Résultat de getDimensionsFromNode :", dims);
     if (dims.length > 0) {
       CheminManager.ajouterDimension(dims[0]);
     }
