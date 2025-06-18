@@ -810,17 +810,58 @@ function processSeparation(lot, keys = [], params = {}) {
 
 // Table de correspondance entre les noms techniques et les noms d'affichage
 const transformationTypes = {
-  selectByFormat: { label: 'Sélection par format', description: 'Sélectionne les articles selon leur format (vêtements, chaussures, etc.)' },
-  selectByType: { label: 'Sélection par type', description: 'Sélectionne les articles selon leur type (après format)' },
-  selectByMatiere: { label: 'Sélection par matière', description: 'Sélectionne les articles selon leur matière' },
-  selectByQualite: { label: 'Sélection par qualité', description: 'Sélectionne les articles selon leur qualité' },
-  selectByCouleur: { label: 'Sélection par couleur', description: 'Sélectionne les articles selon leur couleur' },
-  selectByFibre: { label: 'Sélection par fibre', description: 'Sélectionne les articles selon leur composition en fibres' },
-  selectByProprete: { label: 'Sélection par propreté', description: 'Sélectionne les articles selon leur propreté' },
-  selectByPerturbateur: { label: 'Sélection par perturbateur', description: 'Sélectionne les articles selon la présence de perturbateurs' },
-  processLavage: { label: 'Lavage', description: 'Nettoie les articles et modifie leur état de propreté' },
-  processDelissage: { label: 'Délissage', description: 'Transforme les articles en morceaux de tissu' },
-  processSeparation: { label: 'Séparation', description: 'Sépare les fibres d\'un tissu composé' }
+  selectByFormat: { 
+    label: 'Sélection par format', 
+    description: 'Sélectionne les articles selon leur format (vêtements, chaussures, etc.)',
+    keyList: 'formats'
+  },
+  selectByType: { 
+    label: 'Sélection par type', 
+    description: 'Sélectionne les articles selon leur type (après format)',
+    keyList: 'types'
+  },
+  selectByMatiere: { 
+    label: 'Sélection par matière', 
+    description: 'Sélectionne les articles selon leur matière',
+    keyList: 'matieres'
+  },
+  selectByQualite: { 
+    label: 'Sélection par qualité', 
+    description: 'Sélectionne les articles selon leur qualité',
+    keyList: 'qualite'
+  },
+  selectByCouleur: { 
+    label: 'Sélection par couleur', 
+    description: 'Sélectionne les articles selon leur couleur',
+    keyList: 'couleurs'
+  },
+  selectByFibre: { 
+    label: 'Sélection par fibre', 
+    description: 'Sélectionne les articles selon leur composition en fibres',
+    keyList: 'fibres'
+  },
+  selectByProprete: { 
+    label: 'Sélection par propreté', 
+    description: 'Sélectionne les articles selon leur propreté',
+    keyList: 'proprete'
+  },
+  selectByPerturbateur: { 
+    label: 'Sélection par perturbateur', 
+    description: 'Sélectionne les articles selon la présence de perturbateurs',
+    keyList: 'perturbateurs'
+  },
+  processLavage: { 
+    label: 'Lavage', 
+    description: 'Nettoie les articles et modifie leur état de propreté'
+  },
+  processDelissage: { 
+    label: 'Délissage', 
+    description: 'Transforme les articles en morceaux de tissu'
+  },
+  processSeparation: { 
+    label: 'Séparation', 
+    description: 'Sépare les fibres d\'un tissu composé'
+  }
 };
 
 const transformationUtils = {
@@ -854,4 +895,5 @@ window.processes = {
 };
 
 window.transformationUtils = transformationUtils;
+window.transformationTypes = transformationTypes;
 
