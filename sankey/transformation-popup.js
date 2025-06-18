@@ -64,8 +64,12 @@ class TransformationPopup {
       </div>
     ` : '';
     
+    // Adapter le titre et le texte du bouton selon le mode
+    const title = this.mode === 'add' ? 'Ajouter une transformation' : 'Modifier la transformation';
+    const buttonText = this.mode === 'add' ? 'Créer' : 'Enregistrer';
+    
     this.modal.innerHTML = `
-      <h3 class="text-lg font-semibold mb-4">Ajouter une transformation</h3>
+      <h3 class="text-lg font-semibold mb-4">${title}</h3>
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Type de transformation</label>
@@ -79,7 +83,7 @@ class TransformationPopup {
       </div>
       <div class="mt-6 flex justify-end space-x-3">
         <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
-        <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+        <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
       </div>
     `;
 
