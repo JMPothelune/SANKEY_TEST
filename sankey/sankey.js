@@ -348,6 +348,225 @@ function updateSankey(dimension) {
         target: String(l.target)
     }));
 
+    // Cas spécial : Sankey vide (aucune transformation appliquée, que des nœuds target ou Reste sans transformation)
+    const onlyInitialAndTargets = (
+        nodes.length > 1 &&
+        nodes.slice(1).every(n => n.isTarget || (n.name && n.name.startsWith('Reste')))
+        && links.every(l => !l.transformation)
+    );
+
+    if (onlyInitialAndTargets) {
+        // On ne garde que le lot initial, sans liens ni nœuds target/reste
+        nodes = [nodes[0]];
+        links = [];
+        // Cas spécial : un seul nœud => affichage manuel
+        // (on saute la logique D3 Sankey)
+        if (nodes.length === 1) {
+            const stackbarWidth = 80;
+            const extraBlockWidth = 30;
+            const horizontalPadding = 20;
+            const nodeHeight = Math.max(100, height * 0.8);
+            const nodeWidth = stackbarWidth + extraBlockWidth;
+            const x = horizontalPadding;
+            const y = 40;
+            const d = nodes[0];
+            const nodeGroup = svg.append('g').attr('transform', `translate(${x},${y})`);
+
+            // Stackbar (fond)
+            nodeGroup.append('rect')
+                .attr('x', 0)
+                .attr('height', nodeHeight)
+                .attr('width', stackbarWidth)
+                .style('fill', '#e0e0e0')
+                .style('opacity', 0.6);
+
+            // Stackbars pour la dimension sélectionnée
+            let yOffset = 0;
+            const component = stackbarComponents[dimension];
+            const dimensionValues = component ? component.getStackValues(d.lot) : {};
+            const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
+            const sortedEntries = Object.entries(dimensionValues)
+                .filter(([key]) => !key.startsWith('_'))
+                .sort((a, b) => b[1] - a[1]);
+
+            // Si la stackbar est vide, afficher un fond dashed
+            if (sortedEntries.length === 0) {
+                nodeGroup.append('rect')
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('height', nodeHeight)
+                    .attr('width', stackbarWidth)
+                    .attr('rx', 4)
+                    .attr('ry', 4)
+                    .style('fill', 'url(#dashed-bg)')
+                    .style('stroke', '#bbb')
+                    .style('stroke-width', '1px')
+                    .style('opacity', 1);
+            }
+
+            // Affichage des segments stackbar avec couleur du JSON
+            sortedEntries.forEach(([key, value]) => {
+                const heightSeg = sum > 0 ? (value / sum) * nodeHeight : 0;
+                let color = '#bbb';
+                if (dimension === 'format' && d.lot.formats && d.lot.formats[key] && d.lot.formats[key].color) {
+                    color = d.lot.formats[key].color;
+                } else if ((dimension === 'type' || dimension === 'format_type') && d.lot.formats) {
+                    Object.values(d.lot.formats).forEach(formatObj => {
+                        if (formatObj.types && formatObj.types[key] && formatObj.types[key].color) {
+                            color = formatObj.types[key].color;
+                        }
+                    });
+                } else if (dimension === 'matiere' && d.lot.formats) {
+                    Object.values(d.lot.formats).forEach(formatObj => {
+                        if (formatObj.types) {
+                            Object.values(formatObj.types).forEach(typeObj => {
+                                if (typeObj.matieres && typeObj.matieres[key] && typeObj.matieres[key].color) {
+                                    color = typeObj.matieres[key].color;
+                                }
+                            });
+                        }
+                    });
+                } else if (dimension === 'fibres' && d.lot.formats) {
+                    Object.values(d.lot.formats).forEach(formatObj => {
+                        if (formatObj.types) {
+                            Object.values(formatObj.types).forEach(typeObj => {
+                                if (typeObj.matieres) {
+                                    Object.values(typeObj.matieres).forEach(matiereObj => {
+                                        if (matiereObj.fibres && matiereObj.fibres[key] && matiereObj.fibres[key].color) {
+                                            color = matiereObj.fibres[key].color;
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else if (dimension === 'couleur' && d.lot.formats) {
+                    Object.values(d.lot.formats).forEach(formatObj => {
+                        if (formatObj.types) {
+                            Object.values(formatObj.types).forEach(typeObj => {
+                                if (typeObj.couleurs && typeObj.couleurs[key] && typeObj.couleurs[key].color) {
+                                    color = typeObj.couleurs[key].color;
+                                }
+                            });
+                        }
+                    });
+                } else if (dimension === 'qualite' && d.lot.qualite && d.lot.qualite[key] && d.lot.qualite[key].color) {
+                    color = d.lot.qualite[key].color;
+                } else if (dimension === 'proprete' && d.lot.proprete && d.lot.proprete[key] && d.lot.proprete[key].color) {
+                    color = d.lot.proprete[key].color;
+                } else if (dimension === 'perturbateurs' && d.lot.formats) {
+                    Object.values(d.lot.formats).forEach(formatObj => {
+                        if (formatObj.types) {
+                            Object.values(formatObj.types).forEach(typeObj => {
+                                if (typeObj.perturbateurs && typeObj.perturbateurs[key] && typeObj.perturbateurs[key].color) {
+                                    color = typeObj.perturbateurs[key].color;
+                                }
+                            });
+                        }
+                    });
+                }
+                const fillColorStr = color + (color.length === 7 ? '99' : ''); // Opacité 60% si hex, sinon rgba déjà
+                const strokeColorStr = color;
+                const isUnknown = key.toLowerCase() === 'inconnu' || key.toLowerCase() === 'autre';
+                nodeGroup.append('rect')
+                    .attr('x', 0)
+                    .attr('y', yOffset)
+                    .attr('height', heightSeg)
+                    .attr('width', stackbarWidth)
+                    .attr('rx', 4)
+                    .attr('ry', 4)
+                    .attr('class', 'stackbar-segment')
+                    .attr('data-key', key)
+                    .attr('data-dimension', dimension)
+                    .style('fill', isUnknown ? 'url(#dashed-bg)' : fillColorStr)
+                    .style('stroke', isUnknown ? '#999' : strokeColorStr)
+                    .style('stroke-width', '1px')
+                    .style('opacity', 1)
+                    .on('mouseover', function(event) {
+                        let tooltipContent = component ? component.getTooltipContent(d.lot, key, value, d.lot.total) : '';
+                        tooltip.transition()
+                            .duration(200)
+                            .style('opacity', .9);
+                        tooltip.html(tooltipContent)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 28) + 'px');
+                    })
+                    .on('mouseout', function() {
+                        tooltip.transition()
+                            .duration(500)
+                            .style('opacity', 0);
+                    });
+                yOffset += heightSeg;
+            });
+
+            // Bloc à droite de la stackbar
+            nodeGroup.append('rect')
+                .attr('x', stackbarWidth)
+                .attr('y', 0)
+                .attr('width', extraBlockWidth)
+                .attr('height', nodeHeight)
+                .attr('rx', 4)
+                .attr('ry', 4)
+                .style('fill', 'rgba(204,204,204,0.6)') // gris clair, opacité 60%
+                .style('stroke', 'rgba(204,204,204,1)') // bordure 100%
+                .style('stroke-width', '1px')
+                .style('opacity', 1);
+
+            // Titre du lot
+            nodeGroup.append('text')
+                .attr('class', 'lot-title')
+                .attr('x', (stackbarWidth + extraBlockWidth) / 2)
+                .attr('y', -8)
+                .attr('text-anchor', 'middle')
+                .text(d.lot && d.lot.title ? d.lot.title : d.name)
+                .style('font-size', '11px')
+                .style('fill', '#666');
+
+            // Bouton + pour ajouter une transformation (même logique que dans la boucle node.each)
+            const yPlus = nodeHeight / 2 - 14;
+            const fo = nodeGroup.append('foreignObject')
+                .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+                .attr('y', yPlus)
+                .attr('width', 28)
+                .attr('height', 28);
+            const div = document.createElement('div');
+            div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
+            div.innerHTML = getIconSVG('plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
+            fo.node().appendChild(div);
+            div.addEventListener('mouseover', function(event) {
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                tooltip.html('<strong>Ajouter une transformation</strong>')
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            });
+            div.addEventListener('mouseout', function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
+            div.addEventListener('click', function(event) {
+                event.stopPropagation();
+                const chemin = `${d.name}`;
+                const ref = {
+                    nodeId: d.id,
+                    dimension: dimension,
+                    lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
+                    chemin: chemin,
+                    link: {
+                        target: {
+                            name: ''
+                        }
+                    }
+                };
+                if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
+            });
+
+            return; // On ne fait rien d'autre
+        }
+    }
+
     // 1. Identifier les nœuds feuilles avec un target
     const leafNodesWithTarget = nodes.filter(n =>
         n.lot && n.lot.target &&
@@ -632,6 +851,14 @@ function updateSankey(dimension) {
                             if (dimension === 'proprete') {
                                 return (lotToCheck.proprete && Object.keys(lotToCheck.proprete).includes(key)) ? 0.7 : 0.18;
                             }
+                            if (dimension === 'perturbateurs') {
+                                const hasPerturbateur = lot => Object.values(lot.formats || {}).some(f =>
+                                    f.types && Object.values(f.types).some(t =>
+                                        t.perturbateurs && Object.keys(t.perturbateurs).includes(key)
+                                    )
+                                );
+                                return hasPerturbateur(lotToCheck) ? 0.7 : 0.18;
+                            }
                             return 0.18;
                         });
                 })
@@ -724,8 +951,8 @@ function updateSankey(dimension) {
                 .attr('width', 28)
                 .attr('height', 28);
             const div = document.createElement('div');
-            div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
             const isFork = !!link.transformation;  // La transformation est sur le lien sortant
+            div.className = 'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
             div.innerHTML = getIconSVG(isFork ? 'arrows-split' : 'plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
             fo.node().appendChild(div);
 
