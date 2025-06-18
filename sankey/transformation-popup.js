@@ -39,7 +39,11 @@ class TransformationPopup {
     }
     
     // Génération dynamique des options du select
-    const options = (window.transformationUtils ? window.transformationUtils.getAvailableTransformations() : []).map(t =>
+    let options = '';
+    if (!lastType) {
+      options += '<option value="" disabled selected>Sélectionner une transformation</option>';
+    }
+    options += (window.transformationUtils ? window.transformationUtils.getAvailableTransformations() : []).map(t =>
       `<option value="${t.value}" ${lastType === t.value ? 'selected' : ''}>${t.label}</option>`
     ).join('');
     
