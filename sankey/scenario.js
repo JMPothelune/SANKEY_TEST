@@ -1,3 +1,85 @@
+// Convention de path pour cibler une transformation dans un scénario imbriqué :
+// - Le path est un tableau d'alternance de clés (string) et d'index (number)
+// - Il commence toujours par 'main' (scénario principal) ou 'coproduct' (coproduit racine)
+//   Exemple : ['main', 'transformations', 2, 'scenario', 'coproduct_scenario', 'transformations', 1]
+//   Exemple : ['coproduct', 'transformations', 0]
+//   Exemple : ['main', 'transformations', 2]
+//
+// Les fonctions utilitaires ci-dessous permettent de naviguer et modifier la structure du scénario dynamiquement.
+
+/**
+ * Retourne le sous-scénario ou coproduit ciblé par le path (sans aller jusqu'au tableau de transformations).
+ * @param {object} scenario - Le scénario racine
+ * @param {Array} path - Le chemin (voir convention ci-dessus)
+ * @returns {object} - Le sous-scénario ou coproduit ciblé
+ */
+function getScenarioAtPath(scenario, path) {
+    let current = scenario;
+    let i = 0;
+    if (path[0] === 'main') {
+        current = scenario;
+        i = 1;
+    } else if (path[0] === 'coproduct') {
+        current = scenario.coproduct_scenario;
+        i = 1;
+    }
+    // On s'arrête avant le dernier 'transformations' ou index
+    while (i < path.length) {
+        const key = path[i];
+        if (typeof key === 'string' && (key === 'scenario' || key === 'coproduct_scenario')) {
+            current = current[key];
+        }
+        i++;
+        if (i < path.length && typeof path[i] === 'number') {
+            // On saute l'index, on ne descend pas dans la transformation elle-même
+            i++;
+        }
+    }
+    return current;
+}
+
+/**
+ * Retourne le tableau de transformations ciblé par le path.
+ * @param {object} scenario - Le scénario racine
+ * @param {Array} path - Le chemin (voir convention ci-dessus)
+ * @returns {Array} - Le tableau de transformations ciblé
+ */
+function getTransformationsArray(scenario, path) {
+    let current = scenario;
+    let i = 0;
+    if (path[0] === 'main') {
+        current = scenario;
+        i = 1;
+    } else if (path[0] === 'coproduct') {
+        current = scenario.coproduct_scenario;
+        i = 1;
+    }
+    while (i < path.length) {
+        const key = path[i];
+        if (typeof key === 'string') {
+            current = current[key];
+        } else if (typeof key === 'number') {
+            current = current[key];
+        }
+        i++;
+    }
+    // On doit être sur le tableau de transformations
+    return current;
+}
+
+/**
+ * Supprime la transformation à l'index donné dans le tableau ciblé par le path.
+ * @param {object} scenario - Le scénario racine
+ * @param {Array} path - Le chemin (voir convention ci-dessus)
+ * @param {number} index - L'index de la transformation à supprimer
+ */
+function removeTransformation(scenario, path, index) {
+    const arr = getTransformationsArray(scenario, path);
+    if (Array.isArray(arr) && index >= 0 && index < arr.length) {
+        arr.splice(index, 1);
+    }
+}
+
 function getAllDescendants(tree) {
   let descendants = [];
   for (const key in tree) {
@@ -81,11 +163,25 @@ function normalizePourcentages(obj) {
 }
 
 // Nouvelle fonction de parsing du scénario
-function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = null, idGenObj = null, isRoot = true, transformations_appliquees = [], depth = 0, pathNum = '1') {
+/**
+ * Applique le scénario à un lot et génère les nœuds/links pour le Sankey.
+ * Chaque transformation est annotée avec _path (array) et _index (number) pour permettre l'édition UI.
+ * @param {object} lot
+ * @param {object} scenario
+ * @param {string} parentNodeId
+ * @param {Array} nodes
+ * @param {Array} links
+ * @param {object} idGenObj
+ * @param {boolean} isRoot
+ * @param {Array} transformations_appliquees
+ * @param {number} depth
+ * @param {string|Array} pathNum
+ * @param {Array} pathArr - le chemin courant dans l'arbre du scénario (par défaut ['main'])
+ */
+function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = null, idGenObj = null, isRoot = true, transformations_appliquees = [], depth = 0, pathNum = '1', pathArr = ['main', 'transformations']) {
   if (!nodes) {
     const lotInit = JSON.parse(JSON.stringify(lot));
     lotInit.titre = 'lot Type';
-    console.log('Création lot:', lotInit);
     nodes = [{ id: parentNodeId, name: 'Lot initial', lot: lotInit, transformations_appliquees: [] }];
   }
   if (!links) links = [];
@@ -100,6 +196,15 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     // Support nouvelle structure : type et keys sont des tableaux
     const type = Array.isArray(transfo.type) ? transfo.type[0] : transfo.type;
     const keys = Array.isArray(transfo.keys) ? transfo.keys[0] : transfo.keys;
+
+    // --- Marquage du path et de l'index sur la transformation ---
+    if (!transfo._path) transfo._path = [...pathArr];
+    if (typeof transfo._index !== 'number') transfo._index = idx;
+
+    // Log temporaire pour vérifier le marquage
+    if (window.DEBUG_TRANSFO_PATH) {
+      console.log('TRANSFO PATH/INDEX', transfo._path, transfo._index, transfo);
+    }
 
     if (type === 'selectByFormat') {
       result = window.processes['selectByFormat'](resteLot, keys);
@@ -139,38 +244,36 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     // Utiliser le title de la transformation s'il existe, sinon générer un titre unique
     const titre = transfo.title || `${pathNum}.${idx + 1}`;
     if (!targetLot.title) targetLot.title = titre;
-    console.log('Création lot:', targetLot);
     const nodeId = `${idGenObj.id++}`;
+    // On pousse la référence réelle (pas de clone)
     const newTransformations = [...transformations_appliquees, transfo];
-    
-    // Ajout du nom de la target dans le nom du nœud si elle existe
     const nodeName = targetLot.target 
       ? `${type}: ${keys.join(' + ')} → ${targetLot.target}`
       : `${type}: ${keys.join(' + ')}`;
-    
-    // Ajout de l'ID au lot
     targetLot.id = nodeId;
-    
+
     // On crée d'abord le nœud
     nodes.push({ 
       id: nodeId, 
       name: nodeName, 
       lot: targetLot, 
-      transformations_appliquees: newTransformations
+      transformations_appliquees: newTransformations 
     });
-    
+
     // Puis le lien qui part du parent vers ce nœud
     links.push({ 
       source: parentNodeId, 
       target: nodeId, 
       value: targetLot.total,
-      transformation: transfo  // La transformation qui part du parent vers ce nœud
+      transformation: transfo  // La transformation qui part du parent vers ce nœud (annotée)
     });
     totalChildren += targetLot.total;
 
     // Sous-scenario récursif (sur le lot sélectionné, relié à ce nœud)
     if (transfo.scenario && transfo.scenario.transformations && transfo.scenario.transformations.length > 0) {
-      applyScenario(targetLot, transfo.scenario, nodeId, nodes, links, idGenObj, false, newTransformations, depth + 1, titre);
+      // On passe le path étendu pour le sous-scenario
+      const subPath = [...pathArr, idx, 'scenario', 'transformations'];
+      applyScenario(targetLot, transfo.scenario, nodeId, nodes, links, idGenObj, false, newTransformations, depth + 1, titre, subPath);
     }
     // On retire cette part du reste global
     resteLot = coProductLot;
@@ -178,42 +281,39 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
 
   // Gestion du coproduit (reste)
   if (resteLot && resteLot.total > 0.1) {
-    // Utiliser le title du coproduct s'il existe, sinon générer un titre unique
     const titre = scenario.coproduct_scenario?.title || `${pathNum}.${(scenario.transformations || []).length + 1}`;
     if (!resteLot.title) resteLot.title = titre;
-    // Ajout de la target au coproduit si elle existe
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.target) {
       resteLot.target = scenario.coproduct_scenario.target;
     }
-    
-    console.log('Création lot:', resteLot);
     const coproductNodeId = `${idGenObj.id++}`;
-    
-    // Ajout de l'ID au lot coproduit
     resteLot.id = coproductNodeId;
-    
-    // Ajout du nom de la target dans le nom du nœud du coproduit si elle existe
     const nodeName = resteLot.target 
       ? `Reste → ${resteLot.target}`
       : 'Reste';
-      
     nodes.push({ 
       id: coproductNodeId, 
       name: nodeName, 
       lot: resteLot, 
       transformations_appliquees: transformations_appliquees 
     });
-    
+    // On annote la première transformation du coproduit si elle existe
+    if (scenario.coproduct_scenario && scenario.coproduct_scenario.transformations && scenario.coproduct_scenario.transformations.length > 0) {
+      scenario.coproduct_scenario.transformations.forEach((coproTransfo, cidx) => {
+        if (!coproTransfo._path) coproTransfo._path = [...pathArr, 'coproduct_scenario', 'transformations'];
+        if (typeof coproTransfo._index !== 'number') coproTransfo._index = cidx;
+      });
+    }
     links.push({ 
       source: parentNodeId, 
       target: coproductNodeId, 
       value: resteLot.total,
-      transformation: scenario.coproduct_scenario?.transformations?.[0] || null  // La transformation du coproduit si elle existe
+      transformation: scenario.coproduct_scenario?.transformations?.[0] || null  // La transformation du coproduit si elle existe (annotée)
     });
     totalChildren += resteLot.total;
-    
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.transformations && scenario.coproduct_scenario.transformations.length > 0) {
-      applyScenario(resteLot, scenario.coproduct_scenario, coproductNodeId, nodes, links, idGenObj, false, transformations_appliquees, depth + 1, titre);
+      const coproPath = [...pathArr, 'coproduct_scenario', 'transformations'];
+      applyScenario(resteLot, scenario.coproduct_scenario, coproductNodeId, nodes, links, idGenObj, false, transformations_appliquees, depth + 1, titre, coproPath);
     }
   }
 

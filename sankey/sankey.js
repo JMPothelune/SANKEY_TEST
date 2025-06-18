@@ -1046,7 +1046,7 @@ function updateSankey(dimension) {
                   <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit">Modifier</button>
                   <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}>Monter</button>
                   <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}>Descendre</button>
-                  <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 cursor-not-allowed" disabled>Effacer</button>
+                  <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete">Effacer</button>
                 `;
                 document.body.appendChild(dropdownMenu);
                 dropdownOpen = true;
@@ -1070,6 +1070,46 @@ function updateSankey(dimension) {
                         transformation: link.transformation || null
                     };
                     if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'view');
+                };
+                // Handler pour Effacer
+                dropdownMenu.querySelector('[data-action="delete"]').onclick = function(e) {
+                    e.stopPropagation();
+                    closeDropdown();
+                    // Suppression immédiate, sans confirm
+                    // Trouver le scénario courant
+                    const scenarioIdx = document.getElementById('scenario-selector').value;
+                    const scenario = window.scenarios[scenarioIdx]?.scenario;
+                    // Trouver le path et l'index de la transformation à supprimer
+                    let path = link.transformation && link.transformation._path;
+                    let index = link.transformation && link.transformation._index;
+                    if (!path || typeof index !== 'number') {
+                        const lastTransfo = d.transformations_appliquees && d.transformations_appliquees.length ? d.transformations_appliquees[d.transformations_appliquees.length - 1] : null;
+                        if (lastTransfo && lastTransfo._path && typeof lastTransfo._index === 'number') {
+                            path = lastTransfo._path;
+                            index = lastTransfo._index;
+                        } else {
+                            alert('Impossible de retrouver la position de la transformation à supprimer.');
+                            return;
+                        }
+                    }
+                    if (!scenario || !path || typeof index !== 'number') {
+                        alert('Erreur lors de la suppression : informations manquantes.');
+                        return;
+                    }
+                    if (typeof window.removeTransformation === 'function') {
+                        window.removeTransformation(scenario, path, index);
+                    } else if (typeof removeTransformation === 'function') {
+                        removeTransformation(scenario, path, index);
+                    } else {
+                        alert('Fonction removeTransformation non trouvée.');
+                        return;
+                    }
+                    // Relancer le Sankey
+                    const lot = window.lotType;
+                    const dimension = document.getElementById('dimension-selector').value;
+                    if (typeof runSankey === 'function' && lot && scenario) {
+                        runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+                    }
                 };
                 // Fermer si on clique ailleurs
                 setTimeout(() => {
