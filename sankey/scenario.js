@@ -80,6 +80,62 @@ function removeTransformation(scenario, path, index) {
     }
 }
 
+/**
+ * Ajoute une nouvelle transformation dans le tableau ciblé par le path.
+ * @param {object} scenario - Le scénario racine
+ * @param {Array} path - Le chemin (voir convention ci-dessus)
+ * @param {object} transformation - La transformation à ajouter
+ * @param {number} [index] - L'index où insérer la transformation (optionnel, ajoute à la fin si non spécifié)
+ */
+function addTransformation(scenario, path, transformation, index = -1) {
+    console.log('addTransformation called:', { path, transformation, index });
+    const arr = getTransformationsArray(scenario, path);
+    console.log('Found array:', { arr });
+    if (Array.isArray(arr)) {
+        // Marquer le path et l'index sur la transformation
+        transformation._path = [...path];
+        if (index >= 0 && index <= arr.length) {
+            arr.splice(index, 0, transformation);
+            // Mettre à jour les index des transformations suivantes
+            for (let i = index; i < arr.length; i++) {
+                arr[i]._index = i;
+            }
+        } else {
+            transformation._index = arr.length;
+            arr.push(transformation);
+        }
+        console.log('Array after modification:', { arr });
+    } else {
+        console.error('Could not find array at path:', path);
+    }
+}
+
+/**
+ * Met à jour une transformation existante dans le tableau ciblé par le path.
+ * @param {object} scenario - Le scénario racine
+ * @param {Array} path - Le chemin (voir convention ci-dessus)
+ * @param {number} index - L'index de la transformation à mettre à jour
+ * @param {object} newTransformation - Les nouvelles propriétés de la transformation
+ */
+function updateTransformation(scenario, path, index, newTransformation) {
+    console.log('updateTransformation called:', { path, index, newTransformation });
+    const arr = getTransformationsArray(scenario, path);
+    console.log('Found array:', { arr });
+    if (Array.isArray(arr) && index >= 0 && index < arr.length) {
+        // Garder les métadonnées existantes
+        const existingTransfo = arr[index];
+        arr[index] = {
+            ...existingTransfo,
+            ...newTransformation,
+            _path: existingTransfo._path,
+            _index: existingTransfo._index
+        };
+        console.log('Array after modification:', { arr });
+    } else {
+        console.error('Could not find array at path or invalid index:', { path, index });
+    }
+}
+
 function getAllDescendants(tree) {
   let descendants = [];
   for (const key in tree) {
@@ -738,3 +794,10 @@ function mergeLots(lots) {
 
     return result;
 }
+
+// Exposer les fonctions de manipulation du scénario globalement
+window.getScenarioAtPath = getScenarioAtPath;
+window.getTransformationsArray = getTransformationsArray;
+window.removeTransformation = removeTransformation;
+window.addTransformation = addTransformation;
+window.updateTransformation = updateTransformation;

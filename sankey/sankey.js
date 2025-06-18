@@ -1069,7 +1069,7 @@ function updateSankey(dimension) {
                         },
                         transformation: link.transformation || null
                     };
-                    if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'view');
+                    if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'edit');
                 };
                 // Handler pour Effacer
                 dropdownMenu.querySelector('[data-action="delete"]').onclick = function(e) {
@@ -1310,4 +1310,127 @@ function runSankey({ lot, scenario, containerId = 'sankey-container', dimension 
     console.error('updateSankey non défini');
   }
 }
+
+// Callback global pour la sauvegarde des transformations
+window.onTransformationSave = (nodeId, transformation) => {
+  console.log('onTransformationSave called:', { nodeId, transformation });
+  
+  // Trouver le scénario courant
+  const scenarioIdx = document.getElementById('scenario-selector').value;
+  const scenario = window.scenarios[scenarioIdx]?.scenario;
+  if (!scenario) {
+    console.error('No scenario found');
+    return;
+  }
+
+  // Trouver le nœud et mettre à jour sa transformation
+  let path = null;
+  let index = null;
+
+  // Parcourir les transformations pour trouver le bon nœud
+  const findTransformation = (transformations, currentPath = ['main', 'transformations']) => {
+    if (!transformations) return false;
+    for (let i = 0; i < transformations.length; i++) {
+      const t = transformations[i];
+      
+      // Si on trouve le nœud, on met à jour la transformation
+      if (t._nodeId === nodeId) {
+        path = currentPath;
+        index = i;
+        return true;
+      }
+      
+      // Sinon on cherche dans les sous-scénarios
+      if (t.scenario?.transformations) {
+        if (findTransformation(t.scenario.transformations, [...currentPath, i, 'scenario', 'transformations'])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  findTransformation(scenario.transformations);
+
+  console.log('Found path and index:', { path, index });
+
+  if (path && typeof index === 'number') {
+    // Mettre à jour la transformation en gardant les métadonnées
+    window.updateTransformation(scenario, path, index, {
+      ...transformation,
+      _nodeId: nodeId  // Garder le nodeId
+    });
+
+    // Relancer le Sankey
+    const lot = window.lotType;
+    const dimension = document.getElementById('dimension-selector').value;
+    if (typeof runSankey === 'function' && lot && scenario) {
+      runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+    }
+  } else {
+    console.error('Could not find transformation to update');
+  }
+};
+
+// Callback global pour l'ajout de transformations
+window.onTransformationAdd = (nodeId, transformation) => {
+  console.log('onTransformationAdd called:', { nodeId, transformation });
+  
+  // Trouver le scénario courant
+  const scenarioIdx = document.getElementById('scenario-selector').value;
+  const scenario = window.scenarios[scenarioIdx]?.scenario;
+  if (!scenario) {
+    console.error('No scenario found');
+    return;
+  }
+
+  // Trouver le nœud pour déterminer le path
+  let path = null;
+
+  // Parcourir les transformations pour trouver le bon nœud
+  const findNode = (transformations, currentPath = ['main', 'transformations']) => {
+    if (!transformations) return false;
+    for (let i = 0; i < transformations.length; i++) {
+      const t = transformations[i];
+      
+      // Si on trouve le nœud, on ajoute la transformation dans son scénario
+      if (t._nodeId === nodeId) {
+        // Si le nœud n'a pas de sous-scénario, on en crée un
+        if (!t.scenario) t.scenario = { transformations: [] };
+        path = [...currentPath, i, 'scenario', 'transformations'];
+        return true;
+      }
+      
+      // Sinon on cherche dans les sous-scénarios
+      if (t.scenario?.transformations) {
+        if (findNode(t.scenario.transformations, [...currentPath, i, 'scenario', 'transformations'])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  findNode(scenario.transformations);
+
+  // Si on n'a pas trouvé le nœud, on ajoute au niveau racine
+  if (!path) {
+    path = ['main', 'transformations'];
+  }
+
+  console.log('Found path:', { path });
+
+  // Ajouter la transformation
+  window.addTransformation(scenario, path, {
+    ...transformation,
+    _nodeId: nodeId
+  });
+
+  // Relancer le Sankey
+  const lot = window.lotType;
+  const dimension = document.getElementById('dimension-selector').value;
+  if (typeof runSankey === 'function' && lot && scenario) {
+    runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+  }
+};
 

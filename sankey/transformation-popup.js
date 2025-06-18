@@ -3,9 +3,13 @@ class TransformationPopup {
   constructor() {
     this.backdrop = null;
     this.modal = null;
+    this.currentRef = null;  // Pour stocker la référence
+    this.mode = null;  // Pour stocker le mode
   }
 
   show(ref, mode) {
+    this.currentRef = ref;  // On stocke la référence
+    this.mode = mode;  // On stocke le mode
     this.createPopup(ref);
     this.attachEventListeners();
   }
@@ -93,9 +97,8 @@ class TransformationPopup {
     const keyDropdown = this.modal.querySelector('#key-dropdown');
     
     // Pour garder la liste des keys sélectionnées
-    // On initialise avec les pills existantes dans le DOM
     let selectedKeys = Array.from(keysContainer.querySelectorAll('span')).map(span => 
-      span.textContent.trim().replace(/×$/, '').trim()  // On retire le × de fermeture s'il existe
+      span.textContent.trim().replace(/×$/, '').trim()
     );
 
     cancelBtn.onclick = () => this.close();
@@ -106,22 +109,28 @@ class TransformationPopup {
         keys: [selectedKeys]
       };
       
-      // Mise à jour de la transformation dans le scénario
-      if (this.scenarioRef && this.transformationIndex !== null && this.scenarioRef.transformations) {
-        this.scenarioRef.transformations[this.transformationIndex] = transformation;
-        
-        // Rafraîchir le diagramme Sankey avec le lot actuel
-        if (window.lotType) {
-          const scenarioIdx = document.getElementById('scenario-selector').value;
-          const scenario = window.scenarios[scenarioIdx]?.scenario;
-          const dimension = document.getElementById('dimension-selector').value;
-          if (typeof runSankey === 'function' && scenario) {
-            runSankey({
-              lot: window.lotType,
-              scenario,
-              containerId: 'sankey-container',
-              dimension
-            });
+      if (this.currentRef) {
+        if (this.mode === 'add' && typeof window.onTransformationAdd === 'function') {
+          window.onTransformationAdd(this.currentRef.nodeId, transformation);
+        } else if (this.mode === 'edit' && typeof window.onTransformationSave === 'function') {
+          // Récupérer le path et l'index de la transformation existante
+          const existingTransfo = this.currentRef.transformation;
+          if (existingTransfo && existingTransfo._path && typeof existingTransfo._index === 'number') {
+            // Utiliser directement updateTransformation
+            const scenarioIdx = document.getElementById('scenario-selector').value;
+            const scenario = window.scenarios[scenarioIdx]?.scenario;
+            if (scenario) {
+              window.updateTransformation(scenario, existingTransfo._path, existingTransfo._index, transformation);
+              // Relancer le Sankey
+              const lot = window.lotType;
+              const dimension = document.getElementById('dimension-selector').value;
+              if (typeof runSankey === 'function') {
+                runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+              }
+            }
+          } else {
+            // Fallback sur l'ancien système si on n'a pas les métadonnées
+            window.onTransformationSave(this.currentRef.nodeId, transformation);
           }
         }
       }
