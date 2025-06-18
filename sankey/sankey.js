@@ -548,6 +548,30 @@ function updateSankey(dimension) {
             });
             div.addEventListener('click', function(event) {
                 event.stopPropagation();
+                // Aller chercher le vrai path cible dans le scénario global à partir du nodeId
+                let path = ['main', 'transformations'];
+                const scenarioIdx = document.getElementById('scenario-selector').value;
+                const scenario = window.scenarios[scenarioIdx]?.scenario;
+                if (scenario) {
+                    // Fonction récursive pour trouver le path de la dernière transformation appliquée à ce nodeId
+                    function findLastTransfoPath(transformations, currentPath = ['main', 'transformations']) {
+                        if (!transformations) return null;
+                        for (let i = 0; i < transformations.length; i++) {
+                            const t = transformations[i];
+                            if (t._nodeId === d.id) {
+                                // On veut ajouter dans le sous-scenario de cette transformation
+                                return [...currentPath, i, 'scenario', 'transformations'];
+                            }
+                            if (t.scenario?.transformations) {
+                                const sub = findLastTransfoPath(t.scenario.transformations, [...currentPath, i, 'scenario', 'transformations']);
+                                if (sub) return sub;
+                            }
+                        }
+                        return null;
+                    }
+                    const foundPath = findLastTransfoPath(scenario.transformations);
+                    if (foundPath) path = foundPath;
+                }
                 const chemin = `${d.name}`;
                 const ref = {
                     nodeId: d.id,
@@ -558,7 +582,8 @@ function updateSankey(dimension) {
                         target: {
                             name: ''
                         }
-                    }
+                    },
+                    transformation: { _path: path }
                 };
                 if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
             });
@@ -1193,6 +1218,30 @@ function updateSankey(dimension) {
             });
             div.addEventListener('click', function(event) {
               event.stopPropagation();
+              // Aller chercher le vrai path cible dans le scénario global à partir du nodeId
+              let path = ['main', 'transformations'];
+              const scenarioIdx = document.getElementById('scenario-selector').value;
+              const scenario = window.scenarios[scenarioIdx]?.scenario;
+              if (scenario) {
+                // Fonction récursive pour trouver le path de la dernière transformation appliquée à ce nodeId
+                function findLastTransfoPath(transformations, currentPath = ['main', 'transformations']) {
+                  if (!transformations) return null;
+                  for (let i = 0; i < transformations.length; i++) {
+                    const t = transformations[i];
+                    if (t._nodeId === d.id) {
+                      // On veut ajouter dans le sous-scenario de cette transformation
+                      return [...currentPath, i, 'scenario', 'transformations'];
+                    }
+                    if (t.scenario?.transformations) {
+                      const sub = findLastTransfoPath(t.scenario.transformations, [...currentPath, i, 'scenario', 'transformations']);
+                      if (sub) return sub;
+                    }
+                  }
+                  return null;
+                }
+                const foundPath = findLastTransfoPath(scenario.transformations);
+                if (foundPath) path = foundPath;
+              }
               const chemin = `${d.name}`;
               const ref = {
                   nodeId: d.id,
@@ -1203,7 +1252,8 @@ function updateSankey(dimension) {
                     target: {
                       name: ''
                     }
-                  }
+                  },
+                  transformation: { _path: path }
               };
               if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
           });
@@ -1384,41 +1434,9 @@ window.onTransformationAdd = (nodeId, transformation) => {
     return;
   }
 
-  // Trouver le nœud pour déterminer le path
-  let path = null;
-
-  // Parcourir les transformations pour trouver le bon nœud
-  const findNode = (transformations, currentPath = ['main', 'transformations']) => {
-    if (!transformations) return false;
-    for (let i = 0; i < transformations.length; i++) {
-      const t = transformations[i];
-      
-      // Si on trouve le nœud, on ajoute la transformation dans son scénario
-      if (t._nodeId === nodeId) {
-        // Si le nœud n'a pas de sous-scénario, on en crée un
-        if (!t.scenario) t.scenario = { transformations: [] };
-        path = [...currentPath, i, 'scenario', 'transformations'];
-        return true;
-      }
-      
-      // Sinon on cherche dans les sous-scénarios
-      if (t.scenario?.transformations) {
-        if (findNode(t.scenario.transformations, [...currentPath, i, 'scenario', 'transformations'])) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-
-  findNode(scenario.transformations);
-
-  // Si on n'a pas trouvé le nœud, on ajoute au niveau racine
-  if (!path) {
-    path = ['main', 'transformations'];
-  }
-
-  console.log('Found path:', { path });
+  // Utiliser le path fourni dans la transformation ou le path par défaut
+  const path = transformation._path || ['main', 'transformations'];
+  console.log('Using path:', path);
 
   // Ajouter la transformation
   window.addTransformation(scenario, path, {

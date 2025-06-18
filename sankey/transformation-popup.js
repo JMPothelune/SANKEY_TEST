@@ -74,7 +74,18 @@ class TransformationPopup {
     const buttonText = this.mode === 'add' ? 'Créer' : 'Enregistrer';
     
     this.modal.innerHTML = `
-      <h3 class="text-lg font-semibold mb-4">${title}</h3>
+      <h3 class="text-lg font-semibold mb-2">${title}</h3>
+      ${this.mode === 'edit' && lastTransfo && lastTransfo._path ? 
+        `<div class="text-xs text-gray-500 mb-4">
+          <div>Path: ${JSON.stringify(lastTransfo._path)}</div>
+          ${typeof lastTransfo._index === 'number' ? `<div>Index: ${lastTransfo._index}</div>` : ''}
+         </div>` 
+        : this.mode === 'add' ? 
+        `<div class="text-xs text-gray-500 mb-4">
+          <div>Path: ${JSON.stringify(this.currentRef.transformation?._path || ['main', 'transformations'])}</div>
+         </div>`
+        : ''
+      }
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Type de transformation</label>
