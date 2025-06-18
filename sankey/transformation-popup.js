@@ -8,8 +8,9 @@ class TransformationPopup {
   }
 
   show(ref, mode) {
-    this.currentRef = ref;  // On stocke la référence
-    this.mode = mode;  // On stocke le mode
+    console.log('TransformationPopup.show called with:', { ref, mode });
+    this.currentRef = ref;
+    this.mode = mode;
     this.createPopup(ref);
     this.attachEventListeners();
   }
@@ -113,6 +114,14 @@ class TransformationPopup {
         keys: [selectedKeys]
       };
       
+      console.log('Save button clicked:', {
+        mode: this.mode,
+        currentRef: this.currentRef,
+        transformation,
+        hasAddFunction: typeof window.onTransformationAdd === 'function',
+        hasSaveFunction: typeof window.onTransformationSave === 'function'
+      });
+      
       if (this.currentRef) {
         if (this.mode === 'add' && typeof window.onTransformationAdd === 'function') {
           window.onTransformationAdd(this.currentRef.nodeId, transformation);
@@ -146,14 +155,16 @@ class TransformationPopup {
       if (window.transformationUtils) {
         transfoDescription.textContent = window.transformationUtils.getTransformationDescription(e.target.value);
       }
-      // On ferme et on rouvre la popup pour rafraîchir l'UI (plus simple pour gérer le changement de keyList)
+      // On ferme et on rouvre la popup pour rafraîchir l'UI
       const currentRef = {
-        transformation: { type: [e.target.value], keys: [[]] },
-        scenario: this.scenarioRef,
-        index: this.transformationIndex
+        ...this.currentRef, // Garder toutes les informations de la référence originale
+        transformation: { 
+          type: [e.target.value], 
+          keys: [[]]
+        }
       };
       this.close();
-      window.afficherPopupTransfo(currentRef, 'edit');
+      window.afficherPopupTransfo(currentRef, this.mode); // Utiliser le mode original
     });
 
     // Suppression visuelle d'une key (et du modèle)
