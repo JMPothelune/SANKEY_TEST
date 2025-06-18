@@ -728,13 +728,42 @@ function updateSankey(dimension) {
             const isFork = !!link.transformation;  // La transformation est sur le lien sortant
             div.innerHTML = getIconSVG(isFork ? 'arrows-split' : 'plus', 'w-7 h-7 text-[1.3rem] flex items-center justify-center');
             fo.node().appendChild(div);
+
+            // Dropdown menu state
+            let dropdownMenu = null;
+            let dropdownOpen = false;
+            let closeDropdown = (e) => {
+                if (dropdownMenu) {
+                    dropdownMenu.remove();
+                    dropdownMenu = null;
+                    dropdownOpen = false;
+                }
+                document.removeEventListener('mousedown', onClickOutside);
+            };
+            let onClickOutside = (e) => {
+                if (dropdownMenu && !dropdownMenu.contains(e.target) && e.target !== div) {
+                    closeDropdown();
+                }
+            };
+
             div.addEventListener('mouseover', function(event) {
                 tooltip.transition()
                     .duration(200)
                     .style('opacity', .9);
                 let tooltipContent = '';
                 if (isFork && link.transformation) {  // Utilise la transformation du lien sortant
-                    tooltipContent = `<strong>Transformation</strong><br/>${JSON.stringify(link.transformation, null, 2)}`;
+                    const transfo = link.transformation;
+                    const type = Array.isArray(transfo.type) ? transfo.type[0] : transfo.type;
+                    const label = transfo.title || (window.transformationUtils ? window.transformationUtils.getTransformationLabel(type) : type);
+                    const typeLabel = window.transformationUtils ? window.transformationUtils.getTransformationLabel(type) : type;
+                    let params = '';
+                    if (transfo.keys && transfo.keys.length && transfo.keys[0].length) {
+                        params += `<div>Clés : <span class='font-mono text-xs'>${transfo.keys[0].join(', ')}</span></div>`;
+                    }
+                    if (transfo.scenario && transfo.scenario.target) {
+                        params += `<div>Cible : <span class='font-mono text-xs'>${transfo.scenario.target}</span></div>`;
+                    }
+                    tooltipContent = `<strong>${label}</strong><div class='text-xs text-gray-500 mb-1'>${typeLabel}</div>${params ? '<br/>' + params : ''}`;
                 } else {
                     tooltipContent = '<strong>Ajouter une transformation</strong>';
                 }
@@ -749,22 +778,76 @@ function updateSankey(dimension) {
             });
             div.addEventListener('click', function(event) {
                 event.stopPropagation();
-                const chemin = `${d.name} → ${link.target.name}`;
-                const ref = {
-                    nodeId: d.id,
-                    dimension: dimension,
-                    lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
-                    chemin: chemin,
-                    link: {
-                        ...link,
-                        target: {
-                            ...link.target,
-                            name: link.target.name.split('→')[0].trim()
-                        }
-                    },
-                    transformation: link.transformation || null  // Utilise la transformation du lien sortant
+                if (!isFork) {
+                    // Comportement + classique
+                    const chemin = `${d.name} → ${link.target.name}`;
+                    const ref = {
+                        nodeId: d.id,
+                        dimension: dimension,
+                        lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
+                        chemin: chemin,
+                        link: {
+                            ...link,
+                            target: {
+                                ...link.target,
+                                name: link.target.name.split('→')[0].trim()
+                            }
+                        },
+                        transformation: link.transformation || null
+                    };
+                    if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
+                    return;
+                }
+                // Toggle dropdown
+                if (dropdownOpen) {
+                    closeDropdown();
+                    return;
+                }
+                // Créer le menu dropdown
+                dropdownMenu = document.createElement('div');
+                dropdownMenu.className = 'absolute z-50 mt-2 right-0 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1';
+                dropdownMenu.style.minWidth = '10rem';
+                dropdownMenu.style.width = stackbarWidth + 'px';
+                dropdownMenu.style.position = 'absolute';
+                const rect = div.getBoundingClientRect();
+                dropdownMenu.style.top = (rect.bottom + window.scrollY) + 'px';
+                dropdownMenu.style.left = (rect.right - stackbarWidth - 28) + 'px';
+                // Génération dynamique du menu avec désactivation Monter/Descendre
+                const isFirst = idx === 0;
+                const isLast = idx === outgoingLinks.length - 1;
+                dropdownMenu.innerHTML = `
+                  <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit">Modifier</button>
+                  <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}>Monter</button>
+                  <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}>Descendre</button>
+                  <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 cursor-not-allowed" disabled>Effacer</button>
+                `;
+                document.body.appendChild(dropdownMenu);
+                dropdownOpen = true;
+                // Handler pour Modifier
+                dropdownMenu.querySelector('[data-action="edit"]').onclick = function(e) {
+                    e.stopPropagation();
+                    closeDropdown();
+                    const chemin = `${d.name} → ${link.target.name}`;
+                    const ref = {
+                        nodeId: d.id,
+                        dimension: dimension,
+                        lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
+                        chemin: chemin,
+                        link: {
+                            ...link,
+                            target: {
+                                ...link.target,
+                                name: link.target.name.split('→')[0].trim()
+                            }
+                        },
+                        transformation: link.transformation || null
+                    };
+                    if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'view');
                 };
-                if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, isFork ? 'view' : 'add');
+                // Fermer si on clique ailleurs
+                setTimeout(() => {
+                    document.addEventListener('mousedown', onClickOutside);
+                }, 0);
             });
         });
         }
