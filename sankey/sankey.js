@@ -1122,6 +1122,22 @@ function updateSankey(dimension) {
                         runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
                     }
                 };
+                // Handler pour Monter
+                dropdownMenu.querySelector('[data-action="up"]').onclick = function(e) {
+                    e.stopPropagation();
+                    closeDropdown();
+                    if (typeof window.onTransformationMoveUp === 'function') {
+                        window.onTransformationMoveUp(d.id, link.transformation);
+                    }
+                };
+                // Handler pour Descendre  
+                dropdownMenu.querySelector('[data-action="down"]').onclick = function(e) {
+                    e.stopPropagation();
+                    closeDropdown();
+                    if (typeof window.onTransformationMoveDown === 'function') {
+                        window.onTransformationMoveDown(d.id, link.transformation);
+                    }
+                };
                 // Fermer si on clique ailleurs
                 setTimeout(() => {
                     document.addEventListener('mousedown', onClickOutside);
@@ -1431,5 +1447,69 @@ window.onTransformationAdd = (nodeId, transformation) => {
   if (typeof runSankey === 'function' && lot && scenario) {
     runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
   }
+};
+
+// Callback global pour monter une transformation
+window.onTransformationMoveUp = (nodeId, transformation) => {
+    console.log('onTransformationMoveUp called:', { nodeId, transformation });
+    
+    // Trouver le scénario courant
+    const scenarioIdx = document.getElementById('scenario-selector').value;
+    const scenario = window.scenarios[scenarioIdx]?.scenario;
+    if (!scenario) {
+        console.error('No scenario found');
+        return;
+    }
+    
+    // Utiliser le path et l'index de la transformation
+    const path = transformation._path;
+    const index = transformation._index;
+    
+    if (!path || typeof index !== 'number') {
+        console.error('Invalid path or index for move up');
+        return;
+    }
+    
+    // Déplacer la transformation
+    window.moveTransformationUp(scenario, path, index);
+    
+    // Relancer le Sankey
+    const lot = window.lotType;
+    const dimension = document.getElementById('dimension-selector').value;
+    if (typeof runSankey === 'function' && lot && scenario) {
+        runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+    }
+};
+
+// Callback global pour descendre une transformation
+window.onTransformationMoveDown = (nodeId, transformation) => {
+    console.log('onTransformationMoveDown called:', { nodeId, transformation });
+    
+    // Trouver le scénario courant
+    const scenarioIdx = document.getElementById('scenario-selector').value;
+    const scenario = window.scenarios[scenarioIdx]?.scenario;
+    if (!scenario) {
+        console.error('No scenario found');
+        return;
+    }
+    
+    // Utiliser le path et l'index de la transformation
+    const path = transformation._path;
+    const index = transformation._index;
+    
+    if (!path || typeof index !== 'number') {
+        console.error('Invalid path or index for move down');
+        return;
+    }
+    
+    // Déplacer la transformation
+    window.moveTransformationDown(scenario, path, index);
+    
+    // Relancer le Sankey
+    const lot = window.lotType;
+    const dimension = document.getElementById('dimension-selector').value;
+    if (typeof runSankey === 'function' && lot && scenario) {
+        runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+    }
 };
 

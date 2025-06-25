@@ -941,3 +941,57 @@ function getCoproductPathFromContext(pathArr, isRoot) {
   // Si on est déjà dans un coproduit imbriqué ou sous-scenario
   return [...pathArr, 'coproduct_scenario', 'transformations'];
 }
+
+/**
+ * Déplace une transformation vers le haut dans son tableau (Monter).
+ * @param {object} scenario - Le scénario racine
+ * @param {Array} path - Le chemin vers le tableau de transformations
+ * @param {number} index - L'index de la transformation à monter
+ */
+function moveTransformationUp(scenario, path, index) {
+    console.log('moveTransformationUp called:', { path, index });
+    
+    const arr = getTransformationsArray(scenario, path);
+    if (!Array.isArray(arr) || index <= 0 || index >= arr.length) {
+        console.error('Invalid array or index for moveUp:', { arr, index });
+        return;
+    }
+    
+    // Échanger avec la transformation précédente
+    [arr[index], arr[index - 1]] = [arr[index - 1], arr[index]];
+    
+    // Mettre à jour les index des transformations échangées
+    arr[index]._index = index;
+    arr[index - 1]._index = index - 1;
+    
+    console.log('Transformation moved up successfully');
+}
+
+/**
+ * Déplace une transformation vers le bas dans son tableau (Descendre).
+ * @param {object} scenario - Le scénario racine
+ * @param {Array} path - Le chemin vers le tableau de transformations
+ * @param {number} index - L'index de la transformation à descendre
+ */
+function moveTransformationDown(scenario, path, index) {
+    console.log('moveTransformationDown called:', { path, index });
+    
+    const arr = getTransformationsArray(scenario, path);
+    if (!Array.isArray(arr) || index < 0 || index >= arr.length - 1) {
+        console.error('Invalid array or index for moveDown:', { arr, index });
+        return;
+    }
+    
+    // Échanger avec la transformation suivante
+    [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+    
+    // Mettre à jour les index des transformations échangées
+    arr[index]._index = index;
+    arr[index + 1]._index = index + 1;
+    
+    console.log('Transformation moved down successfully');
+}
+
+// Exposer les fonctions globalement
+window.moveTransformationUp = moveTransformationUp;
+window.moveTransformationDown = moveTransformationDown;
