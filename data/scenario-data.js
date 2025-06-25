@@ -220,7 +220,7 @@ const scenario3 = {
             scenario: {
               transformations: [
                 {
-                  type: ['separation'],
+                  type: ['processSeparation'],
                   keys: [[]]
                 }
               ]
