@@ -55,7 +55,12 @@ function getTransformationsArray(scenario, path) {
         i = 1;
     }
     while (i < path.length) {
+        if (current == null) {
+            console.error('getTransformationsArray: current is undefined at path', path.slice(0, i), 'clé attendue:', path[i]);
+            return undefined;
+        }
         const key = path[i];
+        console.log('[getTransformationsArray] Étape', i, '| path:', path.slice(0, i+1), '| clé:', key, '| type current:', typeof current, '| current:', current);
         if (typeof key === 'string') {
             current = current[key];
         } else if (typeof key === 'number') {
@@ -238,7 +243,7 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
   if (!nodes) {
     const lotInit = JSON.parse(JSON.stringify(lot));
     lotInit.titre = 'lot Type';
-    nodes = [{ id: parentNodeId, name: 'Lot initial', lot: lotInit, transformations_appliquees: [] }];
+    nodes = [{ id: parentNodeId, name: 'Lot initial', lot: lotInit, transformations_appliquees: [], _path: ['main', 'transformations'] }];
   }
   if (!links) links = [];
   if (!idGenObj) idGenObj = { id: 1 };
@@ -309,11 +314,15 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
     targetLot.id = nodeId;
 
     // On crée d'abord le nœud
+    transfo._nodeId = nodeId;
+    console.log('applyScenario - pathArr:', pathArr, 'idx:', idx, 'nodePath:', [...pathArr, idx]);
+    const nodePath = [...pathArr, idx];
     nodes.push({ 
       id: nodeId, 
       name: nodeName, 
       lot: targetLot, 
-      transformations_appliquees: newTransformations 
+      transformations_appliquees: newTransformations,
+      _path: nodePath // Ajout explicite du path unique pour ce node
     });
 
     // Puis le lien qui part du parent vers ce nœud
@@ -343,7 +352,28 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
       resteLot.target = scenario.coproduct_scenario.target;
     }
     const coproductNodeId = `${idGenObj.id++}`;
+    let coproductPath;
+    if (
+      pathArr.length >= 2 &&
+      pathArr[pathArr.length - 2] === 'transformations' &&
+      typeof pathArr[pathArr.length - 1] === 'number'
+    ) {
+      // On est dans une transformation du scénario principal ou d'un sous-scenario
+      coproductPath = [
+        ...pathArr,
+        'scenario',
+        'coproduct_scenario',
+        'transformations'
+      ];
+    } else if (isRoot) {
+      // Vrai coproduit racine
+      coproductPath = ['main', 'coproduct_scenario', 'transformations'];
+    } else {
+      // Fallback (devrait être rare)
+      coproductPath = [...pathArr, 'coproduct_scenario', 'transformations'];
+    }
     resteLot.id = coproductNodeId;
+    resteLot._path = coproductPath;
     const nodeName = resteLot.target 
       ? `Reste → ${resteLot.target}`
       : 'Reste';
@@ -351,12 +381,13 @@ function applyScenario(lot, scenario, parentNodeId = '0', nodes = null, links = 
       id: coproductNodeId, 
       name: nodeName, 
       lot: resteLot, 
-      transformations_appliquees: transformations_appliquees 
+      transformations_appliquees: transformations_appliquees,
+      _path: coproductPath // Ajouté ici aussi pour accès direct côté Sankey
     });
     // On annote la première transformation du coproduit si elle existe
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.transformations && scenario.coproduct_scenario.transformations.length > 0) {
       scenario.coproduct_scenario.transformations.forEach((coproTransfo, cidx) => {
-        if (!coproTransfo._path) coproTransfo._path = [...pathArr, 'coproduct_scenario', 'transformations'];
+        if (!coproTransfo._path) coproTransfo._path = [...coproductPath];
         if (typeof coproTransfo._index !== 'number') coproTransfo._index = cidx;
       });
     }
@@ -801,3 +832,15 @@ window.getTransformationsArray = getTransformationsArray;
 window.removeTransformation = removeTransformation;
 window.addTransformation = addTransformation;
 window.updateTransformation = updateTransformation;
+
+function getCoproductPathFromContext(pathArr, isRoot) {
+  if (isRoot) {
+    return ['main', 'coproduct_scenario', 'transformations'];
+  }
+  // Si on est dans une transformation (dernier élément = index)
+  if (typeof pathArr[pathArr.length - 1] === 'number') {
+    return [...pathArr, 'scenario', 'coproduct_scenario', 'transformations'];
+  }
+  // Si on est déjà dans un coproduit imbriqué ou sous-scenario
+  return [...pathArr, 'coproduct_scenario', 'transformations'];
+}

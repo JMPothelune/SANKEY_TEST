@@ -61,7 +61,8 @@ const scenario = {
             ],
             coproduct_scenario: {
               title: 'Chaussures pour recyclage',
-              target: 'The 8 impact'
+              target: 'The 8 impact',
+              transformations: []
             }
         }
     },
@@ -82,7 +83,8 @@ const scenario = {
           ],
           coproduct_scenario: {
             title: 'Reste des draps pour CSR',
-            target: 'CSR'
+            target: 'CSR',
+            transformations: []
           }
         }
     },
@@ -103,7 +105,8 @@ const scenario = {
         ],
         coproduct_scenario: {
           title: 'BRIC pour CSR',
-          target: 'CSR'
+          target: 'CSR',
+          transformations: []
         }
       }
     },
@@ -127,7 +130,10 @@ const scenario = {
                     target: 'CT2'
                   }
                 }
-              ]
+              ],
+              coproduct_scenario: {
+                transformations: []
+              }
             }
           },  
           {
@@ -181,18 +187,21 @@ const scenario = {
                             scenario: {}
                         }
                       ],
-                      coproduct_scenario: {}
+                      coproduct_scenario: {
+                        transformations: []
+                      }
                     }
                   }
             ],
             coproduct_scenario: {
-              target: 'CSR'
+              target: 'CSR',
+              transformations: []
             }
           }
       }
     }
   ],
-  coproduct_scenario: {}
+  coproduct_scenario: { transformations: [] }
 }; 
 
 // Définition du scénario principal (modifiez ici pour changer le scénario)

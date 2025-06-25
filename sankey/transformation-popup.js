@@ -82,7 +82,7 @@ class TransformationPopup {
          </div>` 
         : this.mode === 'add' ? 
         `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(this.currentRef.transformation?._path || ['main', 'transformations'])}</div>
+          <div>Path: ${JSON.stringify(ref.path)}</div>
          </div>`
         : ''
       }
@@ -139,6 +139,8 @@ class TransformationPopup {
       
       if (this.currentRef) {
         if (this.mode === 'add' && typeof window.onTransformationAdd === 'function') {
+          // Injecter le path du node dans la transformation
+          transformation._path = this.currentRef.path;
           window.onTransformationAdd(this.currentRef.nodeId, transformation);
         } else if (this.mode === 'edit' && typeof window.onTransformationSave === 'function') {
           // Récupérer le path et l'index de la transformation existante

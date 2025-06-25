@@ -547,46 +547,32 @@ function updateSankey(dimension) {
                     .style('opacity', 0);
             });
             div.addEventListener('click', function(event) {
-                event.stopPropagation();
-                // Aller chercher le vrai path cible dans le scénario global à partir du nodeId
-                let path = ['main', 'transformations'];
-                const scenarioIdx = document.getElementById('scenario-selector').value;
-                const scenario = window.scenarios[scenarioIdx]?.scenario;
-                if (scenario) {
-                    // Fonction récursive pour trouver le path de la dernière transformation appliquée à ce nodeId
-                    function findLastTransfoPath(transformations, currentPath = ['main', 'transformations']) {
-                        if (!transformations) return null;
-                        for (let i = 0; i < transformations.length; i++) {
-                            const t = transformations[i];
-                            if (t._nodeId === d.id) {
-                                // On veut ajouter dans le sous-scenario de cette transformation
-                                return [...currentPath, i, 'scenario', 'transformations'];
-                            }
-                            if (t.scenario?.transformations) {
-                                const sub = findLastTransfoPath(t.scenario.transformations, [...currentPath, i, 'scenario', 'transformations']);
-                                if (sub) return sub;
-                            }
-                        }
-                        return null;
-                    }
-                    const foundPath = findLastTransfoPath(scenario.transformations);
-                    if (foundPath) path = foundPath;
+              event.stopPropagation();
+              
+              // Construire le path selon notre logique
+              let path = ['main', 'transformations']; // fallback racine
+              
+              // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
+              if (d.transformations_appliquees && d.transformations_appliquees.length > 0) {
+                const lastTransfo = d.transformations_appliquees[d.transformations_appliquees.length - 1];
+                if (lastTransfo && lastTransfo._path && typeof lastTransfo._index === 'number') {
+                  // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
+                  if (d.name && d.name.startsWith('Reste')) {
+                    path = [...lastTransfo._path, lastTransfo._index, 'scenario', 'coproduct_scenario', 'transformations'];
+                  } else {
+                    // Sinon, pointer vers le sous-scénario
+                    path = [...lastTransfo._path, lastTransfo._index, 'scenario', 'transformations'];
+                  }
                 }
-                const chemin = `${d.name}`;
-                const ref = {
-                    nodeId: d.id,
-                    dimension: dimension,
-                    lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
-                    chemin: chemin,
-                    link: {
-                        target: {
-                            name: ''
-                        }
-                    },
-                    transformation: { _path: path }
-                };
-                if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
-            });
+              }
+              
+              const ref = {
+                  nodeId: d.id,
+                  dimension: dimension,
+                  path: path
+              };
+              if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
+          });
 
             return; // On ne fait rien d'autre
         }
@@ -1029,8 +1015,8 @@ function updateSankey(dimension) {
                     .style('opacity', 0);
             });
             div.addEventListener('click', function(event) {
-                event.stopPropagation();
-                if (!isFork) {
+              event.stopPropagation();
+              if (!isFork) {
                     // Comportement + classique
                     const chemin = `${d.name} → ${link.target.name}`;
                     const ref = {
@@ -1172,19 +1158,28 @@ function updateSankey(dimension) {
             });
             div.addEventListener('click', function(event) {
               event.stopPropagation();
-              const chemin = `${d.name} → ${link.target.name}`;
+              
+              // Construire le path selon notre logique
+              let path = ['main', 'transformations']; // fallback racine
+              
+              // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
+              if (d.transformations_appliquees && d.transformations_appliquees.length > 0) {
+                const lastTransfo = d.transformations_appliquees[d.transformations_appliquees.length - 1];
+                if (lastTransfo && lastTransfo._path && typeof lastTransfo._index === 'number') {
+                  // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
+                  if (d.name && d.name.startsWith('Reste')) {
+                    path = [...lastTransfo._path, lastTransfo._index, 'scenario', 'coproduct_scenario', 'transformations'];
+                  } else {
+                    // Sinon, pointer vers le sous-scénario
+                    path = [...lastTransfo._path, lastTransfo._index, 'scenario', 'transformations'];
+                  }
+                }
+              }
+              
               const ref = {
                   nodeId: d.id,
                   dimension: dimension,
-                  lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
-                  chemin: chemin,
-                  link: {
-                    ...link,
-                    target: {
-                      ...link.target,
-                      name: link.target.name.split('→')[0].trim()
-                    }
-                  }
+                  path: path
               };
               if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
           }); 
@@ -1218,42 +1213,28 @@ function updateSankey(dimension) {
             });
             div.addEventListener('click', function(event) {
               event.stopPropagation();
-              // Aller chercher le vrai path cible dans le scénario global à partir du nodeId
-              let path = ['main', 'transformations'];
-              const scenarioIdx = document.getElementById('scenario-selector').value;
-              const scenario = window.scenarios[scenarioIdx]?.scenario;
-              if (scenario) {
-                // Fonction récursive pour trouver le path de la dernière transformation appliquée à ce nodeId
-                function findLastTransfoPath(transformations, currentPath = ['main', 'transformations']) {
-                  if (!transformations) return null;
-                  for (let i = 0; i < transformations.length; i++) {
-                    const t = transformations[i];
-                    if (t._nodeId === d.id) {
-                      // On veut ajouter dans le sous-scenario de cette transformation
-                      return [...currentPath, i, 'scenario', 'transformations'];
-                    }
-                    if (t.scenario?.transformations) {
-                      const sub = findLastTransfoPath(t.scenario.transformations, [...currentPath, i, 'scenario', 'transformations']);
-                      if (sub) return sub;
-                    }
+              
+              // Construire le path selon notre logique
+              let path = ['main', 'transformations']; // fallback racine
+              
+              // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
+              if (d.transformations_appliquees && d.transformations_appliquees.length > 0) {
+                const lastTransfo = d.transformations_appliquees[d.transformations_appliquees.length - 1];
+                if (lastTransfo && lastTransfo._path && typeof lastTransfo._index === 'number') {
+                  // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
+                  if (d.name && d.name.startsWith('Reste')) {
+                    path = [...lastTransfo._path, lastTransfo._index, 'scenario', 'coproduct_scenario', 'transformations'];
+                  } else {
+                    // Sinon, pointer vers le sous-scénario
+                    path = [...lastTransfo._path, lastTransfo._index, 'scenario', 'transformations'];
                   }
-                  return null;
                 }
-                const foundPath = findLastTransfoPath(scenario.transformations);
-                if (foundPath) path = foundPath;
               }
-              const chemin = `${d.name}`;
+              
               const ref = {
                   nodeId: d.id,
                   dimension: dimension,
-                  lot: { ...d.lot, transformations_appliquees: d.transformations_appliquees },
-                  chemin: chemin,
-                  link: {
-                    target: {
-                      name: ''
-                    }
-                  },
-                  transformation: { _path: path }
+                  path: path
               };
               if (window.afficherPopupTransfo) window.afficherPopupTransfo(ref, 'add');
           });
