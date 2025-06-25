@@ -45,30 +45,127 @@ function getScenarioAtPath(scenario, path) {
  * @returns {Array} - Le tableau de transformations ciblé
  */
 function getTransformationsArray(scenario, path) {
+    console.log('=== getTransformationsArray ===');
+    console.log('Path:', path);
+    
     let current = scenario;
-    let i = 0;
+    
+    // Gestion des préfixes spéciaux
     if (path[0] === 'main') {
         current = scenario;
-        i = 1;
+        // On saute le premier élément et on continue
+        for (let i = 1; i < path.length; i++) {
+            const key = path[i];
+            console.log(`Étape ${i}: clé="${key}", type=${typeof key}, current=`, current);
+            
+            if (current == null || current == undefined) {
+                console.error('current est null/undefined à l\'étape', i);
+                return null;
+            }
+            
+            // Si on va accéder à "transformations" et que ça n'existe pas, on le crée AVANT d'y accéder
+            if (key === 'transformations') {
+                // Cas spécial : création du tableau transformations
+                if (current.scenario && !current.scenario.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans scenario');
+                    current.scenario[key] = [];
+                } else if (current.coproduct_scenario && !current.coproduct_scenario.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans coproduct_scenario');
+                    current.coproduct_scenario[key] = [];
+                } else if (!current.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans current');
+                    current[key] = [];
+                }
+            } else if (key === 'scenario' && !current.hasOwnProperty(key)) {
+                // Créer l'objet scenario s'il n'existe pas
+                console.log('Création de l\'objet scenario');
+                current[key] = {};
+            } else if (key === 'coproduct_scenario' && !current.hasOwnProperty(key)) {
+                // Créer l'objet coproduct_scenario s'il n'existe pas
+                console.log('Création de l\'objet coproduct_scenario');
+                current[key] = {};
+            }
+            
+            current = current[key];
+        }
     } else if (path[0] === 'coproduct') {
+        // Gestion du préfixe coproduct
         current = scenario.coproduct_scenario;
-        i = 1;
-    }
-    while (i < path.length) {
-        if (current == null) {
-            console.error('getTransformationsArray: current is undefined at path', path.slice(0, i), 'clé attendue:', path[i]);
-            return undefined;
+        if (!current) {
+            console.log('Création de coproduct_scenario racine');
+            scenario.coproduct_scenario = {};
+            current = scenario.coproduct_scenario;
         }
-        const key = path[i];
-        console.log('[getTransformationsArray] Étape', i, '| path:', path.slice(0, i+1), '| clé:', key, '| type current:', typeof current, '| current:', current);
-        if (typeof key === 'string') {
-            current = current[key];
-        } else if (typeof key === 'number') {
+        
+        // Parcours du reste du path
+        for (let i = 1; i < path.length; i++) {
+            const key = path[i];
+            console.log(`Étape ${i}: clé="${key}", type=${typeof key}, current=`, current);
+            
+            if (current == null || current == undefined) {
+                console.error('current est null/undefined à l\'étape', i);
+                return null;
+            }
+            
+            // Même logique de création que pour 'main'
+            if (key === 'transformations') {
+                if (current.scenario && !current.scenario.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans scenario (coproduct)');
+                    current.scenario[key] = [];
+                } else if (current.coproduct_scenario && !current.coproduct_scenario.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans coproduct_scenario (coproduct)');
+                    current.coproduct_scenario[key] = [];
+                } else if (!current.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans current (coproduct)');
+                    current[key] = [];
+                }
+            } else if (key === 'scenario' && !current.hasOwnProperty(key)) {
+                console.log('Création de l\'objet scenario (coproduct)');
+                current[key] = {};
+            } else if (key === 'coproduct_scenario' && !current.hasOwnProperty(key)) {
+                console.log('Création de l\'objet coproduct_scenario (coproduct)');
+                current[key] = {};
+            }
+            
             current = current[key];
         }
-        i++;
+    } else {
+        // Parcours normal du path (sans préfixe spécial)
+        for (let i = 0; i < path.length; i++) {
+            const key = path[i];
+            console.log(`Étape ${i}: clé="${key}", type=${typeof key}, current=`, current);
+            
+            if (current == null || current == undefined) {
+                console.error('current est null/undefined à l\'étape', i);
+                return null;
+            }
+            
+            // Même logique de création
+            if (key === 'transformations') {
+                if (current.scenario && !current.scenario.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans scenario (normal)');
+                    current.scenario[key] = [];
+                } else if (current.coproduct_scenario && !current.coproduct_scenario.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans coproduct_scenario (normal)');
+                    current.coproduct_scenario[key] = [];
+                } else if (!current.hasOwnProperty(key)) {
+                    console.log('Création du tableau transformations dans current (normal)');
+                    current[key] = [];
+                }
+            } else if (key === 'scenario' && !current.hasOwnProperty(key)) {
+                console.log('Création de l\'objet scenario (normal)');
+                current[key] = {};
+            } else if (key === 'coproduct_scenario' && !current.hasOwnProperty(key)) {
+                console.log('Création de l\'objet coproduct_scenario (normal)');
+                current[key] = {};
+            }
+            
+            current = current[key];
+        }
     }
-    // On doit être sur le tableau de transformations
+    
+    console.log('Résultat final:', current);
+    console.log('=== Fin getTransformationsArray ===');
     return current;
 }
 
