@@ -128,6 +128,16 @@ function selectByMatiere(lot, selectedMatieres) {
       let selectedPct = 0;
       let restPct = 0;
 
+      // Si le type n'a pas de matières, le traiter comme un type "reste"
+      if (Object.keys(matieresObj).length === 0) {
+        restTypes[typeKey] = JSON.parse(JSON.stringify(typeObj));
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        const typeMass = lot.total * (formatObj.pourcentage / 100) * (typeObj.pourcentage / 100);
+        typeMassesRest[typeKey] = typeMass;
+        formatRestMass += typeMass;
+        return; // Passer au type suivant
+      }
+
       Object.entries(matieresObj).forEach(([nom, matiere]) => {
         if (selectedMatieres.includes(nom)) {
           selectedMatieresObj[nom] = JSON.parse(JSON.stringify(matiere));
@@ -144,6 +154,7 @@ function selectByMatiere(lot, selectedMatieres) {
       const selectedMass = typeMass * (selectedPct / 100);
       const restMass = typeMass * (restPct / 100);
 
+      // Toujours ajouter le type, même si aucune matière n'est sélectionnée
       if (selectedPct > 0) {
         Object.keys(selectedMatieresObj).forEach(nom => {
           selectedMatieresObj[nom].pourcentage = selectedMatieresObj[nom].pourcentage / selectedPct * 100;
@@ -156,6 +167,8 @@ function selectByMatiere(lot, selectedMatieres) {
         typeMassesSelected[typeKey] = selectedMass;
         formatSelectedMass += selectedMass;
       }
+      
+      // Toujours ajouter le type au reste, même si toutes les matières sont sélectionnées
       if (restPct > 0) {
         Object.keys(restMatieresObj).forEach(nom => {
           restMatieresObj[nom].pourcentage = restMatieresObj[nom].pourcentage / restPct * 100;
@@ -167,6 +180,14 @@ function selectByMatiere(lot, selectedMatieres) {
         if (typeObj.color) restTypes[typeKey].color = typeObj.color;
         typeMassesRest[typeKey] = restMass;
         formatRestMass += restMass;
+      }
+      
+      // Si le type n'a ni matières sélectionnées ni matières restantes, l'ajouter au reste
+      if (selectedPct === 0 && restPct === 0) {
+        restTypes[typeKey] = JSON.parse(JSON.stringify(typeObj));
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        typeMassesRest[typeKey] = typeMass;
+        formatRestMass += typeMass;
       }
     });
 
@@ -834,42 +855,50 @@ const transformationTypes = {
   selectByFormat: { 
     label: 'Sélection par format', 
     description: 'Sélectionne les articles selon leur format (vêtements, chaussures, etc.)',
-    keyList: 'formats'
+    keyList: 'formats',
+    requiredKey: true
   },
   selectByType: { 
     label: 'Sélection par type', 
     description: 'Sélectionne les articles selon leur type (après format)',
-    keyList: 'types'
+    keyList: 'types',
+    requiredKey: true
   },
   selectByMatiere: { 
     label: 'Sélection par matière', 
     description: 'Sélectionne les articles selon leur matière',
-    keyList: 'matieres'
+    keyList: 'matieres',
+    requiredKey: true
   },
   selectByQualite: { 
     label: 'Sélection par qualité', 
     description: 'Sélectionne les articles selon leur qualité',
-    keyList: 'qualite'
+    keyList: 'qualite',
+    requiredKey: true
   },
   selectByCouleur: { 
     label: 'Sélection par couleur', 
     description: 'Sélectionne les articles selon leur couleur',
-    keyList: 'couleurs'
+    keyList: 'couleurs',
+    requiredKey: true
   },
   selectByFibre: { 
     label: 'Sélection par fibre', 
     description: 'Sélectionne les articles selon leur composition en fibres',
-    keyList: 'fibres'
+    keyList: 'fibres',
+    requiredKey: true
   },
   selectByProprete: { 
     label: 'Sélection par propreté', 
     description: 'Sélectionne les articles selon leur propreté',
-    keyList: 'proprete'
+    keyList: 'proprete',
+    requiredKey: true
   },
   selectByPerturbateur: { 
     label: 'Sélection par perturbateur', 
     description: 'Sélectionne les articles selon la présence de perturbateurs',
-    keyList: 'perturbateurs'
+    keyList: 'perturbateurs',
+    requiredKey: true
   },
   processLavage: { 
     label: 'Lavage', 

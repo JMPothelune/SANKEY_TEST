@@ -121,6 +121,25 @@ class TransformationPopup {
       span.textContent.trim().replace(/×$/, '').trim()
     );
 
+    // Fonction pour vérifier si le bouton de sauvegarde doit être activé
+    const updateSaveButtonState = () => {
+      const selectedType = transfoTypeSelect.value;
+      const isRequiredKey = window.transformationTypes && 
+                           window.transformationTypes[selectedType] && 
+                           window.transformationTypes[selectedType].requiredKey;
+      
+      const hasKeys = selectedKeys.length > 0;
+      const isValid = !isRequiredKey || hasKeys;
+      
+      saveBtn.disabled = !isValid;
+      saveBtn.className = isValid 
+        ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700' 
+        : 'px-4 py-2 bg-gray-400 text-gray-200 rounded cursor-not-allowed';
+    };
+
+    // Initialiser l'état du bouton
+    updateSaveButtonState();
+
     cancelBtn.onclick = () => this.close();
     
     saveBtn.onclick = () => {
@@ -172,6 +191,16 @@ class TransformationPopup {
       if (window.transformationUtils) {
         transfoDescription.textContent = window.transformationUtils.getTransformationDescription(e.target.value);
       }
+      
+      // Réinitialiser les clés sélectionnées lors du changement de type
+      selectedKeys = [];
+      keysContainer.innerHTML = '';
+      if (keyInput) keyInput.value = '';
+      if (keyDropdown) keyDropdown.classList.add('hidden');
+      
+      // Mettre à jour l'état du bouton
+      updateSaveButtonState();
+      
       // On ferme et on rouvre la popup pour rafraîchir l'UI
       const currentRef = {
         ...this.currentRef, // Garder toutes les informations de la référence originale
@@ -194,6 +223,7 @@ class TransformationPopup {
             const key = pill.textContent.trim();
             selectedKeys = selectedKeys.filter(k => k !== key);
             pill.remove();
+            updateSaveButtonState(); // Mettre à jour l'état du bouton
           }
         });
       });
@@ -259,7 +289,9 @@ class TransformationPopup {
               ev.preventDefault();
               selectedKeys = selectedKeys.filter(k2 => k2 !== key);
               pill.remove();
+              updateSaveButtonState(); // Mettre à jour l'état du bouton
             });
+            updateSaveButtonState(); // Mettre à jour l'état du bouton
           }
           keyDropdown.classList.add('hidden');
           keyDropdown.innerHTML = '';
