@@ -10,7 +10,7 @@ Transformation du projet actuel en application web moderne avec architecture ifr
 - **Frontend** : React 18 + TypeScript + Vite
 - **Déploiement** : Vercel
 - **API Gateway** : Vercel Functions
-- **Backend** : Bubble (gestion métier)
+- **Backend** : Bubble (gestion métier + données de base)
 - **Communication** : postMessage + API REST
 
 ### Structure du projet
@@ -30,29 +30,356 @@ valoramix-frontend/
 │   ├── hooks/
 │   │   ├── useBubbleData.ts
 │   │   ├── useEmbedConfig.ts
-│   │   └── useSankey.ts
+│   │   ├── useSankey.ts
+│   │   └── useBaseData.ts   # Hook pour données de base
 │   ├── services/
 │   │   ├── bubbleApi.ts
-│   │   └── embedSync.ts
+│   │   ├── embedSync.ts
+│   │   └── baseDataService.ts # Service pour données de base
 │   ├── types/
 │   │   ├── lot.ts
 │   │   ├── sankey.ts
-│   │   └── scenario.ts
+│   │   ├── scenario.ts
+│   │   └── baseData.ts      # Types pour données de base
 │   ├── utils/
 │   │   ├── processes.ts     # Migration de processes.js
 │   │   ├── calculations.ts
-│   │   └── colorMappings.ts
+│   │   ├── colorMappings.ts
+│   │   └── jsonBuilder.ts   # Construction des JSONs depuis Bubble
 │   └── pages/
 │       └── embed/
 │           ├── sankey.tsx   # Route /embed/sankey
 │           ├── lot.tsx      # Route /embed/lot
-│           └── data.tsx     # Route /embed/data
+│           └── data.tsx     # Route /embed/data (temporaire)
 ├── public/
 ├── embed.html              # Point d'entrée iframe
 ├── index.html              # Point d'entrée standalone
 ├── vite.config.ts
 ├── package.json
 └── vercel.json
+```
+
+## Phase 0 : Migration des données de base vers Bubble
+
+### 0.1 Structure des données dans Bubble
+
+#### Collections de base (read-only pour utilisateurs)
+```
+Formats:
+- Nom (text)
+- Description (text)
+- Couleur (text)
+- Actif (yes/no)
+- ID (text) - identifiant unique
+
+Types:
+- Nom (text)
+- Description (text)
+- Format (reference to Formats)
+- Couleur (text)
+- Actif (yes/no)
+- ID (text)
+
+Matières:
+- Nom (text)
+- Description (text)
+- Couleur (text)
+- Actif (yes/no)
+- ID (text)
+
+Fibres:
+- Nom (text)
+- Description (text)
+- Couleur (text)
+- Actif (yes/no)
+- ID (text)
+
+Couleurs:
+- Nom (text)
+- Code hex (text)
+- Actif (yes/no)
+- ID (text)
+
+Qualités:
+- Nom (text)
+- Description (text)
+- Couleur (text)
+- Actif (yes/no)
+- ID (text)
+
+Propreté:
+- Nom (text)
+- Description (text)
+- Couleur (text)
+- Actif (yes/no)
+- ID (text)
+
+Perturbateurs:
+- Nom (text)
+- Description (text)
+- Couleur (text)
+- Actif (yes/no)
+- ID (text)
+```
+
+#### Collections de relations
+```
+MatiereFibres:
+- Matière (reference to Matières)
+- Fibre (reference to Fibres)
+- Pourcentage (number)
+
+TypeMatieres:
+- Type (reference to Types)
+- Matière (reference to Matières)
+- Pourcentage (number)
+
+TypeCouleurs:
+- Type (reference to Types)
+- Couleur (reference to Couleurs)
+- Pourcentage (number)
+
+TypePerturbateurs:
+- Type (reference to Types)
+- Perturbateur (reference to Perturbateurs)
+- Pourcentage (number)
+```
+
+### 0.2 Permissions et sécurité
+- **Collections de base** : Read-only pour utilisateurs normaux
+- **Modifications** : Seulement par les admins
+- **Relations** : Modifiables par utilisateurs
+- **API** : Accès en lecture seule pour l'app frontend
+
+### 0.3 API Endpoints pour données de base
+```typescript
+// api/base-data.ts
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const { type } = req.query // formats, types, matieres, fibres, etc.
+
+  try {
+    const response = await fetch(`${BUBBLE_API_URL}/${type}`, {
+      headers: {
+        'Authorization': `Bearer ${BUBBLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      return res.status(404).json({ error: 'Données non trouvées' })
+    }
+
+    const data = await response.json()
+    
+    // Cache avec Vercel Edge
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate')
+    
+    return res.json(data.response)
+
+  } catch (error) {
+    console.error('Erreur API base data:', error)
+    return res.status(500).json({ error: 'Erreur serveur' })
+  }
+}
+```
+
+### 0.4 Service de construction des JSONs
+```typescript
+// services/baseDataService.ts
+export class BaseDataService {
+  private cache: Map<string, any> = new Map()
+  private cacheExpiry: Map<string, number> = new Map()
+  private readonly CACHE_DURATION = 3600000 // 1 heure
+
+  async getBaseData(): Promise<any> {
+    const now = Date.now()
+    
+    // Vérifier le cache
+    if (this.cache.has('baseData') && 
+        this.cacheExpiry.get('baseData')! > now) {
+      return this.cache.get('baseData')
+    }
+
+    // Récupérer depuis Bubble
+    const [formats, types, matieres, fibres, couleurs, qualites, proprete, perturbateurs] = 
+      await Promise.all([
+        this.fetchFromBubble('formats'),
+        this.fetchFromBubble('types'),
+        this.fetchFromBubble('matieres'),
+        this.fetchFromBubble('fibres'),
+        this.fetchFromBubble('couleurs'),
+        this.fetchFromBubble('qualites'),
+        this.fetchFromBubble('proprete'),
+        this.fetchFromBubble('perturbateurs')
+      ])
+
+    // Construire les JSONs au format attendu
+    const baseData = {
+      formats: this.buildFormatsJson(formats),
+      types: this.buildTypesJson(types),
+      matieres: this.buildMatieresJson(matieres),
+      fibres: this.buildFibresJson(fibres),
+      couleurs: this.buildCouleursJson(couleurs),
+      qualite: this.buildQualiteJson(qualites),
+      proprete: this.buildPropreteJson(proprete),
+      perturbateurs: this.buildPerturbateursJson(perturbateurs)
+    }
+
+    // Mettre en cache
+    this.cache.set('baseData', baseData)
+    this.cacheExpiry.set('baseData', now + this.CACHE_DURATION)
+
+    return baseData
+  }
+
+  private buildFormatsJson(formats: any[]): any {
+    const result: any = {}
+    formats.forEach(format => {
+      if (format.Actif) {
+        result[format.ID] = {
+          pourcentage: 0,
+          color: format.Couleur
+        }
+      }
+    })
+    return result
+  }
+
+  private buildTypesJson(types: any[]): any {
+    const result: any = {}
+    types.forEach(type => {
+      if (type.Actif) {
+        result[type.ID] = {
+          pourcentage: 0,
+          color: type.Couleur,
+          matieres: {},
+          couleurs: {},
+          perturbateurs: {}
+        }
+      }
+    })
+    return result
+  }
+
+  // Méthodes similaires pour les autres types...
+
+  private async fetchFromBubble(type: string): Promise<any[]> {
+    const response = await fetch(`/api/base-data?type=${type}`)
+    if (!response.ok) {
+      throw new Error(`Erreur lors de la récupération des ${type}`)
+    }
+    return response.json()
+  }
+}
+```
+
+### 0.5 Hook pour données de base
+```typescript
+// hooks/useBaseData.ts
+import { useState, useEffect } from 'react'
+import { BaseDataService } from '../services/baseDataService'
+
+export const useBaseData = () => {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchBaseData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const service = new BaseDataService()
+        const baseData = await service.getBaseData()
+        setData(baseData)
+
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBaseData()
+  }, [])
+
+  return { data, loading, error }
+}
+```
+
+### 0.6 Migration des données existantes
+```typescript
+// scripts/migrateToBubble.ts
+import * as fs from 'fs'
+import * as path from 'path'
+
+const BUBBLE_API_URL = 'https://your-app.bubbleapps.io/version-test/api/1.1/obj'
+const BUBBLE_API_KEY = process.env.BUBBLE_API_KEY
+
+async function migrateData() {
+  // Lire les fichiers JSON existants
+  const formats = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/formats.json'), 'utf8'))
+  const types = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/types.json'), 'utf8'))
+  const matieres = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/matieres.json'), 'utf8'))
+  const fibres = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/fibres.json'), 'utf8'))
+  const couleurs = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/couleurs.json'), 'utf8'))
+  const qualite = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/qualite.json'), 'utf8'))
+  const proprete = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/proprete.json'), 'utf8'))
+  const perturbateurs = JSON.parse(fs.readFileSync(path.join(__dirname, '../base_data/perturbateurs.json'), 'utf8'))
+
+  // Migrer chaque collection
+  await migrateCollection('formats', formats)
+  await migrateCollection('types', types)
+  await migrateCollection('matieres', matieres)
+  await migrateCollection('fibres', fibres)
+  await migrateCollection('couleurs', couleurs)
+  await migrateCollection('qualites', qualite)
+  await migrateCollection('proprete', proprete)
+  await migrateCollection('perturbateurs', perturbateurs)
+}
+
+async function migrateCollection(collectionName: string, data: any) {
+  console.log(`Migration de ${collectionName}...`)
+  
+  for (const [key, value] of Object.entries(data)) {
+    const item = value as any
+    
+    const bubbleItem = {
+      Nom: key,
+      Description: item.description || '',
+      Couleur: item.color || '#000000',
+      Actif: true,
+      ID: key // Utiliser la clé comme ID
+    }
+
+    // Ajouter des champs spécifiques selon la collection
+    if (collectionName === 'types' && item.format) {
+      bubbleItem.Format = item.format
+    }
+
+    try {
+      const response = await fetch(`${BUBBLE_API_URL}/${collectionName}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${BUBBLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(bubbleItem)
+      })
+
+      if (response.ok) {
+        console.log(`✅ ${collectionName}: ${key} migré`)
+      } else {
+        console.error(`❌ ${collectionName}: ${key} - ${response.statusText}`)
+      }
+    } catch (error) {
+      console.error(`❌ ${collectionName}: ${key} - ${error}`)
+    }
+  }
+}
+
+migrateData().catch(console.error)
 ```
 
 ## Phase 1 : Setup initial
@@ -100,6 +427,9 @@ export default defineConfig({
 {
   "functions": {
     "api/bubble-data.ts": {
+      "maxDuration": 30
+    },
+    "api/base-data.ts": {
       "maxDuration": 30
     }
   },
@@ -565,6 +895,8 @@ window.addEventListener('message', function(event) {
 ✅ **Évolutivité** : Facile d'ajouter de nouvelles fonctionnalités  
 ✅ **Simplicité** : Juste un ID dans l'URL  
 ✅ **Cache** : Optimisation côté serveur  
+✅ **Données centralisées** : Gestion Bubble pour données de base  
+✅ **Permissions** : Contrôle d'accès granulaire  
 
 ## Risques et mitigations
 
@@ -572,14 +904,5 @@ window.addEventListener('message', function(event) {
 ⚠️ **Performance iframe** → Optimisation et lazy loading  
 ⚠️ **Sécurité cross-origin** → Validation stricte des origines  
 ⚠️ **Compatibilité navigateurs** → Tests multi-navigateurs  
+⚠️ **Migration des données** → Scripts de migration et rollback  
 
-## Timeline estimée
-
-- **Phase 1-2** : 1-2 semaines (Setup + migration utilitaires)
-- **Phase 3** : 1 semaine (API Gateway)
-- **Phase 4** : 2-3 semaines (Composants embed)
-- **Phase 5** : 3-4 semaines (Migration composants)
-- **Phase 6** : 1 semaine (Communication)
-- **Phase 7** : 1 semaine (Déploiement)
-
-**Total estimé** : 9-12 semaines

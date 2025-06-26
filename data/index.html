@@ -348,8 +348,14 @@
         card.style.wordBreak = 'break-all';
         // Titre
         const keySpan = document.createElement('span');
-        keySpan.textContent = `"${nom}"`;
+        keySpan.textContent = `${nom} ${val.color}`;
         keySpan.style.fontWeight = 'bold';
+        keySpan.style.cursor = 'pointer';
+        keySpan.title = 'Copier la couleur';
+        keySpan.addEventListener('click', function(e) {
+          e.stopPropagation(); // N'ouvre pas la card
+          navigator.clipboard.writeText(val.color);
+        });
         card.appendChild(keySpan);
         // Détail JSON (caché par défaut)
         const pre = document.createElement('pre');
