@@ -11,14 +11,15 @@ export async function POST(request: Request) {
   baseUrl += 'api/1.1/wf/';
 
   // On retire isLive des params envoyés à Bubble
-  const { isLive: _, ...paramsSansIsLive } = params || {};
+  const paramsSansIsLive = { ...params };
+  delete paramsSansIsLive.isLive;
 
   // Sécurise l'URL pour éviter les doubles slashs
   const url = baseUrl + (endpoint || '').replace(/^\//, '');
   const fetchOptions: RequestInit = {
     method,
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
   };
@@ -42,23 +43,29 @@ export async function POST(request: Request) {
       });
     } catch {
       console.log('API Bubble - Réponse non-JSON:', text);
-      return new Response(JSON.stringify({
-        error: 'Réponse non-JSON',
-        status: response.status,
-        raw: text
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Réponse non-JSON',
+          status: response.status,
+          raw: text,
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   } catch (err) {
     console.log('API Bubble - Erreur fetch:', err);
-    return new Response(JSON.stringify({
-      error: 'Erreur lors du fetch',
-      message: err instanceof Error ? err.message : String(err)
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Erreur lors du fetch',
+        message: err instanceof Error ? err.message : String(err),
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
-} 
+}
