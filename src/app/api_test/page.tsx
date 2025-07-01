@@ -30,7 +30,7 @@ export default function ApiTestPage() {
         [name]: value
       }));
     }
-  };
+  }; 
 
   const handleRun = async (e: React.FormEvent) => {
     e.preventDefault();
