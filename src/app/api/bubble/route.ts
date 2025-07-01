@@ -11,11 +11,11 @@ export async function POST(request: Request) {
   baseUrl += 'api/1.1/wf/';
 
   // On retire isLive des params envoyés à Bubble
-  const { isLive: _isLive, ...paramsSansIsLive } = params || {};
+  const { isLive: _, ...paramsSansIsLive } = params || {};
 
   // Sécurise l'URL pour éviter les doubles slashs
   const url = baseUrl + (endpoint || '').replace(/^\//, '');
-  const fetchOptions: any = {
+  const fetchOptions: RequestInit = {
     method,
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         status: response.status,
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch (e) {
+    } catch {
       console.log('API Bubble - Réponse non-JSON:', text);
       return new Response(JSON.stringify({
         error: 'Réponse non-JSON',
