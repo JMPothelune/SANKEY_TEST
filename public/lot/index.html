@@ -1,61 +1,63 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Création / Modification de Lot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Création / Modification de Lot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"
+    />
 
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body>
-  <div class="w-full flex justify-start p-4">
-    <a href="../index.html" class="inline-flex items-center px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm font-medium shadow-sm border border-gray-200">
-      ← Retour
-    </a>
-  </div>
-  <div class="lot-container">
-    <div id="stackbar-container"></div>
-  </div>
-  <script>
-    // Fonction utilitaire pour charger un JSON
-    function fetchJSON(path) {
-      return fetch(path).then(r => r.json());
-    }
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div class="lot-container">
+      <div id="stackbar-container"></div>
+    </div>
+    <script>
+      // Fonction utilitaire pour charger un JSON
+      function fetchJSON(path) {
+        return fetch(path).then(r => r.json());
+      }
 
-    // Liste des fichiers de base à charger
-    const baseFiles = {
-      types: '../base_data/types.json',
-      formats: '../base_data/formats.json',
-      matieres: '../base_data/matieres.json',
-      fibres: '../base_data/fibres.json',
-      qualite: '../base_data/qualite.json',
-      proprete: '../base_data/proprete.json',
-      perturbateurs: '../base_data/perturbateurs.json',
-      couleurs: '../base_data/couleurs.json'
-    };
+      // Liste des fichiers de base à charger
+      const baseFiles = {
+        types: '../base_data/types.json',
+        formats: '../base_data/formats.json',
+        matieres: '../base_data/matieres.json',
+        fibres: '../base_data/fibres.json',
+        qualite: '../base_data/qualite.json',
+        proprete: '../base_data/proprete.json',
+        perturbateurs: '../base_data/perturbateurs.json',
+        couleurs: '../base_data/couleurs.json',
+      };
 
-    // Chargement de tous les fichiers de base
-    Promise.all(
-      Object.entries(baseFiles).map(([key, path]) =>
-        fetchJSON(path).then(data => [key, data])
-      )
-    ).then(entries => {
-      window.baseData = Object.fromEntries(entries);
-      // Charger le lot initial ensuite
-      fetch('../data/lot_type.json')
-        .then(res => res.json())
-        .then(lot => {
-          window.lotInitial = lot;
-          lancerLotUI(document.getElementById('stackbar-container'), window.lotInitial);
-          window.onLotChange = (lot) => {
-            console.log('Lot modifié :', lot);
-          };
-        });
-    });
-  </script>
-  <script src="lot.js"></script>
-</body>
+      // Chargement de tous les fichiers de base
+      Promise.all(
+        Object.entries(baseFiles).map(([key, path]) =>
+          fetchJSON(path).then(data => [key, data])
+        )
+      ).then(entries => {
+        window.baseData = Object.fromEntries(entries);
+        // Charger le lot initial ensuite
+        fetch('../data/lot_type.json')
+          .then(res => res.json())
+          .then(lot => {
+            window.lotInitial = lot;
+            lancerLotUI(
+              document.getElementById('stackbar-container'),
+              window.lotInitial
+            );
+            window.onLotChange = lot => {
+              console.log('Lot modifié :', lot);
+            };
+          });
+      });
+    </script>
+    <script src="lot.js"></script>
+  </body>
 </html>

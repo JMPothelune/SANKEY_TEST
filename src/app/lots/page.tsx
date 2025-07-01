@@ -1,14 +1,14 @@
 import { AppNavbar } from '@/components/ui/AppNavbar';
 
-export default function SankeyPage() {
+export default function LotsPage() {
   return (
     <div className="h-screen flex flex-col">
       <AppNavbar />
       <div className="flex-1 min-h-0">
         <iframe
-          src="/sankey/index.html"
+          src="/lot/index.html"
           className="w-full h-full border-0"
-          title="Sankey"
+          title="Lots"
         />
       </div>
     </div>

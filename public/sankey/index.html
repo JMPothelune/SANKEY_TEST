@@ -1,47 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Visualisation Sankey - Valorisation Textile</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css" />
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
-</head>
-<body>
-    <div class="w-full flex justify-start p-4">
-        <a href="../index.html" class="inline-flex items-center px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm font-medium shadow-sm border border-gray-200">
-            ← Retour
-        </a>
-    </div>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"
+    />
+  </head>
+  <body>
     <div class="container">
-        <div class="controls flex flex-wrap gap-4 items-center mb-4">
-            <select id="dimension-selector" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
-                <option value="format" selected>Formats</option>
-                <option value="format_type">- Types</option>
-                <option value="matiere">-- Matière</option>
-                <option value="fibres">--- Fibres</option>
-                <option value="couleur">-- Couleur</option>
-                <option value="perturbateurs">-- Perturbateurs</option>
-                <option value="qualite">Qualité</option>
-                <option value="proprete">Propreté</option>
-            </select>
-            <select id="scenario-selector" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
-            </select>
-        </div>
-        <div id="sankey-container"></div>
+      <div class="controls flex flex-wrap gap-4 items-center mb-4">
+        <select
+          id="dimension-selector"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+        >
+          <option value="format" selected>Formats</option>
+          <option value="format_type">- Types</option>
+          <option value="matiere">-- Matière</option>
+          <option value="fibres">--- Fibres</option>
+          <option value="couleur">-- Couleur</option>
+          <option value="perturbateurs">-- Perturbateurs</option>
+          <option value="qualite">Qualité</option>
+          <option value="proprete">Propreté</option>
+        </select>
+        <select
+          id="scenario-selector"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+        ></select>
+      </div>
+      <div id="sankey-container"></div>
     </div>
     <script>
       console.log('[HTML] script chargé');
-      document.addEventListener('sankeyScenarioReady', function() {
+      document.addEventListener('sankeyScenarioReady', function () {
         console.log('[HTML] sankeyScenarioReady reçu');
       });
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('DOMContentLoaded', function () {
         console.log('[HTML] DOMContentLoaded');
         function launchSankeyFromSelectors(lot) {
-          const scenarioIdx = document.getElementById('scenario-selector').value;
+          const scenarioIdx =
+            document.getElementById('scenario-selector').value;
           const scenario = window.scenarios[scenarioIdx]?.scenario;
           const dimension = document.getElementById('dimension-selector').value;
           if (typeof runSankey === 'function' && lot && scenario) {
@@ -49,7 +54,7 @@
               lot,
               scenario,
               containerId: 'sankey-container',
-              dimension
+              dimension,
             });
           }
         }
@@ -61,8 +66,16 @@
             window.lotType = lot; // pour compatibilité temporaire
             setTimeout(() => {
               launchSankeyFromSelectors(lot);
-              document.getElementById('scenario-selector').addEventListener('change', () => launchSankeyFromSelectors(lot));
-              document.getElementById('dimension-selector').addEventListener('change', () => launchSankeyFromSelectors(lot));
+              document
+                .getElementById('scenario-selector')
+                .addEventListener('change', () =>
+                  launchSankeyFromSelectors(lot)
+                );
+              document
+                .getElementById('dimension-selector')
+                .addEventListener('change', () =>
+                  launchSankeyFromSelectors(lot)
+                );
             }, 0);
           });
 
@@ -80,7 +93,7 @@
           qualite: '../base_data/qualite.json',
           proprete: '../base_data/proprete.json',
           perturbateurs: '../base_data/perturbateurs.json',
-          couleurs: '../base_data/couleurs.json'
+          couleurs: '../base_data/couleurs.json',
         };
 
         // Chargement de tous les fichiers de base
@@ -100,5 +113,5 @@
     <script src="scenario.js"></script>
     <script src="transformation-popup.js"></script>
     <script src="sankey.js"></script>
-</body>
-</html> 
+  </body>
+</html>

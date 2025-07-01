@@ -33,7 +33,7 @@ export function AppNavbar() {
             </NavigationMenuItem>
             <NavigationMenuItem className="h-full flex items-center">
               <NavigationMenuLink
-                href="/sankey/index.html"
+                href="/sankey"
                 className="px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 rounded-md transition h-10 flex items-center"
               >
                 Sankey
@@ -41,7 +41,7 @@ export function AppNavbar() {
             </NavigationMenuItem>
             <NavigationMenuItem className="h-full flex items-center">
               <NavigationMenuLink
-                href="/lot/index.html"
+                href="/lots"
                 className="px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 rounded-md transition h-10 flex items-center"
               >
                 Lots
