@@ -2,16 +2,19 @@
 import React, { useState } from 'react';
 import { bubbleApiCalls } from './apiCallsConfig';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink } from "@/components/ui/navigation-menu";
 import { AppNavbar } from "@/components/ui/AppNavbar";
+
+interface FormValues {
+  isLive: boolean;
+  [key: string]: string | boolean | number;
+}
 
 export default function ApiTestPage() {
   const [selectedApiIdx, setSelectedApiIdx] = useState(0);
-  const [formValues, setFormValues] = useState<any>({ isLive: true });
-  const [result, setResult] = useState<any>(null);
+  const [formValues, setFormValues] = useState<FormValues>({ isLive: true });
+  const [result, setResult] = useState<unknown>(null);
   const [showModal, setShowModal] = useState(false);
 
   const selectedApi = bubbleApiCalls[selectedApiIdx];
@@ -20,29 +23,29 @@ export default function ApiTestPage() {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormValues((prev: any) => ({
+      setFormValues((prev: FormValues) => ({
         ...prev,
         [name]: checked
       }));
     } else {
-      setFormValues((prev: any) => ({
+      setFormValues((prev: FormValues) => ({
         ...prev,
         [name]: value
       }));
     }
-  }; 
+  };
 
   const handleRun = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Interpoler les paramètres dans l'endpoint
     let endpoint = selectedApi.endpoint.replace(/\/{2,}/g, '/').replace(/^\//, '');
-    const params: any = { ...formValues };
+    const params: FormValues = { ...formValues };
     
     // Remplacer les {PARAM} dans l'endpoint par les valeurs
     selectedApi.params.forEach(p => {
       if (params[p.name] !== undefined) {
-        endpoint = endpoint.replace(new RegExp(`{${p.name}}`, 'g'), params[p.name]);
+        endpoint = endpoint.replace(new RegExp(`{${p.name}}`, 'g'), String(params[p.name]));
       }
     });
     
@@ -50,7 +53,7 @@ export default function ApiTestPage() {
     selectedApi.params.forEach(p => {
       if (p.type === 'json' && params[p.name]) {
         try {
-          params[p.name] = JSON.parse(params[p.name]);
+          params[p.name] = JSON.parse(String(params[p.name]));
         } catch {
           // Laisse la string si parsing échoue
         }
@@ -113,7 +116,7 @@ export default function ApiTestPage() {
                   ) : param.type === 'json' ? (
                     <textarea
                       name={param.name}
-                      value={formValues[param.name] || ''}
+                      value={String(formValues[param.name] || '')}
                       onChange={handleChange}
                       rows={4}
                       className="px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-none bg-gray-50"
@@ -123,7 +126,7 @@ export default function ApiTestPage() {
                     <input
                       type="text"
                       name={param.name}
-                      value={formValues[param.name] || ''}
+                      value={String(formValues[param.name] || '')}
                       onChange={handleChange}
                       className="px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base bg-gray-50"
                     />
