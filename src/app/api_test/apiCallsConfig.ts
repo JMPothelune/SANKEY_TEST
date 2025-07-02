@@ -26,8 +26,34 @@ export const bubbleApiCalls = [
     ],
   },
   {
+    name: 'Get Liste Perturbateurs',
+    endpoint: 'perturbateurs',
+    method: 'GET',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+    ],
+  },
+  {
     name: 'Get Liste Couleurs',
     endpoint: 'couleurs',
+    method: 'GET',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+    ],
+  },
+  {
+    name: 'Get Liste Fibres',
+    endpoint: 'fibres',
     method: 'GET',
     params: [
       {
