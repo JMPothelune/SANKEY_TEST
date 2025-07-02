@@ -13,6 +13,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Style pour supporter la width configurable */
+      .lot-container {
+        width: var(--iframe-width, 100%);
+        min-width: 300px;
+      }
+    </style>
   </head>
   <body>
     <div class="lot-container">
@@ -30,7 +37,17 @@
         return {
           id: urlParams.get('id'),
           isLive: urlParams.get('isLive') === 'true',
+          width: urlParams.get('width') || '100%',
         };
+      }
+
+      // Appliquer la width configurable
+      const urlParams = getUrlParams();
+      if (urlParams.width) {
+        document.documentElement.style.setProperty(
+          '--iframe-width',
+          urlParams.width
+        );
       }
 
       // Fonction pour faire l'appel API directement depuis l'iframe
@@ -79,6 +96,7 @@
       // Fonction pour initialiser l'UI quand toutes les données sont prêtes
       function initializeUI() {
         if (baseDataLoaded && lotDataReceived) {
+          window.lotJson = lotDataReceived; // Expose le JSON globalement
           console.log(
             "Initialisation de l'UI avec les données:",
             lotDataReceived
@@ -160,6 +178,25 @@
           baseDataLoaded = true;
           initializeUI();
         });
+
+      // Fonction pour envoyer la hauteur au parent
+      function sendHeightToParent() {
+        const height = document.body.scrollHeight;
+        console.log('[IFRAME] Envoi hauteur au parent :', height);
+        window.parent.postMessage({ type: 'IFRAME_HEIGHT', height }, '*');
+      }
+      window.addEventListener('load', sendHeightToParent);
+      window.addEventListener('resize', sendHeightToParent);
+      // Appelle aussi après chaque modification de l'UI si besoin
+      // Hook sur les mutations du DOM pour resize auto
+      const observer = new MutationObserver(() => {
+        sendHeightToParent();
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      });
     </script>
     <script src="lot.js"></script>
   </body>

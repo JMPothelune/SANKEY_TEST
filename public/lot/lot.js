@@ -1,4 +1,5 @@
-console.log("lot.js chargé !");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+console.log('lot.js chargé !');
 
 // --- Nouvelle structure pour le chemin ---
 let cheminSelection = [];
@@ -13,11 +14,11 @@ let rootContainer = null;
 // --- Fonction utilitaire pour injecter les icônes Phosphor ---
 function getIconSVG(name, className = '') {
   const iconMap = {
-    'plus': 'ph-plus',
-    'trash': 'ph-trash',
-    'x': 'ph-x',
+    plus: 'ph-plus',
+    trash: 'ph-trash',
+    x: 'ph-x',
     'caret-left': 'ph-caret-left',
-    'caret-right': 'ph-caret-right'
+    'caret-right': 'ph-caret-right',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';
@@ -31,27 +32,33 @@ function getDimensionsFromNode(node) {
     try {
       node = JSON.parse(node);
     } catch (e) {
-      console.error("Erreur de parsing JSON:", e);
+      console.error('Erreur de parsing JSON:', e);
       return [];
     }
   }
 
-  console.log("Node après parsing:", node);
+  console.log('Node après parsing:', node);
   if (!node || typeof node !== 'object') {
-    console.log("Node invalide:", node);
+    console.log('Node invalide:', node);
     return [];
   }
 
   const dims = Object.keys(node).filter(k => {
-    if (["pourcentage", "percent", "name", "titre", "title", "total"].includes(k)) return false;
+    if (
+      ['pourcentage', 'percent', 'name', 'titre', 'title', 'total'].includes(k)
+    )
+      return false;
     const v = node[k];
-    return v && (typeof v === "object" || typeof v === "function") && !Array.isArray(v);
+    return (
+      v &&
+      (typeof v === 'object' || typeof v === 'function') &&
+      !Array.isArray(v)
+    );
   });
-  console.log("Dimensions trouvées:", dims);
+  console.log('Dimensions trouvées:', dims);
   return dims;
 }
 
-// --- Fonction utilitaire pour obtenir le title d'une dimension ou d'une valeur
 function getTitle(obj, key) {
   if (!obj) return key;
   if (obj[key] && obj[key].title) return obj[key].title;
@@ -74,27 +81,33 @@ const CheminManager = {
   },
 
   // Tronquer le chemin à un niveau donné
-  tronquer: (niveau) => {
+  tronquer: niveau => {
     cheminSelection = cheminSelection.slice(0, niveau);
   },
 
   // Obtenir le chemin jusqu'à un niveau donné
-  getCheminJusquA: (niveau) => {
+  getCheminJusquA: niveau => {
     return cheminSelection.slice(0, niveau);
   },
 
   // Obtenir la dimension et la valeur à un niveau donné
-  getNiveau: (niveau) => {
-    return niveau >= 0 && niveau < cheminSelection.length ? cheminSelection[niveau] : null;
+  getNiveau: niveau => {
+    return niveau >= 0 && niveau < cheminSelection.length
+      ? cheminSelection[niveau]
+      : null;
   },
 
   // Vérifier si une dimension a une valeur à un niveau donné
-  aValeur: (niveau) => {
-    return niveau >= 0 && niveau < cheminSelection.length && cheminSelection[niveau].valeur !== null;
+  aValeur: niveau => {
+    return (
+      niveau >= 0 &&
+      niveau < cheminSelection.length &&
+      cheminSelection[niveau].valeur !== null
+    );
   },
 
   // Obtenir le node correspondant au chemin actuel
-  getNode: (lot) => {
+  getNode: lot => {
     let node = lot;
     for (const { dimension, valeur } of cheminSelection) {
       if (!valeur) break; // On s'arrête si on trouve une dimension sans valeur
@@ -105,12 +118,13 @@ const CheminManager = {
       node = node[dimension][valeur];
     }
     return node;
-  }
+  },
 };
 
 // Fonction utilitaire pour attacher les handlers aux boutons d'un header
 function attacherHandlersHeader(titre, niveau) {
   const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
+
   let nodeParent = lotCourant;
   for (let i = 0; i < niveau; i++) {
     const { dimension, valeur } = cheminSelection[i];
@@ -124,10 +138,10 @@ function attacherHandlersHeader(titre, niveau) {
   if (btnAdd) {
     if (dims.length > 0) {
       btnAdd.onclick = () => {
-        console.log("Bouton +", btnAdd, { niveau, dims });
+        console.log('Bouton +', btnAdd, { niveau, dims });
         const dimActive = cheminSelection[niveau]?.dimension || dims[0];
         afficherModalAjout(niveau, dimActive);
-      }
+      };
     } else {
       btnAdd.style.display = 'none';
     }
@@ -171,7 +185,9 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
     nodeParent = nodeParent[dimension][valeur];
   }
   const niveauCourant = cheminSelection[niveau] || {};
+
   const dimension = niveauCourant.dimension || '';
+
   const valeur = niveauCourant.valeur || '';
   let nom = '';
   let pct = 100;
@@ -179,21 +195,33 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
   if (niveau === 0) {
     nom = lot.title || 'Lot';
     pct = 100;
-    kg = lot.total || 0;
+
+    let totalKg = lot.total || 0;
   } else {
-    nom = cheminSelection[niveau-1]?.valeur || '';
+    nom = cheminSelection[niveau - 1]?.valeur || '';
     // Calcul du pourcentage local
     let nodeParent2 = lot;
-    for (let i = 0; i < niveau-1; i++) {
+    for (let i = 0; i < niveau - 1; i++) {
       const { dimension, valeur } = cheminSelection[i];
-      if (!nodeParent2[dimension] || !valeur || !nodeParent2[dimension][valeur]) {
+      if (
+        !nodeParent2[dimension] ||
+        !valeur ||
+        !nodeParent2[dimension][valeur]
+      ) {
         nodeParent2 = null;
         break;
       }
       nodeParent2 = nodeParent2[dimension][valeur];
     }
-    const parent = cheminSelection[niveau-1];
-    if (parent && parent.dimension && parent.valeur && nodeParent2 && nodeParent2[parent.dimension] && nodeParent2[parent.dimension][parent.valeur]) {
+    const parent = cheminSelection[niveau - 1];
+    if (
+      parent &&
+      parent.dimension &&
+      parent.valeur &&
+      nodeParent2 &&
+      nodeParent2[parent.dimension] &&
+      nodeParent2[parent.dimension][parent.valeur]
+    ) {
       const valNode = nodeParent2[parent.dimension][parent.valeur];
       if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
         pct = valNode.pourcentage;
@@ -205,24 +233,33 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
     let totalKg = lot.total || 0;
     let pctCumul = 100;
     let nodeTmp = lot;
-    for (let i = 0; i <= niveau-1; i++) {
+    for (let i = 0; i <= niveau - 1; i++) {
       const { dimension, valeur } = cheminSelection[i];
       if (!nodeTmp[dimension] || !valeur || !nodeTmp[dimension][valeur]) break;
       let n = nodeTmp[dimension][valeur];
       if (typeof n === 'object' && n.pourcentage !== undefined) {
-        pctCumul = pctCumul * n.pourcentage / 100;
+        pctCumul = (pctCumul * n.pourcentage) / 100;
       } else if (typeof n === 'number') {
-        pctCumul = pctCumul * n / 100;
+        pctCumul = (pctCumul * n) / 100;
       }
       nodeTmp = n;
     }
-    kg = totalKg * pctCumul / 100;
+    kg = (totalKg * pctCumul) / 100;
   }
   return { nodeParent, dimension, valeur, nom, pct, kg };
 }
 
 // --- Fonction unique d'affichage d'un header ---
-function afficherHeaderNiveau({ niveau, nodeParent, dimension, valeur, nom, pct, kg, container }) {
+function afficherHeaderNiveau({
+  niveau,
+  nodeParent,
+  dimension,
+  valeur,
+  nom,
+  pct,
+  kg,
+  container,
+}) {
   const titre = creerTitreStackbar(niveau, nom, pct, kg);
   container.appendChild(titre);
   // Attache les handlers après l'insertion dans le DOM
@@ -233,19 +270,23 @@ function afficherHeaderNiveau({ niveau, nodeParent, dimension, valeur, nom, pct,
 
 // --- Fonction centrale pour afficher les stackbars selon le chemin (refactorisée) ---
 function afficherStackbars(lot, chemin) {
-  console.log("Entrée dans afficherStackbars", lot, chemin);
-  console.log("cheminSelection.length =", chemin.length);
+  console.log('Entrée dans afficherStackbars', lot, chemin);
+  console.log('cheminSelection.length =', chemin.length);
   const container = rootContainer;
   container.innerHTML = '';
 
   let node = lot;
+
   let totalKg = lot.total || 0;
   let pctCumul = 100;
 
   if (cheminSelection.length === 0) {
-    console.log("cheminSelection est vide, on va appeler getDimensionsFromNode avec node =", node);
+    console.log(
+      'cheminSelection est vide, on va appeler getDimensionsFromNode avec node =',
+      node
+    );
     const dims = getDimensionsFromNode(node);
-    console.log("Résultat de getDimensionsFromNode :", dims);
+    console.log('Résultat de getDimensionsFromNode :', dims);
     if (dims.length > 0) {
       CheminManager.ajouterDimension(dims[0]);
     }
@@ -257,15 +298,24 @@ function afficherStackbars(lot, chemin) {
     afficherHeaderNiveau({ ...infos, niveau, container });
     // Affichage de la stackbar si distribution
     if (node[infos.dimension]) {
-      const keys = Object.keys(node[infos.dimension]).filter(k => k !== 'title');
+      const keys = Object.keys(node[infos.dimension]).filter(
+        k => k !== 'title'
+      );
       if (keys.length > 0) {
         let repartition = keys.map(key => {
           const val = node[infos.dimension][key];
-          let pct = typeof val === 'object' && val.pourcentage !== undefined ? val.pourcentage : (typeof val === 'number' ? val : 0);
-          let color = typeof val === 'object' && val.color ? val.color : undefined;
+          let pct =
+            typeof val === 'object' && val.pourcentage !== undefined
+              ? val.pourcentage
+              : typeof val === 'number'
+                ? val
+                : 0;
+          let color =
+            typeof val === 'object' && val.color ? val.color : undefined;
           return { name: key, key, percent: pct, color };
         });
-        let selected = (infos.valeur && keys.includes(infos.valeur)) ? infos.valeur : null;
+        let selected =
+          infos.valeur && keys.includes(infos.valeur) ? infos.valeur : null;
         renderStackbar(
           repartition,
           null,
@@ -283,9 +333,15 @@ function afficherStackbars(lot, chemin) {
       dimension: infos.dimension,
       valeur: infos.valeur,
       nodeDimension: node[infos.dimension],
-      nodeValeur: node[infos.dimension] ? node[infos.dimension][infos.valeur] : undefined
+      nodeValeur: node[infos.dimension]
+        ? node[infos.dimension][infos.valeur]
+        : undefined,
     });
-    if (infos.valeur && node[infos.dimension] && node[infos.dimension][infos.valeur]) {
+    if (
+      infos.valeur &&
+      node[infos.dimension] &&
+      node[infos.dimension][infos.valeur]
+    ) {
       const valNode = node[infos.dimension][infos.valeur];
       let pctPourCumul = 100;
       if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
@@ -293,19 +349,27 @@ function afficherStackbars(lot, chemin) {
       } else if (typeof valNode === 'number') {
         pctPourCumul = valNode;
       }
-      pctCumul = pctCumul * pctPourCumul / 100;
+      pctCumul = (pctCumul * pctPourCumul) / 100;
       node = valNode;
     } else {
-      if (!(infos.valeur && node[infos.dimension] && node[infos.dimension][infos.valeur])) {
+      if (
+        !(
+          infos.valeur &&
+          node[infos.dimension] &&
+          node[infos.dimension][infos.valeur]
+        )
+      ) {
         console.warn('STOP AFFICHAGE HEADER', {
           niveau,
           dimension: infos.dimension,
           valeur: infos.valeur,
           nodeCourant: node,
           nodeDimension: node[infos.dimension],
-          keys: node[infos.dimension] ? Object.keys(node[infos.dimension]) : null
+          keys: node[infos.dimension]
+            ? Object.keys(node[infos.dimension])
+            : null,
         });
-      break;
+        break;
       }
     }
   }
@@ -319,21 +383,34 @@ function afficherStackbars(lot, chemin) {
       let nodeParent = lot;
       for (let i = 0; i < lastNiveau; i++) {
         const { dimension, valeur } = cheminSelection[i];
-        if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+        if (
+          !nodeParent[dimension] ||
+          !valeur ||
+          !nodeParent[dimension][valeur]
+        ) {
           nodeParent = null;
           break;
         }
         nodeParent = nodeParent[dimension][valeur];
       }
       let nodeValue = null;
-      if (nodeParent && last.dimension && nodeParent[last.dimension] && nodeParent[last.dimension][last.valeur]) {
+      if (
+        nodeParent &&
+        last.dimension &&
+        nodeParent[last.dimension] &&
+        nodeParent[last.dimension][last.valeur]
+      ) {
         nodeValue = nodeParent[last.dimension][last.valeur];
       }
       // Vérifie si le nœud courant n'a PAS de distribution (feuille)
       const dims = getDimensionsFromNode(nodeValue);
       if (!nodeValue || dims.length === 0) {
         // Calcul des infos pour le header du niveau suivant
-        const infos = getInfosHeader({ lot, cheminSelection, niveau: lastNiveau + 1 });
+        const infos = getInfosHeader({
+          lot,
+          cheminSelection,
+          niveau: lastNiveau + 1,
+        });
         afficherHeaderNiveau({ ...infos, niveau: lastNiveau + 1, container });
       }
     }
@@ -342,19 +419,19 @@ function afficherStackbars(lot, chemin) {
 
 // --- Fonction d'initialisation universelle ---
 function initLotUI(container, lotInitial) {
-  console.log("Entrée dans initLotUI", container, lotInitial);
+  console.log('Entrée dans initLotUI', container, lotInitial);
   rootContainer = container;
-  
+
   // Parse si c'est une string
   if (typeof lotInitial === 'string') {
     try {
       lotInitial = JSON.parse(lotInitial);
     } catch (e) {
-      console.error("Erreur de parsing du lot initial:", e);
+      console.error('Erreur de parsing du lot initial:', e);
       return;
     }
   }
-  
+
   lotCourant = deepCopy(lotInitial);
   window.lotCourant = lotCourant;
   cheminSelection = [];
@@ -362,9 +439,8 @@ function initLotUI(container, lotInitial) {
   afficherStackbars(lotCourant, cheminSelection);
 }
 
-// --- Fonction d'entrée plug&play ---
 function lancerLotUI(container, lotInitial) {
-  console.log("Entrée dans lancerLotUI", container, lotInitial);
+  console.log('Entrée dans lancerLotUI', container, lotInitial);
   initLotUI(container, lotInitial);
 }
 
@@ -375,10 +451,18 @@ function publierEtatLot() {
 }
 
 // --- renderStackbar modifiée pour gérer la sélection fluide ---
-function renderStackbar(repartition, colorMap, dimension, parentKey, container, selectedKey) {
+function renderStackbar(
+  repartition,
+  colorMap,
+  dimension,
+  parentKey,
+  container,
+  selectedKey
+) {
   const stackbar = document.createElement('div');
   stackbar.id = `stackbar-${dimension}` + (parentKey ? `-${parentKey}` : '');
-  stackbar.className = 'flex w-full h-16 overflow-hidden rounded-xl shadow-sm mb-5 relative';
+  stackbar.className =
+    'flex w-full h-16 overflow-hidden rounded-xl shadow-sm mb-5 relative';
 
   let repartitionState = repartition.map(r => ({ ...r }));
 
@@ -387,7 +471,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       const seg = stackbar.querySelector(`.stackbar-segment[data-idx='${i}']`);
       if (seg) seg.style.width = repartitionState[i].percent + '%';
       const label = seg.querySelector('.stackbar-label');
-      if (label) label.innerHTML = `
+      if (label)
+        label.innerHTML = `
         <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${repartitionState[i].name}">${repartitionState[i].name}</span>
         <span class="text-black font-normal text-xs leading-tight truncate w-full">${repartitionState[i].percent.toFixed(1)}%</span>
       `;
@@ -422,7 +507,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
   for (let i = 0; i < repartitionState.length; i++) {
     const item = repartitionState[i];
     const segment = document.createElement('div');
-    segment.className = 'stackbar-segment flex items-center justify-center relative font-bold text-base transition-all duration-200';
+    segment.className =
+      'stackbar-segment flex items-center justify-center relative font-bold text-base transition-all duration-200';
     segment.setAttribute('data-idx', i);
     let fillColor;
 
@@ -431,7 +517,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       fillColor = d3.color(item.color);
     } else {
       // Fallback pour les objets sans couleur définie
-      const t = repartitionState.length > 1 ? i / (repartitionState.length - 1) : 0.5;
+      const t =
+        repartitionState.length > 1 ? i / (repartitionState.length - 1) : 0.5;
       if (dimension === 'format' || dimension === 'formats') {
         fillColor = d3.color(d3.interpolateYlGn(t));
       } else if (dimension === 'type' || dimension === 'types') {
@@ -439,7 +526,10 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       } else if (dimension === 'matiere' || dimension === 'matieres') {
         fillColor = d3.color(d3.interpolateCool(t));
       } else if (dimension === 'fibre' || dimension === 'fibres') {
-        const tFibres = repartitionState.length > 1 ? (0.15 + 0.7 * (i / (repartitionState.length - 1))) : 0.5;
+        const tFibres =
+          repartitionState.length > 1
+            ? 0.15 + 0.7 * (i / (repartitionState.length - 1))
+            : 0.5;
         fillColor = d3.color(d3.interpolateRainbow(tFibres));
       } else if (dimension === 'qualite') {
         fillColor = d3.color(d3.interpolateOranges(t));
@@ -450,9 +540,12 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       }
     }
 
-    const isUnknown = ['inconnu', 'autre', 'autres compositions'].includes(item.name.toLowerCase());
+    const isUnknown = ['inconnu', 'autre', 'autres compositions'].includes(
+      item.name.toLowerCase()
+    );
     if (isUnknown) {
-      segment.style.background = 'repeating-linear-gradient(135deg, #f5f5f5, #f5f5f5 2px, #e0e0e0 2px, #e0e0e0 4px)';
+      segment.style.background =
+        'repeating-linear-gradient(135deg, #f5f5f5, #f5f5f5 2px, #e0e0e0 2px, #e0e0e0 4px)';
       segment.style.border = '1px solid #bbb';
     } else {
       segment.style.background = `rgba(${fillColor.r},${fillColor.g},${fillColor.b},0.8)`;
@@ -461,7 +554,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     segment.style.width = item.percent + '%';
     segment.style.letterSpacing = '0.5px';
     if (i === 0) segment.classList.add('rounded-l-xl');
-    if (i === repartitionState.length - 1) segment.classList.add('rounded-r-xl');
+    if (i === repartitionState.length - 1)
+      segment.classList.add('rounded-r-xl');
     if (selectedKey === item.name) {
       segment.classList.add('selected');
       segment.style.border = `4px solid rgba(${fillColor.r},${fillColor.g},${fillColor.b},1)`;
@@ -473,7 +567,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     }
     // Label
     const label = document.createElement('div');
-    label.className = 'stackbar-label w-full h-full text-center px-1 flex flex-col items-center justify-center overflow-hidden';
+    label.className =
+      'stackbar-label w-full h-full text-center px-1 flex flex-col items-center justify-center overflow-hidden';
     label.innerHTML = `
       <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${item.name}">${item.name}</span>
       <span class="text-black font-normal text-xs leading-tight truncate w-full">${item.percent.toFixed(1)}%</span>
@@ -483,7 +578,9 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     segment.style.cursor = 'pointer';
     segment.addEventListener('click', () => {
       // Trouver le niveau courant dans cheminSelection par la dimension
-      let niveau = cheminSelection.findIndex(sel => sel.dimension === dimension);
+      let niveau = cheminSelection.findIndex(
+        sel => sel.dimension === dimension
+      );
       if (niveau === -1) niveau = cheminSelection.length - 1;
       let newChemin = cheminSelection.slice(0, niveau);
       newChemin.push({ dimension: dimension, valeur: item.name });
@@ -503,7 +600,10 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
           newChemin.push({ dimension: dimsEnfant[0], valeur: null });
         }
       }
-      console.log('Nouveau chemin après clic sur stackbar :', JSON.stringify(newChemin));
+      console.log(
+        'Nouveau chemin après clic sur stackbar :',
+        JSON.stringify(newChemin)
+      );
       cheminSelection = newChemin;
       afficherStackbars(lotCourant, cheminSelection);
     });
@@ -512,7 +612,8 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
     if (i < repartitionState.length - 1) {
       const handle = document.createElement('button');
       handle.type = 'button';
-      handle.className = 'stackbar-handle-btn absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-gray-300 rounded-full shadow flex items-center justify-center hover:bg-gray-50 active:scale-95 transition z-50 cursor-ew-resize';
+      handle.className =
+        'stackbar-handle-btn absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-gray-300 rounded-full shadow flex items-center justify-center hover:bg-gray-50 active:scale-95 transition z-50 cursor-ew-resize';
       handle.style.zIndex = 50;
       handle.style.left = `calc(${cumulatedPercent + repartitionState[i].percent}% - 14px)`;
       handle.style.pointerEvents = 'auto';
@@ -526,26 +627,34 @@ function renderStackbar(repartition, colorMap, dimension, parentKey, container, 
       let startX = 0;
       let startPctL = 0;
       let startPctR = 0;
-      handle.addEventListener('mousedown', (e) => {
+      handle.addEventListener('mousedown', e => {
         e.preventDefault();
         startX = e.clientX;
         startPctL = repartitionState[i].percent;
-        startPctR = repartitionState[i+1].percent;
+        startPctR = repartitionState[i + 1].percent;
         document.body.style.userSelect = 'none';
         function onMove(ev) {
           const dx = ev.clientX - startX;
           const totalWidth = stackbar.offsetWidth;
-          const dPct = dx / totalWidth * 100;
-          let newPctL = clampPercent(startPctL + dPct, 1, startPctL + startPctR - 1);
-          let newPctR = clampPercent(startPctR - dPct, 1, startPctL + startPctR - 1);
+          const dPct = (dx / totalWidth) * 100;
+          let newPctL = clampPercent(
+            startPctL + dPct,
+            1,
+            startPctL + startPctR - 1
+          );
+          let newPctR = clampPercent(
+            startPctR - dPct,
+            1,
+            startPctL + startPctR - 1
+          );
           // Correction pour ne pas dépasser le total
           if (newPctL + newPctR > startPctL + startPctR) {
             const excess = newPctL + newPctR - (startPctL + startPctR);
-            newPctL -= excess/2;
-            newPctR -= excess/2;
+            newPctL -= excess / 2;
+            newPctR -= excess / 2;
           }
           repartitionState[i].percent = newPctL;
-          repartitionState[i+1].percent = newPctR;
+          repartitionState[i + 1].percent = newPctR;
           updateSegments();
           // Met à jour la position du handle pendant le drag
           handle.style.left = `calc(${cumulatedPercent + repartitionState[i].percent}% - 14px)`;
@@ -584,21 +693,24 @@ function supprimerNoeudEtRepartir(niveau) {
   const chemin = [...cheminSelection];
   const parentCle = chemin[niveau - 1];
   if (!parentCle || parentCle.valeur == null) {
-    console.warn('Aucune valeur sélectionnée à ce niveau parent, suppression impossible.');
+    console.warn(
+      'Aucune valeur sélectionnée à ce niveau parent, suppression impossible.'
+    );
     return;
   }
   const dim = parentCle.dimension;
   const keyToDelete = parentCle.valeur;
 
   // Navigue dynamiquement jusqu'au parent du parent
-  let parent = lotCourant;
+  let nodeParent = lotCourant;
   for (let i = 0; i < niveau - 1; i++) {
     const { dimension, valeur } = chemin[i];
-    if (!parent[dimension] || !valeur || !parent[dimension][valeur]) return;
-    parent = parent[dimension][valeur];
+    if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur])
+      return;
+    nodeParent = nodeParent[dimension][valeur];
   }
-  if (!dim || !parent[dim]) return;
-  const liste = parent[dim];
+  if (!dim || !nodeParent[dim]) return;
+  const liste = nodeParent[dim];
   if (!liste[keyToDelete]) return;
 
   // Supprime la clé
@@ -615,9 +727,10 @@ function supprimerNoeudEtRepartir(niveau) {
   });
   Object.keys(liste).forEach(k => {
     if (typeof liste[k] === 'object' && liste[k].pourcentage !== undefined) {
-      liste[k].pourcentage = total > 0 ? liste[k].pourcentage * 100 / total : 0;
+      liste[k].pourcentage =
+        total > 0 ? (liste[k].pourcentage * 100) / total : 0;
     } else if (typeof liste[k] === 'number') {
-      liste[k] = total > 0 ? liste[k] * 100 / total : 0;
+      liste[k] = total > 0 ? (liste[k] * 100) / total : 0;
     }
   });
 
@@ -625,9 +738,9 @@ function supprimerNoeudEtRepartir(niveau) {
   cheminSelection = cheminSelection.slice(0, niveau);
   // Réajoute la dimension courante avec valeur null
   if (chemin[niveau - 1]) {
-    cheminSelection.push({ 
-      dimension: chemin[niveau - 1].dimension, 
-      valeur: null 
+    cheminSelection.push({
+      dimension: chemin[niveau - 1].dimension,
+      valeur: null,
     });
   }
   afficherStackbars(lotCourant, cheminSelection);
@@ -642,6 +755,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   titre.dataset.niveau = niveau;
 
   // On veut le nœud parent du niveau courant
+
   let nodeParent = lotCourant;
   for (let i = 0; i < niveau; i++) {
     const { dimension, valeur } = cheminSelection[i];
@@ -671,6 +785,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   }
 
   // Détermination du label de dimension (niveau+1)
+
   let labelText = '';
   if (niveau + 1 === 0) labelText = 'format';
   else if (niveau + 1 === 1) labelText = 'types';
@@ -680,14 +795,18 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   titre.innerHTML = `
     <div class="flex items-center justify-between w-full">
       <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-stretch h-10">
-        ${niveau > 0 ? `
+        ${
+          niveau > 0
+            ? `
           <button class="px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-left" aria-label="Précédent">
             ${getIconSVG('caret-left', 'w-4 h-4')}
           </button>
           <button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-caret-right" aria-label="Suivant">
             ${getIconSVG('caret-right', 'w-4 h-4')}
           </button>
-          ` : ''}
+          `
+            : ''
+        }
         <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center stackbar-title-poids" tabindex="0" style="cursor:pointer;">${kg ? `${kg.toFixed(1)} kg` : ''}</span>
@@ -699,14 +818,18 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg ${niveau > 0 ? 'border-r border-gray-300' : ''}" aria-label="Ajouter">
           ${getIconSVG('plus', 'w-4 h-4')}
         </button>
-        ${niveau > 0 ? `
+        ${
+          niveau > 0
+            ? `
           <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 border-r border-gray-300" aria-label="Supprimer">
             ${getIconSVG('trash', 'w-4 h-4')}
           </button>
           <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-r-lg" aria-label="Fermer">
             ${getIconSVG('x', 'w-4 h-4')}
           </button>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     </div>`;
 
@@ -719,7 +842,8 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         const input = document.createElement('input');
         input.type = 'text';
         input.value = oldName;
-        input.className = 'border-l border-gray-300 px-4 h-full font-bold text-base flex items-center outline-none';
+        input.className =
+          'border-l border-gray-300 px-4 h-full font-bold text-base flex items-center outline-none';
         input.style.width = '8rem';
         input.style.background = 'white';
         input.style.textAlign = 'left';
@@ -735,33 +859,46 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
             } else {
               // Renommage d'un segment à un niveau > 0
               // Trouver le parent
-              let parent = lotCourant;
-              for (let i = 0; i < niveau-1; i++) {
+              let nodeParent = lotCourant;
+              for (let i = 0; i < niveau - 1; i++) {
                 const { dimension, valeur } = cheminSelection[i];
-                if (!parent[dimension] || !valeur || !parent[dimension][valeur]) {
-                  parent = null;
+                if (
+                  !nodeParent[dimension] ||
+                  !valeur ||
+                  !nodeParent[dimension][valeur]
+                ) {
+                  nodeParent = null;
                   break;
                 }
-                parent = parent[dimension][valeur];
+                nodeParent = nodeParent[dimension][valeur];
               }
-              const dim = cheminSelection[niveau-1]?.dimension;
-              const val = cheminSelection[niveau-1]?.valeur;
-              if (parent && dim && val && parent[dim] && parent[dim][oldName] && !parent[dim][newName]) {
+              const dim = cheminSelection[niveau - 1]?.dimension;
+              const val = cheminSelection[niveau - 1]?.valeur;
+              if (
+                nodeParent &&
+                dim &&
+                val &&
+                nodeParent[dim] &&
+                nodeParent[dim][oldName] &&
+                !nodeParent[dim][newName]
+              ) {
                 // Conserve l'ordre
-                const entries = Object.entries(parent[dim]);
+                const entries = Object.entries(nodeParent[dim]);
                 const idx = entries.findIndex(([k]) => k === oldName);
                 if (idx !== -1) {
                   const newEntries = [
                     ...entries.slice(0, idx),
-                    [newName, parent[dim][oldName]],
-                    ...entries.slice(idx + 1)
+                    [newName, nodeParent[dim][oldName]],
+                    ...entries.slice(idx + 1),
                   ];
                   const newObj = {};
-                  newEntries.forEach(([k, v]) => { newObj[k] = v; });
-                  parent[dim] = newObj;
+                  newEntries.forEach(([k, v]) => {
+                    newObj[k] = v;
+                  });
+                  nodeParent[dim] = newObj;
                   // Met à jour cheminSelection si besoin
-                  if (cheminSelection[niveau-1].valeur === oldName) {
-                    cheminSelection[niveau-1].valeur = newName;
+                  if (cheminSelection[niveau - 1].valeur === oldName) {
+                    cheminSelection[niveau - 1].valeur = newName;
                   }
                   window.lotCourant = lotCourant;
                 }
@@ -772,7 +909,8 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         }
         input.addEventListener('keydown', e => {
           if (e.key === 'Enter') saveEdit();
-          if (e.key === 'Escape') afficherStackbars(lotCourant, cheminSelection);
+          if (e.key === 'Escape')
+            afficherStackbars(lotCourant, cheminSelection);
         });
         input.addEventListener('blur', saveEdit);
       });
@@ -788,7 +926,8 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         input.step = '0.1';
         input.min = '0';
         input.value = oldPoids;
-        input.className = 'border-l border-gray-300 px-3 h-full text-sm flex items-center outline-none';
+        input.className =
+          'border-l border-gray-300 px-3 h-full text-sm flex items-center outline-none';
         input.style.width = '5rem';
         input.style.background = 'white';
         input.style.textAlign = 'right';
@@ -805,7 +944,8 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         }
         input.addEventListener('keydown', e => {
           if (e.key === 'Enter') saveEdit();
-          if (e.key === 'Escape') afficherStackbars(lotCourant, cheminSelection);
+          if (e.key === 'Escape')
+            afficherStackbars(lotCourant, cheminSelection);
         });
         input.addEventListener('blur', saveEdit);
       });
@@ -840,20 +980,31 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         let nodeParent = lotCourant;
         for (let i = 0; i < niveau; i++) {
           const { dimension, valeur } = newChemin[i];
-          if (!nodeParent[dimension] || !valeur || !nodeParent[dimension][valeur]) {
+          if (
+            !nodeParent[dimension] ||
+            !valeur ||
+            !nodeParent[dimension][valeur]
+          ) {
             nodeParent = null;
             break;
           }
           nodeParent = nodeParent[dimension][valeur];
         }
         if (nodeParent && nodeParent[dim]) {
-          const valeursPossibles = Object.keys(nodeParent[dim]).filter(k => k !== 'title');
+          const valeursPossibles = Object.keys(nodeParent[dim]).filter(
+            k => k !== 'title'
+          );
           if (valeursPossibles.length === 1) {
             newChemin[niveau].valeur = valeursPossibles[0];
           }
         }
 
-        console.log('Dimension cliquée :', dim, '| Nouveau chemin :', JSON.stringify(newChemin));
+        console.log(
+          'Dimension cliquée :',
+          dim,
+          '| Nouveau chemin :',
+          JSON.stringify(newChemin)
+        );
 
         cheminSelection = newChemin;
         afficherStackbars(lotCourant, cheminSelection);
@@ -882,7 +1033,10 @@ function naviguerSiblingStackbar(niveau, direction) {
       nodeParent = null;
       break;
     }
-    if (!nodeParent[niveauParent.dimension] || !nodeParent[niveauParent.dimension][niveauParent.valeur]) {
+    if (
+      !nodeParent[niveauParent.dimension] ||
+      !nodeParent[niveauParent.dimension][niveauParent.valeur]
+    ) {
       nodeParent = null;
       break;
     }
@@ -893,10 +1047,14 @@ function naviguerSiblingStackbar(niveau, direction) {
   // Récupère les siblings (frères) du niveau courant
   let siblings = [];
   if (nodeParent && niveauCourant.dimension) {
-    siblings = Object.keys(nodeParent[niveauCourant.dimension]).filter(k => k !== 'title');
+    siblings = Object.keys(nodeParent[niveauCourant.dimension]).filter(
+      k => k !== 'title'
+    );
   } else if (niveau === 0) {
     // Cas spécial pour le niveau 0 (formats) : on prend directement les clés du lot
-    siblings = Object.keys(lotCourant[niveauCourant.dimension]).filter(k => k !== 'title');
+    siblings = Object.keys(lotCourant[niveauCourant.dimension]).filter(
+      k => k !== 'title'
+    );
   }
   console.log('Siblings:', siblings);
 
@@ -915,8 +1073,11 @@ function naviguerSiblingStackbar(niveau, direction) {
 
   // Met à jour le chemin avec la nouvelle valeur
   let newChemin = cheminSelection.slice(0, niveau);
-  newChemin.push({ dimension: niveauCourant.dimension, valeur: siblings[newIdx] });
-  
+  newChemin.push({
+    dimension: niveauCourant.dimension,
+    valeur: siblings[newIdx],
+  });
+
   // Ajout automatique de la dimension enfant si elle existe
   let node = lotCourant;
   for (let i = 0; i < newChemin.length; i++) {
@@ -955,7 +1116,7 @@ function afficherModalAjout(niveau, dimension) {
 
   // Charger les données de base (synchrone)
   const donneesBase = chargerDonneesBase(dimension);
-  
+
   // Récupérer les éléments existants
   let nodeParent = lotCourant;
   for (let i = 0; i < niveau; i++) {
@@ -966,24 +1127,28 @@ function afficherModalAjout(niveau, dimension) {
     }
     nodeParent = nodeParent[dim][valeur];
   }
-  
-  const elementsExistants = nodeParent && nodeParent[dimension] 
-    ? Object.keys(nodeParent[dimension]).filter(k => k !== 'title')
-    : [];
-  
+
+  const elementsExistants =
+    nodeParent && nodeParent[dimension]
+      ? Object.keys(nodeParent[dimension]).filter(k => k !== 'title')
+      : [];
+
   // Filtrer les éléments disponibles
-  const elementsDisponibles = Object.keys(donneesBase).filter(key => 
-    !elementsExistants.includes(key)
+  const elementsDisponibles = Object.keys(donneesBase).filter(
+    key => !elementsExistants.includes(key)
   );
 
   // Créer le backdrop
   const backdrop = document.createElement('div');
-  backdrop.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-  
+  backdrop.className = 'fixed inset-0 flex items-center justify-center z-50';
+  backdrop.style.background = 'none';
+
   // Créer la modal
   const modal = document.createElement('div');
-  modal.className = 'bg-white rounded-lg shadow-xl w-full max-w-md mx-4';
-  
+  modal.className = 'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4';
+  modal.style.boxShadow =
+    '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+
   // Header de la modal
   const header = document.createElement('div');
   header.className = 'flex items-center justify-between p-4 border-b';
@@ -993,7 +1158,7 @@ function afficherModalAjout(niveau, dimension) {
       ${getIconSVG('x', 'w-5 h-5')}
     </button>
   `;
-  
+
   // Contenu de la modal
   const content = document.createElement('div');
   content.className = 'p-4';
@@ -1004,9 +1169,13 @@ function afficherModalAjout(niveau, dimension) {
         <div class="relative">
           <select id="element" class="block w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer">
             <option value="" class="text-gray-500">Sélectionnez un élément</option>
-            ${elementsDisponibles.map(elem => `
+            ${elementsDisponibles
+              .map(
+                elem => `
               <option value="${elem}" class="py-1">${elem}</option>
-            `).join('')}
+            `
+              )
+              .join('')}
           </select>
           <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1026,7 +1195,7 @@ function afficherModalAjout(niveau, dimension) {
       </div>
     </div>
   `;
-  
+
   // Footer de la modal
   const footer = document.createElement('div');
   footer.className = 'flex items-center justify-end gap-3 p-4 border-t';
@@ -1034,14 +1203,14 @@ function afficherModalAjout(niveau, dimension) {
     <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Annuler</button>
     <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Ajouter</button>
   `;
-  
+
   // Assembler la modal
   modal.appendChild(header);
   modal.appendChild(content);
   modal.appendChild(footer);
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
-  
+
   // Gestionnaires d'événements
   const btnFermer = header.querySelector('button');
   const btnAnnuler = footer.querySelector('button:first-child');
@@ -1049,40 +1218,59 @@ function afficherModalAjout(niveau, dimension) {
   const selectElement = content.querySelector('#element');
   const inputPourcentage = content.querySelector('#pourcentage');
   const pourcentageContainer = content.querySelector('#pourcentage-container');
-  
+
   // Gérer l'affichage du champ pourcentage
   const estPremierElement = elementsExistants.length === 0;
   if (estPremierElement) {
     pourcentageContainer.style.display = 'none';
   }
-  
+
   function fermerModal() {
     backdrop.remove();
   }
-  
+
   btnFermer.onclick = fermerModal;
   btnAnnuler.onclick = fermerModal;
-  backdrop.onclick = (e) => {
+  backdrop.onclick = e => {
     if (e.target === backdrop) fermerModal();
   };
-  
+
   btnAjouter.onclick = () => {
     const elementSelectionne = selectElement.value;
-    const pourcentage = estPremierElement ? 100 : parseFloat(inputPourcentage.value);
-    
-    if (elementSelectionne && (!estPremierElement ? !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100 : true)) {
-      ajouterElementEtRepartir(niveau, dimension, elementSelectionne, pourcentage, donneesBase[elementSelectionne]);
+    const pourcentage = estPremierElement
+      ? 100
+      : parseFloat(inputPourcentage.value);
+
+    if (
+      elementSelectionne &&
+      (!estPremierElement
+        ? !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100
+        : true)
+    ) {
+      ajouterElementEtRepartir(
+        niveau,
+        dimension,
+        elementSelectionne,
+        pourcentage,
+        donneesBase[elementSelectionne]
+      );
       fermerModal();
       afficherStackbars(lotCourant, cheminSelection);
     }
   };
-  
+
   // Focus sur le select
   selectElement.focus();
 }
 
 // Fonction pour ajouter un élément et répartir les pourcentages
-function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage, donneesBase) {
+function ajouterElementEtRepartir(
+  niveau,
+  dimension,
+  nom,
+  pourcentage,
+  donneesBase
+) {
   let node = lotCourant;
   for (let i = 0; i < niveau; i++) {
     const { dimension: dim, valeur } = cheminSelection[i];
@@ -1108,7 +1296,7 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage, donneesBa
   if (totalAvant === 0) {
     node[dimension][nom] = {
       ...donneesBase,
-      pourcentage: 100
+      pourcentage: 100,
     };
     return;
   }
@@ -1145,7 +1333,7 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage, donneesBa
   // Ajoute le nouvel élément avec sa structure complète
   node[dimension][nom] = {
     ...donneesBase,
-    pourcentage: pourcentage
+    pourcentage: pourcentage,
   };
   publierEtatLot();
   window.lotCourant = lotCourant;
@@ -1153,4 +1341,3 @@ function ajouterElementEtRepartir(niveau, dimension, nom, pourcentage, donneesBa
 
 // --- Exemple d'appel local (à mettre dans index.html) ---
 // lancerLotUI(document.getElementById('stackbar-container'), window.lotInitial);
-

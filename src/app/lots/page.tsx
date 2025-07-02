@@ -1,7 +1,7 @@
 'use client';
 import { AppNavbar } from '@/components/ui/AppNavbar';
 import { lots } from '@/data/lots';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Select,
   SelectTrigger,
@@ -10,107 +10,34 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 
-// Interface pour typer les données du lot
-interface LotData {
-  [key: string]: unknown;
-}
-
 export default function LotsPage() {
   const [selectedLotIdx, setSelectedLotIdx] = useState(0);
-  const [lotData, setLotData] = useState<LotData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState<number>(400);
+  const lot = lots[selectedLotIdx];
+  const iframeSrc = `/lot/index.html?id=${encodeURIComponent(lot.bubbleId)}&isLive=${lot.isLive}`;
 
-  const fetchLotData = useCallback(async (lotIdx: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const lot = lots[lotIdx];
-      if (!lot) {
-        throw new Error('Lot non trouvé');
-      }
-
-      const response = await fetch('/api/bubble', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          endpoint: 'lot',
-          params: {
-            id: lot.bubbleId,
-            isLive: lot.isLive,
-          },
-          method: 'POST',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setLotData(data);
-
-      // Envoyer les données à l'iframe
-      sendDataToIframe(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
-      console.error('Erreur lors du chargement du lot:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fonction pour envoyer les données à l'iframe
-  const sendDataToIframe = useCallback((data: LotData) => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      console.log("Envoi des données à l'iframe:", data);
-      iframeRef.current.contentWindow.postMessage(
-        {
-          type: 'LOT_DATA',
-          data: data,
-        },
-        '*'
-      );
-    }
-  }, []);
-
-  // Charger le lot par défaut au montage
   useEffect(() => {
-    fetchLotData(selectedLotIdx);
-  }, [fetchLotData, selectedLotIdx]);
-
-  // Écouter le chargement de l'iframe pour envoyer les données
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (iframe) {
-      const handleLoad = () => {
-        console.log('Iframe chargée, envoi des données si disponibles');
-        if (lotData) {
-          sendDataToIframe(lotData);
-        }
-      };
-
-      iframe.addEventListener('load', handleLoad);
-      return () => iframe.removeEventListener('load', handleLoad);
+    function handleResizeMessage(event: MessageEvent) {
+      if (
+        event.data &&
+        event.data.type === 'IFRAME_HEIGHT' &&
+        typeof event.data.height === 'number'
+      ) {
+        setIframeHeight(event.data.height);
+      }
     }
-  }, [lotData, sendDataToIframe]);
-
-  // Charger le nouveau lot quand l'utilisateur change de sélection
-  const handleLotChange = (newIdx: number) => {
-    setSelectedLotIdx(newIdx);
-    fetchLotData(newIdx);
-  };
+    window.addEventListener('message', handleResizeMessage);
+    return () => window.removeEventListener('message', handleResizeMessage);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col">
       <AppNavbar />
-      <div className="p-4 border-b flex items-center">
+      <div className="px-6 py-4 border-b flex items-center">
         <label className="font-semibold mr-2">Choisir un lot :</label>
         <Select
           value={selectedLotIdx.toString()}
-          onValueChange={v => handleLotChange(Number(v))}
+          onValueChange={v => setSelectedLotIdx(Number(v))}
         >
           <SelectTrigger className="w-64">
             <SelectValue placeholder="Choisir un lot" />
@@ -123,23 +50,16 @@ export default function LotsPage() {
             ))}
           </SelectContent>
         </Select>
-        {loading && (
-          <div className="ml-4 flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-sm text-gray-600">Chargement...</span>
-          </div>
-        )}
-        {error && (
-          <div className="ml-4 text-sm text-red-600">Erreur: {error}</div>
-        )}
       </div>
-      <div className="flex-1 min-h-0">
-        <iframe
-          ref={iframeRef}
-          src="/lot/index.html"
-          className="w-full h-full border-0"
-          title="Lots"
-        />
+      <div className="flex-1 min-h-0 p-6 bg-gray-50">
+        <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-sm border">
+          <iframe
+            src={iframeSrc}
+            className="w-full h-full border-0 rounded-lg"
+            style={{ minHeight: 400, height: iframeHeight }}
+            title="Lots"
+          />
+        </div>
       </div>
     </div>
   );
