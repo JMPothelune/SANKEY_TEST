@@ -161,7 +161,7 @@ export default function ApiTestPage() {
                   )}
                 </div>
               ))}
-              <Button type="submit" className="w-full" size="lg">
+              <Button type="submit" className="w-full cursor-pointer" size="lg">
                 Run
               </Button>
             </form>
