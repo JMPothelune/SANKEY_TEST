@@ -7,7 +7,7 @@ import {
 
 export function AppNavbar() {
   return (
-    <nav className="w-full fixed top-0 left-0 z-50 bg-white border-b border-gray-100 h-16 flex items-center">
+    <nav className="w-full bg-white border-b border-gray-100 h-16 flex items-center">
       <div className="w-full mx-auto flex items-center h-full justify-between px-4">
         <NavigationMenu className="h-full">
           <NavigationMenuList className="h-full">

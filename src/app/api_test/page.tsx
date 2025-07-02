@@ -1,10 +1,16 @@
-"use client";
+'use client';
 import React, { useState } from 'react';
 import { bubbleApiCalls } from './apiCallsConfig';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { AppNavbar } from "@/components/ui/AppNavbar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { AppNavbar } from '@/components/ui/AppNavbar';
 
 interface FormValues {
   isLive: boolean;
@@ -19,36 +25,45 @@ export default function ApiTestPage() {
 
   const selectedApi = bubbleApiCalls[selectedApiIdx];
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormValues((prev: FormValues) => ({
         ...prev,
-        [name]: checked
+        [name]: checked,
       }));
     } else {
       setFormValues((prev: FormValues) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
   };
 
   const handleRun = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Interpoler les paramètres dans l'endpoint
-    let endpoint = selectedApi.endpoint.replace(/\/{2,}/g, '/').replace(/^\//, '');
+    let endpoint = selectedApi.endpoint
+      .replace(/\/{2,}/g, '/')
+      .replace(/^\//, '');
     const params: FormValues = { ...formValues };
-    
+
     // Remplacer les {PARAM} dans l'endpoint par les valeurs
     selectedApi.params.forEach(p => {
       if (params[p.name] !== undefined) {
-        endpoint = endpoint.replace(new RegExp(`{${p.name}}`, 'g'), String(params[p.name]));
+        endpoint = endpoint.replace(
+          new RegExp(`{${p.name}}`, 'g'),
+          String(params[p.name])
+        );
       }
     });
-    
+
     // Traiter les paramètres JSON
     selectedApi.params.forEach(p => {
       if (p.type === 'json' && params[p.name]) {
@@ -59,15 +74,15 @@ export default function ApiTestPage() {
         }
       }
     });
-    
+
     const res = await fetch('/api/bubble', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         endpoint,
         params,
-        method: selectedApi.method
-      })
+        method: selectedApi.method,
+      }),
     });
     const data = await res.json();
     setResult(data);
@@ -75,18 +90,29 @@ export default function ApiTestPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-100/60 to-white font-sans px-2">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-100/60 to-white font-sans">
       <AppNavbar />
-      <div className="flex-1 flex items-center justify-center w-full pt-24">
+      <div className="flex-1 flex items-center justify-center w-full">
         <Card className="w-full max-w-lg">
           <CardHeader>
-            <CardTitle className="text-3xl text-center">API Bubble Test</CardTitle>
+            <CardTitle className="text-3xl text-center">
+              API Bubble Test
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRun} className="flex flex-col gap-6">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-gray-700 mb-1">Choisir une API</label>
-                <Select value={selectedApiIdx.toString()} onValueChange={v => { setSelectedApiIdx(Number(v)); setFormValues({ isLive: true }); setResult(null); }}>
+                <label className="text-sm font-semibold text-gray-700 mb-1">
+                  Choisir une API
+                </label>
+                <Select
+                  value={selectedApiIdx.toString()}
+                  onValueChange={v => {
+                    setSelectedApiIdx(Number(v));
+                    setFormValues({ isLive: true });
+                    setResult(null);
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choisir une API" />
                   </SelectTrigger>
@@ -101,7 +127,9 @@ export default function ApiTestPage() {
               </div>
               {selectedApi.params.map(param => (
                 <div key={param.name} className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-gray-700 mb-1">{param.label}</label>
+                  <label className="text-sm font-semibold text-gray-700 mb-1">
+                    {param.label}
+                  </label>
                   {param.type === 'boolean' ? (
                     <div className="flex items-center gap-3">
                       <input
@@ -151,7 +179,9 @@ export default function ApiTestPage() {
           >
             <h2 className="text-lg font-bold mb-2">Résultat brut</h2>
             <pre className="bg-gray-100 rounded p-3 text-xs overflow-x-auto whitespace-pre-wrap break-all">
-              {typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)}
+              {typeof result === 'object'
+                ? JSON.stringify(result, null, 2)
+                : String(result)}
             </pre>
             <button
               onClick={() => setShowModal(false)}
@@ -164,4 +194,4 @@ export default function ApiTestPage() {
       )}
     </div>
   );
-} 
+}
