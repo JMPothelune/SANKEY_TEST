@@ -24,6 +24,42 @@
         return fetch(path).then(r => r.json());
       }
 
+      // Fonction pour récupérer les paramètres de l'URL
+      function getUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return {
+          id: urlParams.get('id'),
+          isLive: urlParams.get('isLive') === 'true',
+        };
+      }
+
+      // Fonction pour faire l'appel API directement depuis l'iframe
+      async function fetchLotFromAPI(lotId, isLive) {
+        try {
+          const response = await fetch('/api/bubble', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoint: 'lot',
+              params: {
+                id: lotId,
+                isLive: isLive,
+              },
+              method: 'POST',
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Erreur API: ${response.status}`);
+          }
+
+          return await response.json();
+        } catch (error) {
+          console.error('Erreur lors du chargement du lot:', error);
+          throw error;
+        }
+      }
+
       // Liste des fichiers de base à charger
       const baseFiles = {
         types: '../base_data/types.json',
@@ -36,27 +72,94 @@
         couleurs: '../base_data/couleurs.json',
       };
 
+      // Variable pour stocker les données du lot reçues via postMessage ou URL
+      let lotDataReceived = null;
+      let baseDataLoaded = false;
+
+      // Fonction pour initialiser l'UI quand toutes les données sont prêtes
+      function initializeUI() {
+        if (baseDataLoaded && lotDataReceived) {
+          console.log(
+            "Initialisation de l'UI avec les données:",
+            lotDataReceived
+          );
+          lancerLotUI(
+            document.getElementById('stackbar-container'),
+            lotDataReceived
+          );
+          window.onLotChange = lot => {
+            console.log('Lot modifié :', lot);
+            // Notifier le parent si on est dans une iframe
+            if (window.parent !== window) {
+              window.parent.postMessage(
+                {
+                  type: 'LOT_UPDATED',
+                  data: lot,
+                },
+                '*'
+              );
+            }
+          };
+        }
+      }
+
+      // Écouter les messages postMessage du parent
+      window.addEventListener('message', function (event) {
+        console.log("Message reçu dans l'iframe:", event.data);
+        if (event.data.type === 'LOT_DATA') {
+          console.log(
+            'Données de lot reçues via postMessage:',
+            event.data.data
+          );
+          lotDataReceived = event.data.data;
+          initializeUI();
+        }
+      });
+
       // Chargement de tous les fichiers de base
       Promise.all(
         Object.entries(baseFiles).map(([key, path]) =>
           fetchJSON(path).then(data => [key, data])
         )
-      ).then(entries => {
-        window.baseData = Object.fromEntries(entries);
-        // Charger le lot initial ensuite
-        fetch('../data/lot_type.json')
-          .then(res => res.json())
-          .then(lot => {
-            window.lotInitial = lot;
-            lancerLotUI(
-              document.getElementById('stackbar-container'),
-              window.lotInitial
+      )
+        .then(entries => {
+          window.baseData = Object.fromEntries(entries);
+          baseDataLoaded = true;
+
+          // Vérifier s'il y a des paramètres URL pour charger le lot directement
+          const urlParams = getUrlParams();
+          if (urlParams.id) {
+            console.log(
+              'Chargement du lot depuis les paramètres URL:',
+              urlParams
             );
-            window.onLotChange = lot => {
-              console.log('Lot modifié :', lot);
-            };
-          });
-      });
+            fetchLotFromAPI(urlParams.id, urlParams.isLive)
+              .then(data => {
+                lotDataReceived = data;
+                initializeUI();
+              })
+              .catch(error => {
+                console.error(
+                  "Erreur lors du chargement du lot depuis l'URL:",
+                  error
+                );
+                // On peut initialiser avec des données par défaut en cas d'erreur
+                initializeUI();
+              });
+          } else {
+            // Pas de paramètres URL, on attend les données via postMessage
+            initializeUI();
+          }
+        })
+        .catch(error => {
+          console.error(
+            'Erreur lors du chargement des données de base:',
+            error
+          );
+          // En cas d'erreur, on peut quand même initialiser avec des données par défaut
+          baseDataLoaded = true;
+          initializeUI();
+        });
     </script>
     <script src="lot.js"></script>
   </body>
