@@ -195,8 +195,7 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
   if (niveau === 0) {
     nom = lot.title || 'Lot';
     pct = 100;
-
-    let totalKg = lot.total || 0;
+    kg = lot.total || 0;
   } else {
     nom = cheminSelection[niveau - 1]?.valeur || '';
     // Calcul du pourcentage local
