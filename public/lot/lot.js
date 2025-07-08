@@ -137,10 +137,10 @@ function attacherHandlersHeader(titre, niveau) {
   const dims = getDimensionsFromNode(nodeParent ? nodeParent : lotCourant);
   if (btnAdd) {
     if (dims.length > 0) {
-      btnAdd.onclick = () => {
+      btnAdd.onclick = async () => {
         console.log('Bouton +', btnAdd, { niveau, dims });
         const dimActive = cheminSelection[niveau]?.dimension || dims[0];
-        afficherModalAjout(niveau, dimActive);
+        await afficherModalAjout(niveau, dimActive);
       };
     } else {
       btnAdd.style.display = 'none';
@@ -903,6 +903,8 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
                 }
               }
             }
+            // Notifier que le lot a été modifié
+            if (window.onLotChange) window.onLotChange(lotCourant);
           }
           afficherStackbars(lotCourant, cheminSelection);
         }
@@ -939,6 +941,8 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
           if (!isNaN(newPoids) && newPoids >= 0 && newPoids !== oldPoids) {
             lotCourant.total = newPoids;
             window.lotCourant = lotCourant;
+            // Notifier que le lot a été modifié
+            if (window.onLotChange) window.onLotChange(lotCourant);
           }
           afficherStackbars(lotCourant, cheminSelection);
         }
@@ -1110,12 +1114,56 @@ function chargerDonneesBase(dimension) {
   return {};
 }
 
+// Mapping entre les noms des dimensions et les endpoints API
+function getEndpointForDimension(dimension) {
+  const mapping = {
+    formats: 'formats',
+    matieres: 'matieres',
+    fibres: 'fibres',
+    types: 'types',
+    couleurs: 'couleurs',
+    qualite: 'qualites', // Le code utilise 'qualite' mais l'API attend 'qualites'
+    proprete: 'propretes', // Le code utilise 'proprete' mais l'API attend 'propretes'
+    perturbateurs: 'perturbateurs',
+  };
+  return mapping[dimension] || dimension;
+}
+
+// Fonction pour charger les données depuis l'API Bubble
+async function chargerDonneesBaseAPI(dimension) {
+  try {
+    const urlParams = getUrlParams(); // Utilise la fonction qui existe déjà
+    const endpoint = getEndpointForDimension(dimension);
+
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: endpoint, // Utilise le mapping pour avoir le bon endpoint
+        params: { isLive: urlParams.isLive },
+        method: 'GET',
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+    const data = await response.json();
+    console.log(
+      `Données chargées depuis l'API pour ${dimension} (endpoint: ${endpoint}):`,
+      data
+    );
+    return data;
+  } catch (error) {
+    console.error('Erreur lors du chargement des données:', error);
+    throw error;
+  }
+}
+
 // Fonction pour afficher la modal d'ajout
-function afficherModalAjout(niveau, dimension) {
+async function afficherModalAjout(niveau, dimension) {
   if (!dimension) return;
 
-  // Charger les données de base (synchrone)
-  const donneesBase = chargerDonneesBase(dimension);
+  // Charger les données depuis l'API
+  const donneesBase = await chargerDonneesBaseAPI(dimension);
 
   // Récupérer les éléments existants
   let nodeParent = lotCourant;
@@ -1223,6 +1271,37 @@ function afficherModalAjout(niveau, dimension) {
   const estPremierElement = elementsExistants.length === 0;
   if (estPremierElement) {
     pourcentageContainer.style.display = 'none';
+  }
+
+  // Fonction pour valider le formulaire et mettre à jour l'état du bouton
+  function updateButtonState() {
+    const elementSelectionne = selectElement.value;
+    let isValid = !!elementSelectionne; // Doit avoir un élément sélectionné
+
+    // Si ce n'est pas le premier élément, vérifier aussi le pourcentage
+    if (!estPremierElement) {
+      const pourcentage = parseFloat(inputPourcentage.value);
+      isValid =
+        isValid &&
+        !isNaN(pourcentage) &&
+        pourcentage >= 0 &&
+        pourcentage <= 100;
+    }
+
+    // Mettre à jour l'état du bouton
+    btnAjouter.disabled = !isValid;
+    btnAjouter.className = isValid
+      ? 'px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+      : 'px-4 py-2 text-sm font-medium text-gray-400 bg-gray-200 border border-transparent rounded-md cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500';
+  }
+
+  // Initialiser l'état du bouton (désactivé par défaut)
+  updateButtonState();
+
+  // Écouter les changements pour mettre à jour l'état du bouton
+  selectElement.addEventListener('change', updateButtonState);
+  if (!estPremierElement) {
+    inputPourcentage.addEventListener('input', updateButtonState);
   }
 
   function fermerModal() {
