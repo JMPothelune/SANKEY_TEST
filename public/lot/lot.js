@@ -1,6 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 console.log('lot.js chargé !');
 
+// --- Configuration des options de frequency ---
+const FREQUENCY_OPTIONS = {
+  recurrent: {
+    value: 'recurrent',
+    label: 'Récurrent',
+    icon: 'arrow-clockwise',
+  },
+  ponctuel: {
+    value: 'ponctuel',
+    label: 'Ponctuel',
+    icon: 'map-pin-simple-area',
+  },
+};
+
 // --- Nouvelle structure pour le chemin ---
 let cheminSelection = [];
 
@@ -19,6 +33,8 @@ function getIconSVG(name, className = '') {
     x: 'ph-x',
     'caret-left': 'ph-caret-left',
     'caret-right': 'ph-caret-right',
+    'arrow-clockwise': 'ph-arrow-clockwise',
+    'map-pin-simple-area': 'ph-map-pin-simple-area',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';
@@ -121,6 +137,93 @@ const CheminManager = {
   },
 };
 
+// Fonction pour afficher le dropdown de refresh
+function afficherDropdownRefresh(button) {
+  console.log('Fonction afficherDropdownRefresh appelée avec:', button);
+  // Supprimer les dropdowns existants
+  const existingDropdowns = document.querySelectorAll('.refresh-dropdown');
+  existingDropdowns.forEach(dropdown => dropdown.remove());
+
+  // Créer le dropdown
+  const dropdown = document.createElement('div');
+  dropdown.className =
+    'refresh-dropdown absolute z-50 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none';
+  dropdown.style.top = '100%';
+  dropdown.style.right = '0';
+
+  // Récupérer la valeur actuelle de frequency (par défaut 'recurrent' si null)
+  const currentFrequency = lotCourant.frequency || 'recurrent';
+
+  dropdown.innerHTML = `
+    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+      ${Object.values(FREQUENCY_OPTIONS)
+        .map(
+          option => `
+        <button class="group flex w-full items-center px-4 py-2 text-sm ${currentFrequency === option.value ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'} ${currentFrequency === option.value ? 'font-medium' : ''}" role="menuitem" data-action="${option.value}">
+          <i class="ph ph-${option.icon} mr-3 h-4 w-4 ${currentFrequency === option.value ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'}"></i>
+          ${option.label}
+          ${currentFrequency === option.value ? '<i class="ph ph-check ml-auto h-4 w-4 text-blue-500"></i>' : ''}
+        </button>
+      `
+        )
+        .join('')}
+    </div>
+  `;
+
+  // Positionner le dropdown
+  const buttonRect = button.getBoundingClientRect();
+  dropdown.style.position = 'fixed';
+  dropdown.style.top = `${buttonRect.bottom + 5}px`;
+  dropdown.style.left = `${buttonRect.right - 192}px`; // 192px = w-48 (largeur du dropdown)
+
+  // Ajouter le dropdown au body pour éviter les problèmes de positionnement
+  document.body.appendChild(dropdown);
+
+  // Gestionnaires d'événements
+  const options = dropdown.querySelectorAll('button[data-action]');
+  options.forEach(option => {
+    option.addEventListener('click', e => {
+      e.stopPropagation();
+      const action = option.getAttribute('data-action');
+      console.log('Action sélectionnée:', action);
+
+      // S'assurer que le champ frequency existe dans le lot
+      if (!lotCourant.hasOwnProperty('frequency')) {
+        lotCourant.frequency = null;
+      }
+
+      // Mettre à jour la frequency dans le lot
+      lotCourant.frequency = action;
+      window.lotCourant = lotCourant;
+
+      // Notifier que le lot a été modifié (pour activer le bouton sauvegarder)
+      if (window.onLotChange) window.onLotChange(lotCourant);
+
+      console.log('Frequency mise à jour:', action);
+      console.log('LotCourant après mise à jour:', lotCourant);
+
+      // Fermer le dropdown
+      dropdown.remove();
+
+      // Re-rendre l'interface pour afficher la nouvelle icône
+      afficherStackbars(lotCourant, cheminSelection);
+    });
+  });
+
+  // Fermer le dropdown si on clique ailleurs
+  const closeDropdown = e => {
+    if (!dropdown.contains(e.target) && !button.contains(e.target)) {
+      dropdown.remove();
+      document.removeEventListener('click', closeDropdown);
+    }
+  };
+
+  // Attendre un peu avant d'ajouter l'écouteur pour éviter la fermeture immédiate
+  setTimeout(() => {
+    document.addEventListener('click', closeDropdown);
+  }, 100);
+}
+
 // Fonction utilitaire pour attacher les handlers aux boutons d'un header
 function attacherHandlersHeader(titre, niveau) {
   const btnAdd = titre.querySelector('button[aria-label="Ajouter"]');
@@ -152,6 +255,18 @@ function attacherHandlersHeader(titre, niveau) {
   if (btnDelete) {
     btnDelete.onclick = () => {
       supprimerNoeudEtRepartir(niveau);
+    };
+  }
+
+  // Bouton Refresh (niveau 0 uniquement)
+  const btnRefresh = titre.querySelector('.stackbar-refresh');
+  console.log('Bouton refresh trouvé:', btnRefresh, 'niveau:', niveau);
+  if (btnRefresh && niveau === 0) {
+    console.log('Attachement du handler au bouton refresh');
+    btnRefresh.onclick = e => {
+      console.log('Clic sur le bouton refresh détecté');
+      e.stopPropagation();
+      afficherDropdownRefresh(btnRefresh);
     };
   }
 
@@ -435,6 +550,7 @@ function initLotUI(container, lotInitial) {
   window.lotCourant = lotCourant;
   cheminSelection = [];
   console.log('lotCourant après init', window.lotCourant);
+  console.log('Frequency après init:', lotCourant.frequency);
   afficherStackbars(lotCourant, cheminSelection);
 }
 
@@ -808,6 +924,25 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         <span class="border-l border-gray-300 px-4 h-full font-bold text-base flex items-center stackbar-title-nom" tabindex="0" style="cursor:pointer;">${nom}</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center stackbar-title-poids" tabindex="0" style="cursor:pointer;">${kg ? `${kg.toFixed(1)} kg` : ''}</span>
+        ${
+          niveau === 0
+            ? (() => {
+                const currentFrequency = lotCourant.frequency || 'recurrent';
+                const iconName =
+                  FREQUENCY_OPTIONS[currentFrequency]?.icon ||
+                  'arrow-clockwise';
+                console.log(
+                  'Création bouton frequency - lotCourant:',
+                  lotCourant,
+                  'currentFrequency:',
+                  currentFrequency,
+                  'iconName:',
+                  iconName
+                );
+                return `<button class="border-l border-gray-300 px-3 h-full hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex items-center justify-center stackbar-refresh" aria-label="Actualiser">${getIconSVG(iconName, 'w-4 h-4')}</button>`;
+              })()
+            : ''
+        }
       </div>
       <div class="flex-1 flex justify-center items-center">
         ${btnGroupDims}
