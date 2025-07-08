@@ -1449,7 +1449,7 @@ async function afficherModalAjout(niveau, dimension) {
     if (e.target === backdrop) fermerModal();
   };
 
-  btnAjouter.onclick = () => {
+  btnAjouter.onclick = async () => {
     const elementSelectionne = selectElement.value;
     const pourcentage = estPremierElement
       ? 100
@@ -1461,20 +1461,78 @@ async function afficherModalAjout(niveau, dimension) {
         ? !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100
         : true)
     ) {
-      ajouterElementEtRepartir(
-        niveau,
-        dimension,
-        elementSelectionne,
-        pourcentage,
-        donneesBase[elementSelectionne]
-      );
-      fermerModal();
-      afficherStackbars(lotCourant, cheminSelection);
+      // Récupérer l'objet complet depuis Bubble
+      const elementComplet = await recupererElementComplet(elementSelectionne);
+      if (elementComplet) {
+        ajouterElementEtRepartir(
+          niveau,
+          dimension,
+          elementSelectionne,
+          pourcentage,
+          elementComplet
+        );
+        fermerModal();
+        afficherStackbars(lotCourant, cheminSelection);
+      } else {
+        console.error(
+          "Impossible de récupérer l'élément complet depuis Bubble"
+        );
+        // Fallback : utiliser les données de base
+        ajouterElementEtRepartir(
+          niveau,
+          dimension,
+          elementSelectionne,
+          pourcentage,
+          donneesBase[elementSelectionne]
+        );
+        fermerModal();
+        afficherStackbars(lotCourant, cheminSelection);
+      }
     }
   };
 
   // Focus sur le select
   selectElement.focus();
+}
+
+// Fonction pour récupérer l'objet complet depuis Bubble
+async function recupererElementComplet(bubbleId) {
+  try {
+    console.log("Récupération de l'élément complet pour bubble_id:", bubbleId);
+
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        endpoint: 'item',
+        method: 'POST',
+        params: {
+          id: bubbleId,
+          isLive: window.isLive || false,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(
+        "Erreur lors de la récupération de l'élément:",
+        response.status
+      );
+      return null;
+    }
+
+    const data = await response.json();
+    console.log('Élément complet récupéré:', data);
+    return data;
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération de l'élément complet:",
+      error
+    );
+    return null;
+  }
 }
 
 // Fonction pour ajouter un élément et répartir les pourcentages

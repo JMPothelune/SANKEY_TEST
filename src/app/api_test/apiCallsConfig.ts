@@ -106,7 +106,7 @@ export const bubbleApiCalls = [
   {
     name: 'Get 1 Lib item',
     endpoint: 'item?id={id}',
-    method: 'GET',
+    method: 'POST',
     params: [
       {
         name: 'isLive',
