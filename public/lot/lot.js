@@ -664,6 +664,7 @@ function renderStackbar(
           document.body.style.userSelect = '';
           updateLotCourant();
           afficherStackbars(lotCourant, cheminSelection);
+          publierEtatLot(); // Ajouté : notifie la modification après drag
         }
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);

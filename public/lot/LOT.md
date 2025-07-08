@@ -1,6 +1,7 @@
 # Documentation – Module Lot (stackbars dynamiques)
 
 ## Présentation
+
 Ce module permet de visualiser, éditer et naviguer dynamiquement dans la structure d’un lot textile multi-dimensionnel (format, type, matière, fibre, etc.) via une interface de stackbars interactive, inspirée d’un Sankey, mais adaptée à la logique de lots.
 
 L’UI est totalement pilotée par la structure réelle du JSON du lot : chaque niveau, chaque dimension et chaque valeur sont lus et affichés dynamiquement.
@@ -12,6 +13,7 @@ L’UI est totalement pilotée par la structure réelle du JSON du lot : chaqu
 Un lot est un objet arborescent, chaque niveau représentant une dimension (ex : formats, types, matières, fibres…).
 
 Exemple simplifié :
+
 ```json
 {
   "title": "Lot de vêtements",
@@ -40,6 +42,7 @@ Exemple simplifié :
 - Le champ `total` (au niveau racine) indique le poids total (kg).
 
 **Remarques** :
+
 - Les clés de dimension peuvent être renommées (ex : "format" → "formats") : l’UI s’adapte dynamiquement.
 - Les segments spéciaux ("autre", "inconnu", "autres compositions") sont stylés différemment (fond pointillé, bordure grise).
 
@@ -54,6 +57,7 @@ Exemple simplifié :
 - Le module lit toujours les données de base via `window.baseData` pour garantir la compatibilité local/Bubble.
 
 **Exemple d’initialisation dans `index.html` :**
+
 ```js
 const baseFiles = {
   types: '../base_data/types.json',
@@ -63,11 +67,13 @@ const baseFiles = {
   qualite: '../base_data/qualite.json',
   proprete: '../base_data/proprete.json',
   perturbateurs: '../base_data/perturbateurs.json',
-  couleurs: '../base_data/couleurs.json'
+  couleurs: '../base_data/couleurs.json',
 };
 Promise.all(
   Object.entries(baseFiles).map(([key, path]) =>
-    fetch(path).then(r => r.json()).then(data => [key, data])
+    fetch(path)
+      .then(r => r.json())
+      .then(data => [key, data])
   )
 ).then(entries => {
   window.baseData = Object.fromEntries(entries);
@@ -82,6 +88,7 @@ Promise.all(
 ## Fonctionnement de l’UI et logique d’ajout
 
 ### Navigation et interaction
+
 - La navigation se fait via un chemin (`cheminSelection`) : tableau d’objets `{ dimension, valeur }`.
 - À chaque niveau, l’UI lit dynamiquement les dimensions accessibles à partir du nœud courant.
 - Le button group central affiche toutes les dimensions accessibles, la dimension active étant en "selected".
@@ -91,6 +98,7 @@ Promise.all(
 - Les modifications sont répercutées en temps réel dans le JSON du lot.
 
 ### Ajout d’un élément (popup)
+
 - Lorsqu’on clique sur le bouton +, une popup s’ouvre pour ajouter un élément à la dimension courante.
 - Le champ texte a été remplacé par un dropdown listant les éléments disponibles dans la donnée de base correspondante (ex : tous les types si on est sur la dimension "types").
 - Les éléments déjà présents dans l’objet courant sont exclus de la liste.
@@ -101,6 +109,7 @@ Promise.all(
 - Si d’autres éléments existent déjà, leurs pourcentages sont réajustés pour que le total fasse 100 %.
 
 ### Suppression et renommage
+
 - La suppression d’un segment réajuste automatiquement les pourcentages restants.
 - Le renommage d’un segment met à jour la clé dans l’objet parent et dans le chemin de navigation.
 
@@ -146,4 +155,49 @@ lancerLotUI(document.getElementById('stackbar-container'), window.lotInitial);
 
 Pour toute évolution de la logique ou de l’UI, adapter ce fichier en conséquence.
 
+---
 
+## Intégration dans Bubble (iframe)
+
+Pour intégrer le module Lot dans Bubble, il suffit d'utiliser une balise `<iframe>` pointant vers l'URL suivante :
+
+```html
+<iframe
+  id="lot-iframe"
+  src="https://valoramix-api.vercel.app/lot/index.html?id=VOTRE_ID_LOT&isLive=true"
+  style="width: 100%; height: 600px; border: none;"
+  allow="clipboard-write"
+></iframe>
+```
+
+- Remplacez `VOTRE_ID_LOT` par l'identifiant du lot à charger.
+- Le paramètre `isLive` peut être `true` ou `false` selon l'environnement.
+- Vous pouvez ajouter d'autres paramètres à l'URL si besoin (ex : `&width=800px`).
+
+**Attention :**
+
+- L'URL doit pointer vers `/lot/index.html` (et non juste `/lot/`).
+- Si vous modifiez la structure du projet ou déployez sur un autre domaine, adaptez l'URL en conséquence.
+
+### Communication avec Bubble
+
+- L'iframe envoie des messages à la page par `postMessage` (ex : `LOT_UPDATED`, `IFRAME_HEIGHT`).
+- Vous pouvez écouter ces messages dans Bubble pour synchroniser les données ou ajuster la hauteur automatiquement.
+
+**Exemple de gestion des messages :**
+
+```js
+window.addEventListener('message', function (event) {
+  if (event.data.type === 'LOT_UPDATED') {
+    // Le lot a été modifié dans l'iframe
+    console.log('Lot modifié:', event.data.data);
+    // Mettre à jour vos données Bubble ici
+  }
+  if (event.data.type === 'IFRAME_HEIGHT') {
+    document.getElementById('lot-iframe').style.height =
+      event.data.height + 'px';
+  }
+});
+```
+
+---

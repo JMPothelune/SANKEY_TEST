@@ -1,7 +1,7 @@
 'use client';
 import { AppNavbar } from '@/components/ui/AppNavbar';
 import { lots } from '@/data/lots';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Select,
   SelectTrigger,
@@ -13,8 +13,12 @@ import {
 export default function LotsPage() {
   const [selectedLotIdx, setSelectedLotIdx] = useState(0);
   const [iframeHeight, setIframeHeight] = useState<number>(400);
+  const [isEditable, setIsEditable] = useState(true);
   const lot = lots[selectedLotIdx];
-  const iframeSrc = `/lot/index.html?id=${encodeURIComponent(lot.bubbleId)}&isLive=${lot.isLive}`;
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Construit dynamiquement l'URL de l'iframe avec isEditable
+  const iframeSrc = `/lot/index.html?id=${encodeURIComponent(lot.bubbleId)}&isLive=${lot.isLive}&isEditable=${isEditable}`;
 
   useEffect(() => {
     function handleResizeMessage(event: MessageEvent) {
@@ -50,10 +54,24 @@ export default function LotsPage() {
             ))}
           </SelectContent>
         </Select>
+        <label
+          htmlFor="isEditable-checkbox"
+          className="flex items-center ml-6 gap-2 text-base font-normal"
+        >
+          <input
+            id="isEditable-checkbox"
+            type="checkbox"
+            checked={isEditable}
+            onChange={e => setIsEditable(e.target.checked)}
+            className="accent-blue-600 w-5 h-5"
+          />
+          Éditable
+        </label>
       </div>
       <div className="flex-1 min-h-0 p-6 bg-gray-50">
         <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-sm border">
           <iframe
+            ref={iframeRef}
             src={iframeSrc}
             className="w-full h-full border-0 rounded-lg"
             style={{ minHeight: 400, height: iframeHeight }}

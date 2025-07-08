@@ -22,8 +22,30 @@
     </style>
   </head>
   <body>
-    <div class="lot-container">
+    <div class="lot-container" style="position: relative">
       <div id="stackbar-container"></div>
+      <div
+        style="display: flex; justify-content: flex-end; display: none"
+        id="save-btn-container"
+      >
+        <button
+          id="save-lot-btn"
+          disabled
+          style="
+            padding: 8px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+          "
+        >
+          Enregistrer
+        </button>
+      </div>
     </div>
     <script>
       // Fonction utilitaire pour charger un JSON
@@ -93,6 +115,30 @@
       let lotDataReceived = null;
       let baseDataLoaded = false;
 
+      // Définir window.onLotChange UNE SEULE FOIS, tout en haut
+      function setLotModifie(modifie) {
+        const saveBtn = document.getElementById('save-lot-btn');
+        window._lotModifie = !!modifie;
+        if (saveBtn) {
+          saveBtn.disabled = !modifie;
+          saveBtn.style.opacity = modifie ? '1' : '0.5';
+        }
+      }
+      window.onLotChange = lot => {
+        console.log('Lot modifié :', lot);
+        if (window.parent !== window) {
+          window.parent.postMessage(
+            {
+              type: 'LOT_UPDATED',
+              data: lot,
+            },
+            '*'
+          );
+        }
+        setLotModifie(true);
+      };
+      window._lotModifie = false;
+
       // Fonction pour initialiser l'UI quand toutes les données sont prêtes
       function initializeUI() {
         if (baseDataLoaded && lotDataReceived) {
@@ -105,19 +151,9 @@
             document.getElementById('stackbar-container'),
             lotDataReceived
           );
-          window.onLotChange = lot => {
-            console.log('Lot modifié :', lot);
-            // Notifier le parent si on est dans une iframe
-            if (window.parent !== window) {
-              window.parent.postMessage(
-                {
-                  type: 'LOT_UPDATED',
-                  data: lot,
-                },
-                '*'
-              );
-            }
-          };
+          // Affiche le bouton Enregistrer
+          var saveBtnContainer = document.getElementById('save-btn-container');
+          if (saveBtnContainer) saveBtnContainer.style.display = 'flex';
         }
       }
 
@@ -178,6 +214,30 @@
           baseDataLoaded = true;
           initializeUI();
         });
+
+      // Ajout du bouton Enregistrer avec gestion d'état
+      document.addEventListener('DOMContentLoaded', function () {
+        const saveBtn = document.getElementById('save-lot-btn');
+        if (saveBtn) {
+          setLotModifie(false);
+          saveBtn.addEventListener('click', function () {
+            if (window.lotJson && window._lotModifie) {
+              window.parent.postMessage(
+                {
+                  type: 'LOT_SAVE_REQUEST',
+                  data: window.lotJson,
+                },
+                '*'
+              );
+              saveBtn.textContent = 'Enregistré !';
+              setLotModifie(false);
+              setTimeout(() => {
+                saveBtn.textContent = 'Enregistrer';
+              }, 1500);
+            }
+          });
+        }
+      });
 
       // Fonction pour envoyer la hauteur au parent
       function sendHeightToParent() {
