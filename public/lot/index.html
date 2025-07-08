@@ -60,6 +60,7 @@
           id: urlParams.get('id'),
           isLive: urlParams.get('isLive') === 'true',
           width: urlParams.get('width') || '100%',
+          isEditable: urlParams.get('isEditable') !== 'false', // true par défaut
         };
       }
 
@@ -71,6 +72,7 @@
           urlParams.width
         );
       }
+      window.isEditable = urlParams.isEditable;
 
       // Fonction pour faire l'appel API directement depuis l'iframe
       async function fetchLotFromAPI(lotId, isLive) {
@@ -151,9 +153,11 @@
             document.getElementById('stackbar-container'),
             lotDataReceived
           );
-          // Affiche le bouton Enregistrer
+          // Affiche le bouton Enregistrer seulement si isEditable
           var saveBtnContainer = document.getElementById('save-btn-container');
-          if (saveBtnContainer) saveBtnContainer.style.display = 'flex';
+          if (saveBtnContainer)
+            saveBtnContainer.style.display =
+              window.isEditable === false ? 'none' : 'flex';
         }
       }
 

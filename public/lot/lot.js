@@ -607,69 +607,68 @@ function renderStackbar(
       afficherStackbars(lotCourant, cheminSelection);
     });
     stackbar.appendChild(segment);
-    // Handle (inchangé)
+    // Handle (drag)
     if (i < repartitionState.length - 1) {
-      const handle = document.createElement('button');
-      handle.type = 'button';
-      handle.className =
-        'stackbar-handle-btn absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-gray-300 rounded-full shadow flex items-center justify-center hover:bg-gray-50 active:scale-95 transition z-50 cursor-ew-resize';
-      handle.style.zIndex = 50;
-      handle.style.left = `calc(${cumulatedPercent + repartitionState[i].percent}% - 14px)`;
-      handle.style.pointerEvents = 'auto';
-      handle.innerHTML = `
-        <svg width="18" height="18" fill="none" viewBox="0 0 18 18">
-          <path d="M7 5l-3 4 3 4" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M11 5l3 4-3 4" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      `;
-      // Drag logic
-      let startX = 0;
-      let startPctL = 0;
-      let startPctR = 0;
-      handle.addEventListener('mousedown', e => {
-        e.preventDefault();
-        startX = e.clientX;
-        startPctL = repartitionState[i].percent;
-        startPctR = repartitionState[i + 1].percent;
-        document.body.style.userSelect = 'none';
-        function onMove(ev) {
-          const dx = ev.clientX - startX;
-          const totalWidth = stackbar.offsetWidth;
-          const dPct = (dx / totalWidth) * 100;
-          let newPctL = clampPercent(
-            startPctL + dPct,
-            1,
-            startPctL + startPctR - 1
-          );
-          let newPctR = clampPercent(
-            startPctR - dPct,
-            1,
-            startPctL + startPctR - 1
-          );
-          // Correction pour ne pas dépasser le total
-          if (newPctL + newPctR > startPctL + startPctR) {
-            const excess = newPctL + newPctR - (startPctL + startPctR);
-            newPctL -= excess / 2;
-            newPctR -= excess / 2;
+      if (window.isEditable !== false) {
+        const handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className =
+          'stackbar-handle-btn absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white border border-gray-300 rounded-full shadow flex items-center justify-center hover:bg-gray-50 active:scale-95 transition z-50 cursor-ew-resize';
+        handle.style.zIndex = 50;
+        handle.style.left = `calc(${cumulatedPercent + repartitionState[i].percent}% - 14px)`;
+        handle.style.pointerEvents = 'auto';
+        handle.innerHTML = `
+          <svg width="18" height="18" fill="none" viewBox="0 0 18 18">
+            <path d="M7 5l-3 4 3 4" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11 5l3 4-3 4" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        `;
+        // Drag logic
+        let startX = 0;
+        let startPctL = 0;
+        let startPctR = 0;
+        handle.addEventListener('mousedown', e => {
+          e.preventDefault();
+          startX = e.clientX;
+          startPctL = repartitionState[i].percent;
+          startPctR = repartitionState[i + 1].percent;
+          document.body.style.userSelect = 'none';
+          function onMove(ev) {
+            const dx = ev.clientX - startX;
+            const totalWidth = stackbar.offsetWidth;
+            const dPct = (dx / totalWidth) * 100;
+            let newPctL = clampPercent(
+              startPctL + dPct,
+              1,
+              startPctL + startPctR - 1
+            );
+            let newPctR = clampPercent(
+              startPctR - dPct,
+              1,
+              startPctL + startPctR - 1
+            );
+            if (newPctL + newPctR !== startPctL + startPctR) {
+              // Correction arrondi
+              newPctR = startPctL + startPctR - newPctL;
+            }
+            repartitionState[i].percent = newPctL;
+            repartitionState[i + 1].percent = newPctR;
+            updateSegments();
           }
-          repartitionState[i].percent = newPctL;
-          repartitionState[i + 1].percent = newPctR;
-          updateSegments();
-          // Met à jour la position du handle pendant le drag
-          handle.style.left = `calc(${cumulatedPercent + repartitionState[i].percent}% - 14px)`;
-        }
-        function onUp() {
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          document.body.style.userSelect = '';
-          updateLotCourant();
-          afficherStackbars(lotCourant, cheminSelection);
-          publierEtatLot(); // Ajouté : notifie la modification après drag
-        }
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-      stackbar.appendChild(handle);
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.userSelect = '';
+            updateLotCourant();
+            afficherStackbars(lotCourant, cheminSelection);
+            publierEtatLot();
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
+        stackbar.appendChild(handle);
+      }
+      // Si non éditable, on ne met pas de handle
     }
     cumulatedPercent += item.percent;
   }
@@ -785,7 +784,6 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
   }
 
   // Détermination du label de dimension (niveau+1)
-
   let labelText = '';
   if (niveau + 1 === 0) labelText = 'format';
   else if (niveau + 1 === 1) labelText = 'types';
@@ -811,10 +809,10 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center">${pct.toFixed(1)}%</span>
         <span class="border-l border-gray-300 px-3 h-full text-sm flex items-center stackbar-title-poids" tabindex="0" style="cursor:pointer;">${kg ? `${kg.toFixed(1)} kg` : ''}</span>
       </div>
-      <div class="flex-1 flex justify-center">
+      <div class="flex-1 flex justify-center items-center">
         ${btnGroupDims}
       </div>
-      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10">
+      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm items-center h-10" style="${window.isEditable === false ? 'display:none' : ''}">
         <button class="h-full px-3 py-2 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 rounded-l-lg ${niveau > 0 ? 'border-r border-gray-300' : ''}" aria-label="Ajouter">
           ${getIconSVG('plus', 'w-4 h-4')}
         </button>
@@ -838,6 +836,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
     const spanNom = titre.querySelector('.stackbar-title-nom');
     if (spanNom) {
       spanNom.addEventListener('click', () => {
+        if (window.isEditable === false) return; // Empêche édition si non éditable
         const oldName = spanNom.textContent;
         const input = document.createElement('input');
         input.type = 'text';
@@ -920,6 +919,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
     const spanPoids = titre.querySelector('.stackbar-title-poids');
     if (spanPoids && niveau === 0) {
       spanPoids.addEventListener('click', () => {
+        if (window.isEditable === false) return; // Empêche édition si non éditable
         const oldPoids = lotCourant.total || 0;
         const input = document.createElement('input');
         input.type = 'number';
