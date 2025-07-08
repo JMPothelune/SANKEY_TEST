@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     // Gestion de l'environnement live/dev
-    const isLive = params?.isLive !== undefined ? params.isLive : true;
+    const isLive = params?.isLive === true || params?.isLive === 'true';
     let baseUrl = 'https://app.valoramix.com/';
     if (!isLive) {
       baseUrl += 'version-test/';
@@ -38,12 +38,18 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
     };
-    if (method !== 'GET' && paramsSansIsLive) {
+    // Envoie le body pour les requêtes POST avec des paramètres
+    if (
+      method !== 'GET' &&
+      paramsSansIsLive &&
+      Object.keys(paramsSansIsLive).length > 0
+    ) {
       fetchOptions.body = JSON.stringify(paramsSansIsLive);
     }
 
     console.log('API Bubble - URL:', url);
     console.log('API Bubble - Options:', fetchOptions);
+    console.log('API Bubble - Body envoyé:', fetchOptions.body);
 
     const response = await fetch(url, fetchOptions);
     const text = await response.text();

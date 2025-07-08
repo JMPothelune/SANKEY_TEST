@@ -224,20 +224,45 @@
         const saveBtn = document.getElementById('save-lot-btn');
         if (saveBtn) {
           setLotModifie(false);
-          saveBtn.addEventListener('click', function () {
-            if (window.lotJson && window._lotModifie) {
-              window.parent.postMessage(
-                {
-                  type: 'LOT_SAVE_REQUEST',
-                  data: window.lotJson,
-                },
-                '*'
-              );
-              saveBtn.textContent = 'Enregistré !';
-              setLotModifie(false);
-              setTimeout(() => {
-                saveBtn.textContent = 'Enregistrer';
-              }, 1500);
+          saveBtn.addEventListener('click', async function () {
+            if (window.lotCourant && window._lotModifie) {
+              saveBtn.disabled = true;
+              saveBtn.textContent = 'Enregistrement...';
+              saveBtn.style.opacity = '0.5';
+              try {
+                const urlParams = getUrlParams();
+                const response = await fetch('/api/bubble', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    endpoint: 'save',
+                    params: {
+                      lot_id: urlParams.id,
+                      value: JSON.stringify(window.lotCourant),
+                      isLive: urlParams.isLive,
+                    },
+                    method: 'POST',
+                  }),
+                });
+                if (!response.ok)
+                  throw new Error('Erreur API: ' + response.status);
+                saveBtn.textContent = 'Enregistré !';
+                setLotModifie(false);
+                setTimeout(() => {
+                  saveBtn.textContent = 'Enregistrer';
+                }, 1500);
+              } catch (e) {
+                saveBtn.textContent = 'Erreur';
+                setTimeout(() => {
+                  saveBtn.textContent = 'Enregistrer';
+                }, 2000);
+                alert(
+                  'Erreur lors de la sauvegarde du lot : ' + (e.message || e)
+                );
+              } finally {
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = window._lotModifie ? '1' : '0.5';
+              }
             }
           });
         }
