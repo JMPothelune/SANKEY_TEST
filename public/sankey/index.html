@@ -16,67 +16,60 @@
   </head>
   <body>
     <div class="container">
-      <div class="controls flex flex-wrap gap-4 items-center mb-4">
-        <select
-          id="dimension-selector"
-          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-        >
-          <option value="format" selected>Formats</option>
-          <option value="format_type">- Types</option>
-          <option value="matiere">-- Matière</option>
-          <option value="fibres">--- Fibres</option>
-          <option value="couleur">-- Couleur</option>
-          <option value="perturbateurs">-- Perturbateurs</option>
-          <option value="qualite">Qualité</option>
-          <option value="proprete">Propreté</option>
-        </select>
-        <select
-          id="scenario-selector"
-          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-        ></select>
-      </div>
       <div id="sankey-container"></div>
     </div>
     <script>
       console.log('[HTML] script chargé');
-      document.addEventListener('sankeyScenarioReady', function () {
-        console.log('[HTML] sankeyScenarioReady reçu');
-      });
+
+      // Fonction utilitaire pour lire les paramètres d'URL
+      function getUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return {
+          dimension: urlParams.get('dimension') || 'format',
+          scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
+          lotId: urlParams.get('lotId') || '',
+          isEditable: urlParams.get('isEditable') === 'yes',
+        };
+      }
+
+      // Fonction pour lancer le Sankey avec les paramètres d'URL
+      function launchSankeyFromUrl(lot) {
+        const params = getUrlParams();
+        const scenarioIdx = params.scenarioIdx;
+        const scenario = window.scenarios[scenarioIdx]?.scenario;
+        const dimension = params.dimension;
+
+        console.log('[HTML] Lancement Sankey avec:', {
+          lot,
+          scenario,
+          dimension,
+        });
+
+        if (typeof runSankey === 'function' && lot && scenario) {
+          runSankey({
+            lot,
+            scenario,
+            containerId: 'sankey-container',
+            dimension,
+          });
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', function () {
         console.log('[HTML] DOMContentLoaded');
-        function launchSankeyFromSelectors(lot) {
-          const scenarioIdx =
-            document.getElementById('scenario-selector').value;
-          const scenario = window.scenarios[scenarioIdx]?.scenario;
-          const dimension = document.getElementById('dimension-selector').value;
-          if (typeof runSankey === 'function' && lot && scenario) {
-            runSankey({
-              lot,
-              scenario,
-              containerId: 'sankey-container',
-              dimension,
-            });
-          }
-        }
 
         // Charger le lot_type.json
         fetch('../data/lot_type.json')
           .then(r => r.json())
           .then(lot => {
             window.lotType = lot; // pour compatibilité temporaire
-            setTimeout(() => {
-              launchSankeyFromSelectors(lot);
-              document
-                .getElementById('scenario-selector')
-                .addEventListener('change', () =>
-                  launchSankeyFromSelectors(lot)
-                );
-              document
-                .getElementById('dimension-selector')
-                .addEventListener('change', () =>
-                  launchSankeyFromSelectors(lot)
-                );
-            }, 0);
+            console.log('[HTML] Lot chargé:', lot);
+
+            // Lancer le Sankey avec les paramètres d'URL
+            launchSankeyFromUrl(lot);
+          })
+          .catch(error => {
+            console.error('[HTML] Erreur lors du chargement du lot:', error);
           });
 
         // Fonction utilitaire pour charger un JSON
@@ -101,10 +94,17 @@
           Object.entries(baseFiles).map(([key, path]) =>
             fetchJSON(path).then(data => [key, data])
           )
-        ).then(entries => {
-          window.baseData = Object.fromEntries(entries);
-          // ... reste du code ...
-        });
+        )
+          .then(entries => {
+            window.baseData = Object.fromEntries(entries);
+            console.log('[HTML] Base data chargée:', window.baseData);
+          })
+          .catch(error => {
+            console.error(
+              '[HTML] Erreur lors du chargement des données de base:',
+              error
+            );
+          });
       });
     </script>
     <script src="../data/processes.js"></script>
