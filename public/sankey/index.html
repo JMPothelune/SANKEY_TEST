@@ -28,6 +28,7 @@
           dimension: urlParams.get('dimension') || 'format',
           scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
           lotId: urlParams.get('lotId') || '',
+          isLive: urlParams.get('isLive') === 'true',
           isEditable: urlParams.get('isEditable') === 'yes',
         };
       }
@@ -76,25 +77,75 @@
       document.addEventListener('DOMContentLoaded', function () {
         console.log('[HTML] DOMContentLoaded');
 
-        // Charger le lot_type.json
-        fetch('../data/lot_type.json')
-          .then(r => r.json())
-          .then(lot => {
-            window.lotType = lot; // pour compatibilité temporaire
-            console.log('[HTML] Lot chargé:', lot);
+        const params = getUrlParams();
 
-            // Attendre que tous les scripts soient chargés avant de lancer le Sankey
-            setTimeout(() => {
-              console.log(
-                '[HTML] Vérification des scénarios:',
-                window.scenarios
-              );
-              launchSankeyFromUrl(lot);
-            }, 100);
+        // Si on a un lotId, charger les données depuis l'API Bubble
+        if (params.lotId) {
+          console.log("[HTML] Chargement du lot depuis l'API Bubble:", params);
+
+          // Appel API Bubble comme sur la page /lots
+          fetch('/api/bubble', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoint: 'lot',
+              params: {
+                id: params.lotId,
+                isLive: params.isLive,
+              },
+              method: 'POST',
+            }),
           })
-          .catch(error => {
-            console.error('[HTML] Erreur lors du chargement du lot:', error);
-          });
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`Erreur API: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then(lot => {
+              console.log('[HTML] Lot chargé depuis API Bubble:', lot);
+              window.lotType = lot; // pour compatibilité temporaire
+
+              // Attendre que tous les scripts soient chargés avant de lancer le Sankey
+              setTimeout(() => {
+                console.log(
+                  '[HTML] Vérification des scénarios:',
+                  window.scenarios
+                );
+                launchSankeyFromUrl(lot);
+              }, 100);
+            })
+            .catch(error => {
+              console.error(
+                '[HTML] Erreur lors du chargement du lot depuis API:',
+                error
+              );
+              // Fallback vers le lot_type.json si l'API échoue
+              fetch('../data/lot_type.json')
+                .then(r => r.json())
+                .then(lot => {
+                  window.lotType = lot;
+                  console.log('[HTML] Fallback vers lot_type.json:', lot);
+                  setTimeout(() => {
+                    launchSankeyFromUrl(lot);
+                  }, 100);
+                });
+            });
+        } else {
+          // Fallback vers le lot_type.json si pas de lotId
+          fetch('../data/lot_type.json')
+            .then(r => r.json())
+            .then(lot => {
+              window.lotType = lot;
+              console.log('[HTML] Lot chargé depuis lot_type.json:', lot);
+              setTimeout(() => {
+                launchSankeyFromUrl(lot);
+              }, 100);
+            })
+            .catch(error => {
+              console.error('[HTML] Erreur lors du chargement du lot:', error);
+            });
+        }
 
         // Fonction utilitaire pour charger un JSON
         function fetchJSON(path) {

@@ -34,7 +34,9 @@ export default function SankeyPage() {
   const [dimension, setDimension] = useState('format');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [scenarioIdx, setScenarioIdx] = useState(0);
-  const [selectedLot, setSelectedLot] = useState<(typeof lots)[0] | null>(null);
+  const [selectedLot, setSelectedLot] = useState<(typeof lots)[0] | null>(
+    lots[0]
+  ); // Premier lot par défaut
   const [isEditable, setIsEditable] = useState(false);
   const [iframeKey, setIframeKey] = useState(0); // Clé pour forcer le rechargement
 
@@ -66,7 +68,7 @@ export default function SankeyPage() {
   }, [dimension, scenarioIdx, selectedLot, isEditable]);
 
   // Construire l'URL de l'iframe avec tous les paramètres
-  const iframeSrc = `/sankey/index.html?dimension=${encodeURIComponent(dimension)}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}`;
+  const iframeSrc = `/sankey/index.html?dimension=${encodeURIComponent(dimension)}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
 
   // Log pour debug
   console.log('URL iframe:', iframeSrc, 'scenarioIdx:', scenarioIdx);
