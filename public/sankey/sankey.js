@@ -444,6 +444,9 @@ function getIconSVG(name, className = '') {
     'caret-right': 'ph-caret-right',
     'arrows-split': 'ph-arrows-split',
     'check-circle': 'ph-check-circle',
+    'pencil-simple': 'ph-pencil-simple',
+    'arrow-up': 'ph-arrow-up',
+    'arrow-down': 'ph-arrow-down',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';
@@ -1340,10 +1343,11 @@ function updateSankey(dimension) {
           // Créer le menu dropdown
           dropdownMenu = document.createElement('div');
           dropdownMenu.className =
-            'absolute z-50 mt-2 right-0 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1';
-          dropdownMenu.style.minWidth = '10rem';
-          dropdownMenu.style.width = stackbarWidth + 'px';
+            'absolute z-50 mt-2 right-0 bg-white rounded-xl shadow-xl py-2 flex flex-col gap-1 border border-gray-200'; // min-w supprimé
+          dropdownMenu.style.width = '170px'; // Largeur fixe, lisible, style shadcn/ui
           dropdownMenu.style.position = 'absolute';
+          dropdownMenu.style.padding = '0';
+          dropdownMenu.style.overflow = 'hidden'; // Empêche tout débordement
           const rect = div.getBoundingClientRect();
           dropdownMenu.style.top = rect.bottom + window.scrollY + 'px';
           dropdownMenu.style.left = rect.right - stackbarWidth - 28 + 'px';
@@ -1352,11 +1356,59 @@ function updateSankey(dimension) {
           const isLast =
             outgoingLinks.indexOf(link) === outgoingLinks.length - 1;
           dropdownMenu.innerHTML = `
-                  <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit">Modifier</button>
-                  <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}>Monter</button>
-                  <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}>Descendre</button>
-                  <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete">Effacer</button>
-                `;
+            <button class="dropdown-btn" data-action="edit">
+              <i class="ph ph-pencil-simple" style="font-size:1.1em;display:flex;align-items:center;"></i> Modifier
+            </button>
+            <button class="dropdown-btn" data-action="up" ${isFirst ? 'disabled' : ''}>
+              <i class="ph ph-arrow-up" style="font-size:1.1em;display:flex;align-items:center;"></i> Monter
+            </button>
+            <button class="dropdown-btn" data-action="down" ${isLast ? 'disabled' : ''}>
+              <i class="ph ph-arrow-down" style="font-size:1.1em;display:flex;align-items:center;"></i> Descendre
+            </button>
+            <button class="dropdown-btn" data-action="delete">
+              <i class="ph ph-trash" style="font-size:1.1em;display:flex;align-items:center;"></i> Effacer
+            </button>
+          `;
+          // Appliquer le style inline sur chaque bouton
+          dropdownMenu.querySelectorAll('.dropdown-btn').forEach(btn => {
+            btn.style.display = 'flex';
+            btn.style.alignItems = 'center';
+            btn.style.justifyContent = 'flex-start';
+            btn.style.gap = '0.7em';
+            btn.style.width = '100%';
+            btn.style.boxSizing = 'border-box';
+            btn.style.background = 'none';
+            btn.style.border = 'none';
+            btn.style.outline = 'none';
+            btn.style.fontSize = '1rem';
+            btn.style.fontWeight = '500';
+            btn.style.padding = '0.65em 0.8em'; // padding horizontal réduit
+            btn.style.borderRadius = '0.7em';
+            btn.style.transition =
+              'background 0.13s, color 0.13s, box-shadow 0.13s';
+            btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+            btn.style.color = '#23272f';
+            if (btn.dataset.action === 'delete') {
+              btn.style.color = '#dc2626';
+            }
+            btn.onmouseover = function () {
+              if (btn.disabled) return;
+              if (btn.dataset.action === 'delete') {
+                btn.style.background = '#fff1f2';
+                btn.style.color = '#b91c1c';
+              } else {
+                btn.style.background = '#eaf3ff';
+                btn.style.color = '#1d4ed8';
+              }
+            };
+            btn.onmouseout = function () {
+              btn.style.background = 'none';
+              btn.style.color =
+                btn.dataset.action === 'delete' ? '#dc2626' : '#23272f';
+            };
+            btn.onfocus = btn.onmouseover;
+            btn.onblur = btn.onmouseout;
+          });
           document.body.appendChild(dropdownMenu);
           dropdownOpen = true;
           // Handler pour Modifier
