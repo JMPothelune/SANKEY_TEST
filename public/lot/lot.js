@@ -145,8 +145,7 @@ function afficherDropdownRefresh(button) {
 
   // Créer le dropdown
   const dropdown = document.createElement('div');
-  dropdown.className =
-    'refresh-dropdown absolute z-50 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none';
+  dropdown.className = 'refresh-dropdown absolute z-50';
   dropdown.style.top = '100%';
   dropdown.style.right = '0';
 
@@ -154,14 +153,14 @@ function afficherDropdownRefresh(button) {
   const currentFrequency = lotCourant.frequency || 'recurrent';
 
   dropdown.innerHTML = `
-    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+    <div role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
       ${Object.values(FREQUENCY_OPTIONS)
         .map(
           option => `
-        <button class="group flex w-full items-center px-4 py-2 text-sm ${currentFrequency === option.value ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'} ${currentFrequency === option.value ? 'font-medium' : ''}" role="menuitem" data-action="${option.value}">
-          <i class="ph ph-${option.icon} mr-3 h-4 w-4 ${currentFrequency === option.value ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'}"></i>
+        <button class="${currentFrequency === option.value ? 'selected' : ''}" role="menuitem" data-action="${option.value}">
+          <i class="ph ph-${option.icon}"></i>
           ${option.label}
-          ${currentFrequency === option.value ? '<i class="ph ph-check ml-auto h-4 w-4 text-blue-500"></i>' : ''}
+          ${currentFrequency === option.value ? '<i class="ph ph-check ml-auto"></i>' : ''}
         </button>
       `
         )
@@ -887,7 +886,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
       const isSelected = dim === cheminSelection[niveau]?.dimension;
       btnGroupDims += `
         <button
-          class="h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none ${isSelected ? 'bg-blue-50 text-blue-600 border-blue-200 shadow' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'} ${idx > 0 ? 'border-l border-gray-200' : ''}"
+          class="nav-button h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none ${isSelected ? 'bg-blue-50 text-blue-600 border-blue-200 shadow' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'} ${idx > 0 ? 'border-l border-gray-200' : ''}"
           style="border-radius:0;"
         >${dim.charAt(0).toUpperCase() + dim.slice(1).toLowerCase()}</button>
       `;
