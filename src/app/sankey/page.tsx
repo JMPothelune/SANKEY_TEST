@@ -77,7 +77,7 @@ export default function SankeyPage() {
 
       <div className="">
         {/* Header avec les contrôles */}
-        <div className="bg-white border border-gray-200 p-6 mb-6">
+        <div className="bg-white border border-gray-200 p-6">
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2">
               <label className="font-semibold">Dimension :</label>
