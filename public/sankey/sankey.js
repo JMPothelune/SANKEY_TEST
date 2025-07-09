@@ -717,7 +717,7 @@ function updateSankey(dimension) {
         event.stopPropagation();
 
         // Construire le path selon notre logique
-        let path = ['main', 'transformations']; // fallback racine
+        let path = ['transformations']; // fallback racine
 
         // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
         if (
@@ -1550,7 +1550,7 @@ function updateSankey(dimension) {
         event.stopPropagation();
 
         // Construire le path selon notre logique
-        let path = ['main', 'transformations']; // fallback racine
+        let path = ['transformations']; // fallback racine
 
         // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
         if (
@@ -1629,7 +1629,7 @@ function updateSankey(dimension) {
         event.stopPropagation();
 
         // Construire le path selon notre logique
-        let path = ['main', 'transformations']; // fallback racine
+        let path = ['transformations']; // fallback racine
 
         // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
         if (
@@ -1836,7 +1836,9 @@ window.onTransformationSave = (nodeId, transformation) => {
     return false;
   };
 
-  findTransformation(scenario.transformations);
+  findTransformation(
+    scenario.main?.transformations || scenario.transformations
+  );
 
   console.log('Found path and index:', { path, index });
 
@@ -1865,16 +1867,18 @@ window.onTransformationAdd = (nodeId, transformation) => {
   // Trouver le scénario courant
   const scenarioIdx = window.currentScenarioIdx;
   const scenario = window.scenarios[scenarioIdx]?.scenario;
+  console.log('Found scenario:', { scenarioIdx, scenario: !!scenario });
   if (!scenario) {
     console.error('No scenario found');
     return;
   }
 
   // Utiliser le path fourni dans la transformation ou le path par défaut
-  const path = transformation._path || ['main', 'transformations'];
+  const path = transformation._path || ['transformations'];
   console.log('Using path:', path);
 
   // Ajouter la transformation
+  console.log('Calling addTransformation...');
   window.addTransformation(scenario, path, {
     ...transformation,
     _nodeId: nodeId,
@@ -1883,8 +1887,52 @@ window.onTransformationAdd = (nodeId, transformation) => {
   // Relancer le Sankey
   const lot = window.lotType;
   const dimension = window.currentDimension;
+  console.log('Reloading Sankey with:', {
+    lot: !!lot,
+    dimension,
+    hasRunSankey: typeof runSankey === 'function',
+  });
   if (typeof runSankey === 'function' && lot && scenario) {
+    console.log('Calling runSankey...');
     runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+  } else {
+    console.error('Cannot reload Sankey:', {
+      hasRunSankey: typeof runSankey === 'function',
+      hasLot: !!lot,
+      hasScenario: !!scenario,
+    });
+  }
+};
+
+// Expose addTransformation sur window si ce n'est pas déjà fait
+window.addTransformation = function (scenario, path, transformation) {
+  console.log('addTransformation called with:', {
+    scenario,
+    path,
+    transformation,
+  });
+  console.log('Scenario before adding:', JSON.stringify(scenario, null, 2));
+
+  // Naviguer jusqu'au bon tableau de transformations
+  let arr = scenario;
+  for (let i = 0; i < path.length; i++) {
+    const key = path[i];
+    if (Array.isArray(arr)) {
+      arr = arr[key];
+    } else if (arr && typeof arr === 'object') {
+      if (!(key in arr)) arr[key] = key === 'transformations' ? [] : {};
+      arr = arr[key];
+    }
+  }
+  if (Array.isArray(arr)) {
+    arr.push(transformation);
+    console.log('Transformation added to array. Array length now:', arr.length);
+    console.log('Scenario after adding:', JSON.stringify(scenario, null, 2));
+  } else {
+    console.error(
+      "Impossible d'ajouter la transformation, chemin invalide",
+      path
+    );
   }
 };
 
@@ -2458,7 +2506,7 @@ function applyScenario(
   transformations_appliquees = [],
   depth = 0,
   pathNum = '1',
-  pathArr = ['main', 'transformations']
+  pathArr = ['transformations']
 ) {
   if (!nodes) {
     const lotInit = JSON.parse(JSON.stringify(lot));
@@ -2469,7 +2517,7 @@ function applyScenario(
         name: 'Lot initial',
         lot: lotInit,
         transformations_appliquees: [],
-        _path: ['main', 'transformations'],
+        _path: ['transformations'],
       },
     ];
   }
@@ -2480,131 +2528,149 @@ function applyScenario(
   const parentTotal = lot.total;
   let totalChildren = 0;
 
-  (scenario.transformations || []).forEach((transfo, idx) => {
-    let result;
-    // Support nouvelle structure : type et keys sont des tableaux
-    const type = Array.isArray(transfo.type) ? transfo.type[0] : transfo.type;
-    const keys = Array.isArray(transfo.keys) ? transfo.keys[0] : transfo.keys;
+  console.log('applyScenario - scenario structure:', {
+    hasMain: !!scenario.main,
+    mainTransformations: scenario.main?.transformations?.length || 0,
+    rootTransformations: scenario.transformations?.length || 0,
+    scenarioKeys: Object.keys(scenario),
+  });
 
-    // --- Marquage du path et de l'index sur la transformation ---
-    if (!transfo._path) transfo._path = [...pathArr];
-    if (typeof transfo._index !== 'number') transfo._index = idx;
+  (scenario.main?.transformations || scenario.transformations || []).forEach(
+    (transfo, idx) => {
+      let result;
+      // Support nouvelle structure : type et keys sont des tableaux
+      const type = Array.isArray(transfo.type) ? transfo.type[0] : transfo.type;
+      const keys = Array.isArray(transfo.keys) ? transfo.keys[0] : transfo.keys;
 
-    // Log temporaire pour vérifier le marquage
-    if (window.DEBUG_TRANSFO_PATH) {
-      console.log('TRANSFO PATH/INDEX', transfo._path, transfo._index, transfo);
-    }
+      // --- Marquage du path et de l'index sur la transformation ---
+      if (!transfo._path) transfo._path = [...pathArr];
+      if (typeof transfo._index !== 'number') transfo._index = idx;
 
-    if (type === 'selectByFormat') {
-      result = window.processes['selectByFormat'](resteLot, keys);
-    } else if (type === 'selectByType') {
-      result = window.processes['selectByType'](resteLot, keys);
-    } else if (type === 'selectByMatiere') {
-      result = window.processes['selectByMatiere'](resteLot, keys);
-    } else if (type === 'selectByQualite') {
-      result = window.processes['selectByQualite'](resteLot, keys);
-    } else if (type === 'selectByCouleur') {
-      result = window.processes['selectByCouleur'](resteLot, keys);
-    } else if (type === 'selectByFibre') {
-      if ('threshold' in transfo && 'condition' in transfo) {
-        result = window.processes['selectByFibre'](
+      // Log temporaire pour vérifier le marquage
+      if (window.DEBUG_TRANSFO_PATH) {
+        console.log(
+          'TRANSFO PATH/INDEX',
+          transfo._path,
+          transfo._index,
+          transfo
+        );
+      }
+
+      if (type === 'selectByFormat') {
+        result = window.processes['selectByFormat'](resteLot, keys);
+      } else if (type === 'selectByType') {
+        result = window.processes['selectByType'](resteLot, keys);
+      } else if (type === 'selectByMatiere') {
+        result = window.processes['selectByMatiere'](resteLot, keys);
+      } else if (type === 'selectByQualite') {
+        result = window.processes['selectByQualite'](resteLot, keys);
+      } else if (type === 'selectByCouleur') {
+        result = window.processes['selectByCouleur'](resteLot, keys);
+      } else if (type === 'selectByFibre') {
+        if ('threshold' in transfo && 'condition' in transfo) {
+          result = window.processes['selectByFibre'](
+            resteLot,
+            keys,
+            transfo.threshold,
+            transfo.condition
+          );
+        } else {
+          result = window.processes['selectByFibre'](resteLot, keys);
+        }
+      } else if (type === 'selectByProprete') {
+        result = window.processes['selectByProprete'](resteLot, keys);
+      } else if (type === 'selectByPerturbateur') {
+        result = window.processes['selectByPerturbateur'](resteLot, keys);
+      } else if (window.processes && window.processes[type]) {
+        const params = { yield: transfo.yield };
+        const { targetLot, coProductLot } = window.processes[type](
           resteLot,
           keys,
-          transfo.threshold,
-          transfo.condition
+          params
         );
+        result = { targetLot, coProductLot };
       } else {
-        result = window.processes['selectByFibre'](resteLot, keys);
+        throw new Error('Type de transformation non géré : ' + type);
       }
-    } else if (type === 'selectByProprete') {
-      result = window.processes['selectByProprete'](resteLot, keys);
-    } else if (type === 'selectByPerturbateur') {
-      result = window.processes['selectByPerturbateur'](resteLot, keys);
-    } else if (window.processes && window.processes[type]) {
-      const params = { yield: transfo.yield };
-      const { targetLot, coProductLot } = window.processes[type](
-        resteLot,
-        keys,
-        params
+      const { targetLot, coProductLot } = result;
+      if (!targetLot) return;
+
+      // Ajout de la target au lot si elle existe dans le scénario
+      if (transfo.scenario && transfo.scenario.target) {
+        targetLot.target = transfo.scenario.target;
+      }
+
+      // Utiliser le title de la transformation s'il existe, sinon générer un titre unique
+      const titre = transfo.title || `${pathNum}.${idx + 1}`;
+      if (!targetLot.title) targetLot.title = titre;
+      const nodeId = `${idGenObj.id++}`;
+      // On pousse la référence réelle (pas de clone)
+      const newTransformations = [...transformations_appliquees, transfo];
+      const nodeName = targetLot.target
+        ? `${type}: ${keys.join(' + ')} → ${targetLot.target}`
+        : `${type}: ${keys.join(' + ')}`;
+      targetLot.id = nodeId;
+
+      // On crée d'abord le nœud
+      transfo._nodeId = nodeId;
+      console.log(
+        'applyScenario - pathArr:',
+        pathArr,
+        'idx:',
+        idx,
+        'nodePath:',
+        [...pathArr, idx]
       );
-      result = { targetLot, coProductLot };
-    } else {
-      throw new Error('Type de transformation non géré : ' + type);
+      const nodePath = [...pathArr, idx];
+      nodes.push({
+        id: nodeId,
+        name: nodeName,
+        lot: targetLot,
+        transformations_appliquees: newTransformations,
+        _path: nodePath, // Ajout explicite du path unique pour ce node
+      });
+
+      // Puis le lien qui part du parent vers ce nœud
+      links.push({
+        source: parentNodeId,
+        target: nodeId,
+        value: targetLot.total,
+        transformation: transfo, // La transformation qui part du parent vers ce nœud (annotée)
+      });
+      totalChildren += targetLot.total;
+
+      // Sous-scenario récursif (sur le lot sélectionné, relié à ce nœud)
+      if (
+        transfo.scenario &&
+        transfo.scenario.transformations &&
+        transfo.scenario.transformations.length > 0
+      ) {
+        // On passe le path étendu pour le sous-scenario
+        const subPath = [...pathArr, idx, 'scenario', 'transformations'];
+        applyScenario(
+          targetLot,
+          transfo.scenario,
+          nodeId,
+          nodes,
+          links,
+          idGenObj,
+          false,
+          newTransformations,
+          depth + 1,
+          titre,
+          subPath
+        );
+      }
+      // On retire cette part du reste global
+      resteLot = coProductLot;
     }
-    const { targetLot, coProductLot } = result;
-    if (!targetLot) return;
-
-    // Ajout de la target au lot si elle existe dans le scénario
-    if (transfo.scenario && transfo.scenario.target) {
-      targetLot.target = transfo.scenario.target;
-    }
-
-    // Utiliser le title de la transformation s'il existe, sinon générer un titre unique
-    const titre = transfo.title || `${pathNum}.${idx + 1}`;
-    if (!targetLot.title) targetLot.title = titre;
-    const nodeId = `${idGenObj.id++}`;
-    // On pousse la référence réelle (pas de clone)
-    const newTransformations = [...transformations_appliquees, transfo];
-    const nodeName = targetLot.target
-      ? `${type}: ${keys.join(' + ')} → ${targetLot.target}`
-      : `${type}: ${keys.join(' + ')}`;
-    targetLot.id = nodeId;
-
-    // On crée d'abord le nœud
-    transfo._nodeId = nodeId;
-    console.log('applyScenario - pathArr:', pathArr, 'idx:', idx, 'nodePath:', [
-      ...pathArr,
-      idx,
-    ]);
-    const nodePath = [...pathArr, idx];
-    nodes.push({
-      id: nodeId,
-      name: nodeName,
-      lot: targetLot,
-      transformations_appliquees: newTransformations,
-      _path: nodePath, // Ajout explicite du path unique pour ce node
-    });
-
-    // Puis le lien qui part du parent vers ce nœud
-    links.push({
-      source: parentNodeId,
-      target: nodeId,
-      value: targetLot.total,
-      transformation: transfo, // La transformation qui part du parent vers ce nœud (annotée)
-    });
-    totalChildren += targetLot.total;
-
-    // Sous-scenario récursif (sur le lot sélectionné, relié à ce nœud)
-    if (
-      transfo.scenario &&
-      transfo.scenario.transformations &&
-      transfo.scenario.transformations.length > 0
-    ) {
-      // On passe le path étendu pour le sous-scenario
-      const subPath = [...pathArr, idx, 'scenario', 'transformations'];
-      applyScenario(
-        targetLot,
-        transfo.scenario,
-        nodeId,
-        nodes,
-        links,
-        idGenObj,
-        false,
-        newTransformations,
-        depth + 1,
-        titre,
-        subPath
-      );
-    }
-    // On retire cette part du reste global
-    resteLot = coProductLot;
-  });
+  );
 
   // Gestion du coproduit (reste)
   if (resteLot && resteLot.total > 0.1) {
     const titre =
       scenario.coproduct_scenario?.title ||
-      `${pathNum}.${(scenario.transformations || []).length + 1}`;
+      `${pathNum}.${(scenario.main?.transformations || scenario.transformations || []).length + 1}`;
     if (!resteLot.title) resteLot.title = titre;
     if (scenario.coproduct_scenario && scenario.coproduct_scenario.target) {
       resteLot.target = scenario.coproduct_scenario.target;
@@ -2625,7 +2691,7 @@ function applyScenario(
       ];
     } else if (isRoot) {
       // Vrai coproduit racine
-      coproductPath = ['main', 'coproduct_scenario', 'transformations'];
+      coproductPath = ['coproduct_scenario', 'transformations'];
     } else {
       // Fallback (devrait être rare)
       coproductPath = [...pathArr, 'coproduct_scenario', 'transformations'];

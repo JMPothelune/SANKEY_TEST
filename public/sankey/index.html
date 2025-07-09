@@ -151,35 +151,6 @@
         function fetchJSON(path) {
           return fetch(path).then(r => r.json());
         }
-
-        // Liste des fichiers de base à charger
-        const baseFiles = {
-          types: '../base_data/types.json',
-          formats: '../base_data/formats.json',
-          matieres: '../base_data/matieres.json',
-          fibres: '../base_data/fibres.json',
-          qualite: '../base_data/qualite.json',
-          proprete: '../base_data/proprete.json',
-          perturbateurs: '../base_data/perturbateurs.json',
-          couleurs: '../base_data/couleurs.json',
-        };
-
-        // Chargement de tous les fichiers de base
-        Promise.all(
-          Object.entries(baseFiles).map(([key, path]) =>
-            fetchJSON(path).then(data => [key, data])
-          )
-        )
-          .then(entries => {
-            window.baseData = Object.fromEntries(entries);
-            console.log('[HTML] Base data chargée:', window.baseData);
-          })
-          .catch(error => {
-            console.error(
-              '[HTML] Erreur lors du chargement des données de base:',
-              error
-            );
-          });
       });
     </script>
     <script src="../data/processes.js"></script>
