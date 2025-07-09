@@ -1356,18 +1356,10 @@ function updateSankey(dimension) {
           const isLast =
             outgoingLinks.indexOf(link) === outgoingLinks.length - 1;
           dropdownMenu.innerHTML = `
-            <button class="dropdown-btn" data-action="edit">
-              <i class="ph ph-pencil-simple" style="font-size:1.1em;display:flex;align-items:center;"></i> Modifier
-            </button>
-            <button class="dropdown-btn" data-action="up" ${isFirst ? 'disabled' : ''}>
-              <i class="ph ph-arrow-up" style="font-size:1.1em;display:flex;align-items:center;"></i> Monter
-            </button>
-            <button class="dropdown-btn" data-action="down" ${isLast ? 'disabled' : ''}>
-              <i class="ph ph-arrow-down" style="font-size:1.1em;display:flex;align-items:center;"></i> Descendre
-            </button>
-            <button class="dropdown-btn" data-action="delete">
-              <i class="ph ph-trash" style="font-size:1.1em;display:flex;align-items:center;"></i> Effacer
-            </button>
+            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit"><i class="ph ph-pencil-simple text-base align-middle mr-2"></i>Modifier</button>
+            <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}><i class="ph ph-arrow-up text-base align-middle mr-2"></i>Monter</button>
+            <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}><i class="ph ph-arrow-down text-base align-middle mr-2"></i>Descendre</button>
+            <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete"><i class="ph ph-trash text-base align-middle mr-2"></i>Effacer</button>
           `;
           // Appliquer le style inline sur chaque bouton
           dropdownMenu.querySelectorAll('.dropdown-btn').forEach(btn => {
