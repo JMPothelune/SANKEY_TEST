@@ -36,6 +36,15 @@
       function launchSankeyFromUrl(lot) {
         const params = getUrlParams();
         const scenarioIdx = params.scenarioIdx;
+
+        console.log('[HTML] Paramètres reçus:', params);
+        console.log('[HTML] Scénarios disponibles:', window.scenarios);
+        console.log('[HTML] Index demandé:', scenarioIdx);
+        console.log(
+          "[HTML] Scénario à l'index demandé:",
+          window.scenarios?.[scenarioIdx]
+        );
+
         const scenario = window.scenarios[scenarioIdx]?.scenario;
         const dimension = params.dimension;
 
@@ -43,6 +52,8 @@
           lot,
           scenario,
           dimension,
+          scenarioIdx,
+          availableScenarios: window.scenarios?.length || 0,
         });
 
         if (typeof runSankey === 'function' && lot && scenario) {
@@ -51,6 +62,13 @@
             scenario,
             containerId: 'sankey-container',
             dimension,
+          });
+        } else {
+          console.error('[HTML] Impossible de lancer le Sankey:', {
+            runSankeyExists: typeof runSankey === 'function',
+            lotExists: !!lot,
+            scenarioExists: !!scenario,
+            scenarios: window.scenarios,
           });
         }
       }
@@ -65,8 +83,14 @@
             window.lotType = lot; // pour compatibilité temporaire
             console.log('[HTML] Lot chargé:', lot);
 
-            // Lancer le Sankey avec les paramètres d'URL
-            launchSankeyFromUrl(lot);
+            // Attendre que tous les scripts soient chargés avant de lancer le Sankey
+            setTimeout(() => {
+              console.log(
+                '[HTML] Vérification des scénarios:',
+                window.scenarios
+              );
+              launchSankeyFromUrl(lot);
+            }, 100);
           })
           .catch(error => {
             console.error('[HTML] Erreur lors du chargement du lot:', error);

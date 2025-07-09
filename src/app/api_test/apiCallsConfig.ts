@@ -146,4 +146,17 @@ export const bubbleApiCalls = [
       { name: 'json', label: 'JSON', type: 'string', required: true },
     ],
   },
+  {
+    name: 'Get dimensions',
+    endpoint: 'dimensions',
+    method: 'GET',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+    ],
+  },
 ];

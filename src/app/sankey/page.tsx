@@ -36,52 +36,48 @@ export default function SankeyPage() {
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [selectedLot, setSelectedLot] = useState<(typeof lots)[0] | null>(null);
   const [isEditable, setIsEditable] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0); // Clé pour forcer le rechargement
 
-  // Charger les scénarios depuis window.scenarios
+  // Charger les scénarios depuis l'API
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.scenarios) {
-      setScenarios(window.scenarios);
-      if (window.scenarios.length > 0) {
-        setScenarioIdx(0);
+    const loadScenarios = async () => {
+      try {
+        const response = await fetch('/api/scenarios');
+        if (response.ok) {
+          const scenariosData = await response.json();
+          setScenarios(scenariosData);
+          if (scenariosData.length > 0) {
+            setScenarioIdx(0);
+          }
+        } else {
+          console.error('Erreur lors du chargement des scénarios');
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des scénarios:', error);
       }
-    }
+    };
+
+    loadScenarios();
   }, []);
 
-  // Mettre à jour l'URL de l'iframe quand les paramètres changent
+  // Forcer le rechargement de l'iframe quand les paramètres changent
   useEffect(() => {
-    if (selectedLot) {
-      const iframe = document.getElementById(
-        'sankey-iframe'
-      ) as HTMLIFrameElement;
-      if (iframe) {
-        const params = new URLSearchParams({
-          dimension,
-          scenarioIdx: scenarioIdx.toString(),
-          lotId: selectedLot.bubbleId,
-          isLive: selectedLot.isLive ? 'true' : 'false',
-          isEditable: isEditable ? 'yes' : 'no',
-        });
-        iframe.src = `/sankey/index.html?${params.toString()}`;
-      }
-    }
+    setIframeKey(prev => prev + 1);
   }, [dimension, scenarioIdx, selectedLot, isEditable]);
+
+  // Construire l'URL de l'iframe avec tous les paramètres
+  const iframeSrc = `/sankey/index.html?dimension=${encodeURIComponent(dimension)}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}`;
+
+  // Log pour debug
+  console.log('URL iframe:', iframeSrc, 'scenarioIdx:', scenarioIdx);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <AppNavbar />
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Visualisation Sankey
-          </h1>
-          <p className="text-gray-600">
-            Analyse des flux de valorisation textile
-          </p>
-        </div>
-
+      <div className="">
         {/* Header avec les contrôles */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white border border-gray-200 p-6 mb-6">
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2">
               <label className="font-semibold">Dimension :</label>
@@ -148,9 +144,6 @@ export default function SankeyPage() {
                 onChange={e => setIsEditable(e.target.checked)}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
               />
-              <span className="text-sm text-gray-600">
-                {isEditable ? 'Activée' : 'Désactivée'}
-              </span>
             </div>
           </div>
         </div>
@@ -158,8 +151,8 @@ export default function SankeyPage() {
         {/* Iframe Sankey */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <iframe
-            id="sankey-iframe"
-            src="/sankey/index.html"
+            key={iframeKey}
+            src={iframeSrc}
             className="w-full h-[800px] border-0"
             title="Visualisation Sankey"
           />
