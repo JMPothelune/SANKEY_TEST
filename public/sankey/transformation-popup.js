@@ -3,8 +3,8 @@ class TransformationPopup {
   constructor() {
     this.backdrop = null;
     this.modal = null;
-    this.currentRef = null;  // Pour stocker la référence
-    this.mode = null;  // Pour stocker le mode
+    this.currentRef = null; // Pour stocker la référence
+    this.mode = null; // Pour stocker le mode
   }
 
   show(ref, mode) {
@@ -18,73 +18,107 @@ class TransformationPopup {
   createPopup(ref) {
     // Création du backdrop
     this.backdrop = document.createElement('div');
-    this.backdrop.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-    
+    this.backdrop.className =
+      'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
     // Création de la modal
     this.modal = document.createElement('div');
-    this.modal.className = 'bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6';
-    
+    this.modal.className =
+      'bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6';
+
     // Récupération de la transformation du lien cliqué
     const lastTransfo = ref.transformation || null;
-    const lastType = lastTransfo ? (Array.isArray(lastTransfo.type) ? lastTransfo.type[0] : lastTransfo.type) : null;
-    const keys = lastTransfo && lastTransfo.keys && lastTransfo.keys[0] ? lastTransfo.keys[0] : [];
-    
+    const lastType = lastTransfo
+      ? Array.isArray(lastTransfo.type)
+        ? lastTransfo.type[0]
+        : lastTransfo.type
+      : null;
+    const keys =
+      lastTransfo && lastTransfo.keys && lastTransfo.keys[0]
+        ? lastTransfo.keys[0]
+        : [];
+
     // Récupérer la keyList de la transformation sélectionnée
     let keyList = null;
     if (window.transformationUtils && lastType) {
-      const t = window.transformationUtils.getAvailableTransformations().find(t => t.value === lastType);
+      const t = window.transformationUtils
+        .getAvailableTransformations()
+        .find(t => t.value === lastType);
       if (window.transformationTypes && window.transformationTypes[lastType]) {
         keyList = window.transformationTypes[lastType].keyList;
       }
     }
-    
+
     // Génération dynamique des options du select
     let options = '';
     if (!lastType) {
-      options += '<option value="" disabled selected>Sélectionner une transformation</option>';
+      options +=
+        '<option value="" disabled selected>Sélectionner une transformation</option>';
     }
-    options += (window.transformationUtils ? window.transformationUtils.getAvailableTransformations() : []).map(t =>
-      `<option value="${t.value}" ${lastType === t.value ? 'selected' : ''}>${t.label}</option>`
-    ).join('');
-    
+    options += (
+      window.transformationUtils
+        ? window.transformationUtils.getAvailableTransformations()
+        : []
+    )
+      .map(
+        t =>
+          `<option value="${t.value}" ${lastType === t.value ? 'selected' : ''}>${t.label}</option>`
+      )
+      .join('');
+
     // Label et description de la transformation sélectionnée
-    const currentLabel = lastType && window.transformationUtils ? window.transformationUtils.getTransformationLabel(lastType) : 'Aucune transformation';
-    const currentDesc = lastType && window.transformationUtils ? window.transformationUtils.getTransformationDescription(lastType) : '';
-    
+    const currentLabel =
+      lastType && window.transformationUtils
+        ? window.transformationUtils.getTransformationLabel(lastType)
+        : 'Aucune transformation';
+    const currentDesc =
+      lastType && window.transformationUtils
+        ? window.transformationUtils.getTransformationDescription(lastType)
+        : '';
+
     // Pills pour les keys
-    const pills = keys.map((key, i) =>
-      `<span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2">
+    const pills = keys
+      .map(
+        (key, i) =>
+          `<span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2">
         ${key}
         <button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${i}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </span>`
-    ).join('');
-    
+      )
+      .join('');
+
     // Input et dropdown pour les keys (affiché seulement si keyList)
-    const keyInputHTML = keyList ? `
+    const keyInputHTML = keyList
+      ? `
       <div class="relative mt-2">
         <input id="key-input" type="text" autocomplete="off" placeholder="Paramètres" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
         <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 hidden max-h-40 overflow-y-auto"></div>
       </div>
-    ` : '';
-    
+    `
+      : '';
+
     // Adapter le titre et le texte du bouton selon le mode
-    const title = this.mode === 'add' ? 'Ajouter une transformation' : 'Modifier la transformation';
+    const title =
+      this.mode === 'add'
+        ? 'Ajouter une transformation'
+        : 'Modifier la transformation';
     const buttonText = this.mode === 'add' ? 'Créer' : 'Enregistrer';
-    
+
     this.modal.innerHTML = `
       <h3 class="text-lg font-semibold mb-2">${title}</h3>
-      ${this.mode === 'edit' && lastTransfo && lastTransfo._path ? 
-        `<div class="text-xs text-gray-500 mb-4">
+      ${
+        this.mode === 'edit' && lastTransfo && lastTransfo._path
+          ? `<div class="text-xs text-gray-500 mb-4">
           <div>Path: ${JSON.stringify(lastTransfo._path)}</div>
           ${typeof lastTransfo._index === 'number' ? `<div>Index: ${lastTransfo._index}</div>` : ''}
-         </div>` 
-        : this.mode === 'add' ? 
-        `<div class="text-xs text-gray-500 mb-4">
+         </div>`
+          : this.mode === 'add'
+            ? `<div class="text-xs text-gray-500 mb-4">
           <div>Path: ${JSON.stringify(ref.path)}</div>
          </div>`
-        : ''
+            : ''
       }
       <div class="space-y-4">
         <div>
@@ -115,25 +149,35 @@ class TransformationPopup {
     const keysContainer = this.modal.querySelector('#transfo-keys');
     const keyInput = this.modal.querySelector('#key-input');
     const keyDropdown = this.modal.querySelector('#key-dropdown');
-    
+
     // Pour garder la liste des keys sélectionnées
-    let selectedKeys = Array.from(keysContainer.querySelectorAll('span')).map(span => 
-      span.textContent.trim().replace(/×$/, '').trim()
+    let selectedKeys = Array.from(keysContainer.querySelectorAll('span')).map(
+      span => span.textContent.trim().replace(/×$/, '').trim()
     );
 
     // Fonction pour vérifier si le bouton de sauvegarde doit être activé
     const updateSaveButtonState = () => {
       const selectedType = transfoTypeSelect.value;
-      const isRequiredKey = window.transformationTypes && 
-                           window.transformationTypes[selectedType] && 
-                           window.transformationTypes[selectedType].requiredKey;
-      
+      // 1. Dropdown vide ?
+      const isDropdownEmpty = !selectedType;
+      // 2. Cette transfo nécessite des paramètres ? (input visible = keyList défini)
+      const keyList =
+        window.transformationTypes &&
+        window.transformationTypes[selectedType] &&
+        window.transformationTypes[selectedType].keyList;
+      const isRequiredKey =
+        window.transformationTypes &&
+        window.transformationTypes[selectedType] &&
+        window.transformationTypes[selectedType].requiredKey;
       const hasKeys = selectedKeys.length > 0;
-      const isValid = !isRequiredKey || hasKeys;
-      
+      // Le bouton est enabled seulement si :
+      // - une transfo est sélectionnée
+      // - ET (si keyList existe et requiredKey, alors il faut au moins une key)
+      const isValid =
+        !isDropdownEmpty && (!keyList || !isRequiredKey || hasKeys);
       saveBtn.disabled = !isValid;
-      saveBtn.className = isValid 
-        ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700' 
+      saveBtn.className = isValid
+        ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
         : 'px-4 py-2 bg-gray-400 text-gray-200 rounded cursor-not-allowed';
     };
 
@@ -141,40 +185,62 @@ class TransformationPopup {
     updateSaveButtonState();
 
     cancelBtn.onclick = () => this.close();
-    
+
     saveBtn.onclick = () => {
       const transformation = {
         type: [transfoTypeSelect.value],
-        keys: [selectedKeys]
+        keys: [selectedKeys],
       };
-      
+
       console.log('Save button clicked:', {
         mode: this.mode,
         currentRef: this.currentRef,
         transformation,
         hasAddFunction: typeof window.onTransformationAdd === 'function',
-        hasSaveFunction: typeof window.onTransformationSave === 'function'
+        hasSaveFunction: typeof window.onTransformationSave === 'function',
       });
-      
+
       if (this.currentRef) {
-        if (this.mode === 'add' && typeof window.onTransformationAdd === 'function') {
+        if (
+          this.mode === 'add' &&
+          typeof window.onTransformationAdd === 'function'
+        ) {
           // Injecter le path du node dans la transformation
           transformation._path = this.currentRef.path;
           window.onTransformationAdd(this.currentRef.nodeId, transformation);
-        } else if (this.mode === 'edit' && typeof window.onTransformationSave === 'function') {
+        } else if (
+          this.mode === 'edit' &&
+          typeof window.onTransformationSave === 'function'
+        ) {
           // Récupérer le path et l'index de la transformation existante
           const existingTransfo = this.currentRef.transformation;
-          if (existingTransfo && existingTransfo._path && typeof existingTransfo._index === 'number') {
+          if (
+            existingTransfo &&
+            existingTransfo._path &&
+            typeof existingTransfo._index === 'number'
+          ) {
             // Utiliser directement updateTransformation
-            const scenarioIdx = document.getElementById('scenario-selector').value;
+            const scenarioIdx =
+              document.getElementById('scenario-selector').value;
             const scenario = window.scenarios[scenarioIdx]?.scenario;
             if (scenario) {
-              window.updateTransformation(scenario, existingTransfo._path, existingTransfo._index, transformation);
+              window.updateTransformation(
+                scenario,
+                existingTransfo._path,
+                existingTransfo._index,
+                transformation
+              );
               // Relancer le Sankey
               const lot = window.lotType;
-              const dimension = document.getElementById('dimension-selector').value;
+              const dimension =
+                document.getElementById('dimension-selector').value;
               if (typeof runSankey === 'function') {
-                runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+                runSankey({
+                  lot,
+                  scenario,
+                  containerId: 'sankey-container',
+                  dimension,
+                });
               }
             }
           } else {
@@ -183,31 +249,34 @@ class TransformationPopup {
           }
         }
       }
-      
+
       this.close();
     };
-    
-    transfoTypeSelect.addEventListener('change', (e) => {
+
+    transfoTypeSelect.addEventListener('change', e => {
       if (window.transformationUtils) {
-        transfoDescription.textContent = window.transformationUtils.getTransformationDescription(e.target.value);
+        transfoDescription.textContent =
+          window.transformationUtils.getTransformationDescription(
+            e.target.value
+          );
       }
-      
+
       // Réinitialiser les clés sélectionnées lors du changement de type
       selectedKeys = [];
       keysContainer.innerHTML = '';
       if (keyInput) keyInput.value = '';
       if (keyDropdown) keyDropdown.classList.add('hidden');
-      
+
       // Mettre à jour l'état du bouton
       updateSaveButtonState();
-      
+
       // On ferme et on rouvre la popup pour rafraîchir l'UI
       const currentRef = {
         ...this.currentRef, // Garder toutes les informations de la référence originale
-        transformation: { 
-          type: [e.target.value], 
-          keys: [[]]
-        }
+        transformation: {
+          type: [e.target.value],
+          keys: [[]],
+        },
       };
       this.close();
       window.afficherPopupTransfo(currentRef, this.mode); // Utiliser le mode original
@@ -216,7 +285,7 @@ class TransformationPopup {
     // Suppression visuelle d'une key (et du modèle)
     if (keysContainer) {
       keysContainer.querySelectorAll('button[data-key-index]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', e => {
           e.preventDefault();
           const pill = btn.closest('span');
           if (pill) {
@@ -228,7 +297,7 @@ class TransformationPopup {
         });
       });
     }
-    
+
     // Gestion de l'input et du dropdown
     if (keyInput && keyDropdown) {
       // Fonction pour afficher les options filtrées
@@ -244,7 +313,9 @@ class TransformationPopup {
           const data = window.baseData[keyList];
           if (Array.isArray(data)) {
             if (typeof data[0] === 'object') {
-              allKeys = data.map(obj => obj.nom || obj.name || obj.label || obj.id || '');
+              allKeys = data.map(
+                obj => obj.nom || obj.name || obj.label || obj.id || ''
+              );
             } else {
               allKeys = data;
             }
@@ -253,9 +324,19 @@ class TransformationPopup {
           }
         }
         // Filtrer selon la saisie et exclure déjà sélectionnés
-        const filtered = allKeys.filter(k => k && k.toLowerCase().includes(value.toLowerCase()) && !selectedKeys.includes(k));
+        const filtered = allKeys.filter(
+          k =>
+            k &&
+            k.toLowerCase().includes(value.toLowerCase()) &&
+            !selectedKeys.includes(k)
+        );
         if (filtered.length > 0) {
-          keyDropdown.innerHTML = filtered.map(k => `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-key="${k}">${k}</div>`).join('');
+          keyDropdown.innerHTML = filtered
+            .map(
+              k =>
+                `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-key="${k}">${k}</div>`
+            )
+            .join('');
           keyDropdown.classList.remove('hidden');
         } else {
           keyDropdown.innerHTML = '';
@@ -269,28 +350,31 @@ class TransformationPopup {
       });
 
       // Filtrer les options à la saisie
-      keyInput.addEventListener('input', (e) => {
+      keyInput.addEventListener('input', e => {
         showFilteredOptions(e.target.value.trim());
       });
 
       // Sélection d'une key dans le dropdown
-      keyDropdown.addEventListener('mousedown', (e) => {
+      keyDropdown.addEventListener('mousedown', e => {
         if (e.target && e.target.dataset.key) {
           const key = e.target.dataset.key;
           if (!selectedKeys.includes(key)) {
             selectedKeys.push(key);
             // Ajouter le pill visuellement
             const pill = document.createElement('span');
-            pill.className = 'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
-            pill.innerHTML = `${key}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${selectedKeys.length-1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+            pill.className =
+              'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
+            pill.innerHTML = `${key}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
             keysContainer.appendChild(pill);
             // Ajout du listener pour suppression
-            pill.querySelector('button[data-key-index]').addEventListener('click', (ev) => {
-              ev.preventDefault();
-              selectedKeys = selectedKeys.filter(k2 => k2 !== key);
-              pill.remove();
-              updateSaveButtonState(); // Mettre à jour l'état du bouton
-            });
+            pill
+              .querySelector('button[data-key-index]')
+              .addEventListener('click', ev => {
+                ev.preventDefault();
+                selectedKeys = selectedKeys.filter(k2 => k2 !== key);
+                pill.remove();
+                updateSaveButtonState(); // Mettre à jour l'état du bouton
+              });
             updateSaveButtonState(); // Mettre à jour l'état du bouton
           }
           keyDropdown.classList.add('hidden');
@@ -299,14 +383,16 @@ class TransformationPopup {
         }
       });
       // Fermer le dropdown si on clique ailleurs
-      document.addEventListener('mousedown', (e) => {
+      document.addEventListener('mousedown', e => {
         if (!keyInput.contains(e.target) && !keyDropdown.contains(e.target)) {
           keyDropdown.classList.add('hidden');
         }
       });
     }
-    
-    this.backdrop.onclick = (e) => { if (e.target === this.backdrop) this.close(); };
+
+    this.backdrop.onclick = e => {
+      if (e.target === this.backdrop) this.close();
+    };
   }
 
   close() {
@@ -320,4 +406,5 @@ class TransformationPopup {
 
 // Exposer la popup globalement
 window.transformationPopup = new TransformationPopup();
-window.afficherPopupTransfo = (ref, mode) => window.transformationPopup.show(ref, mode);
+window.afficherPopupTransfo = (ref, mode) =>
+  window.transformationPopup.show(ref, mode);
