@@ -260,6 +260,7 @@ function attacherHandlersHeader(titre, niveau) {
   const btnRefresh = titre.querySelector('.stackbar-refresh');
   if (btnRefresh && niveau === 0) {
     btnRefresh.onclick = e => {
+      if (window.isEditable === false) return; // PATCH : désactive le dropdown si non éditable
       e.stopPropagation();
       afficherDropdownRefresh(btnRefresh);
     };
