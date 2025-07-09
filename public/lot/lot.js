@@ -139,7 +139,6 @@ const CheminManager = {
 
 // Fonction pour afficher le dropdown de refresh
 function afficherDropdownRefresh(button) {
-  console.log('Fonction afficherDropdownRefresh appelée avec:', button);
   // Supprimer les dropdowns existants
   const existingDropdowns = document.querySelectorAll('.refresh-dropdown');
   existingDropdowns.forEach(dropdown => dropdown.remove());
@@ -200,7 +199,6 @@ function afficherDropdownRefresh(button) {
       if (window.onLotChange) window.onLotChange(lotCourant);
 
       console.log('Frequency mise à jour:', action);
-      console.log('LotCourant après mise à jour:', lotCourant);
 
       // Fermer le dropdown
       dropdown.remove();
@@ -260,11 +258,8 @@ function attacherHandlersHeader(titre, niveau) {
 
   // Bouton Refresh (niveau 0 uniquement)
   const btnRefresh = titre.querySelector('.stackbar-refresh');
-  console.log('Bouton refresh trouvé:', btnRefresh, 'niveau:', niveau);
   if (btnRefresh && niveau === 0) {
-    console.log('Attachement du handler au bouton refresh');
     btnRefresh.onclick = e => {
-      console.log('Clic sur le bouton refresh détecté');
       e.stopPropagation();
       afficherDropdownRefresh(btnRefresh);
     };
@@ -1355,7 +1350,7 @@ async function afficherModalAjout(niveau, dimension) {
             ${elementsDisponibles
               .map(
                 elem => `
-              <option value="${elem}" class="py-1">${elem}</option>
+              <option value="${donneesBase[elem].bubble_id || elem}" class="py-1">${elem}</option>
             `
               )
               .join('')}
@@ -1450,6 +1445,7 @@ async function afficherModalAjout(niveau, dimension) {
   };
 
   btnAjouter.onclick = async () => {
+    console.log('CLIC SUR AJOUTER');
     const elementSelectionne = selectElement.value;
     const pourcentage = estPremierElement
       ? 100
@@ -1461,15 +1457,22 @@ async function afficherModalAjout(niveau, dimension) {
         ? !isNaN(pourcentage) && pourcentage >= 0 && pourcentage <= 100
         : true)
     ) {
+      console.log(
+        'On va appeler recupererElementComplet avec',
+        elementSelectionne
+      );
       // Récupérer l'objet complet depuis Bubble
       const elementComplet = await recupererElementComplet(elementSelectionne);
       if (elementComplet) {
+        // On extrait la clé et la valeur
+        const nomLisible = Object.keys(elementComplet)[0];
+        const data = elementComplet[nomLisible];
         ajouterElementEtRepartir(
           niveau,
           dimension,
-          elementSelectionne,
+          nomLisible, // clé lisible
           pourcentage,
-          elementComplet
+          data // données
         );
         fermerModal();
         afficherStackbars(lotCourant, cheminSelection);
@@ -1498,13 +1501,9 @@ async function afficherModalAjout(niveau, dimension) {
 // Fonction pour récupérer l'objet complet depuis Bubble
 async function recupererElementComplet(bubbleId) {
   try {
-    console.log("Récupération de l'élément complet pour bubble_id:", bubbleId);
-
     const response = await fetch('/api/bubble', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         endpoint: 'item',
         method: 'POST',
@@ -1514,15 +1513,7 @@ async function recupererElementComplet(bubbleId) {
         },
       }),
     });
-
-    if (!response.ok) {
-      console.error(
-        "Erreur lors de la récupération de l'élément:",
-        response.status
-      );
-      return null;
-    }
-
+    if (!response.ok) return null;
     const data = await response.json();
     console.log('Élément complet récupéré:', data);
     return data;
