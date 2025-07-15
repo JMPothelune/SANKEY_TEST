@@ -11,6 +11,16 @@ window.currentDimension = 'format';
 window.currentScenarioIdx = 0;
 window.currentLotId = '';
 
+// Fonction pour gérer l'état du bouton Enregistrer (exposée globalement)
+window.setScenarioModifie = function (modifie) {
+  const saveBtn = document.getElementById('save-scenario-btn');
+  window._scenarioModifie = !!modifie;
+  if (saveBtn) {
+    saveBtn.disabled = !modifie;
+    saveBtn.style.opacity = modifie ? '1' : '0.5';
+  }
+};
+
 // Fonction utilitaire pour lire les paramètres d'URL
 function getUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -19,6 +29,9 @@ function getUrlParams() {
     scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
     lotId: urlParams.get('lotId') || '',
     isEditable: urlParams.get('isEditable') === 'yes',
+    scenarioId: urlParams.get('scenarioId') || '',
+    scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
+    isLive: urlParams.get('isLive') === 'true',
   };
 }
 
@@ -456,6 +469,28 @@ function getIconSVG(name, className = '') {
 function updateSankey(dimension) {
   // Nettoyer le SVG
   svg.selectAll('*').remove();
+
+  // Vérifier que le scénario Sankey est disponible
+  if (
+    !window.sankeyScenario ||
+    !window.sankeyScenario.nodes ||
+    !window.sankeyScenario.links
+  ) {
+    console.error(
+      'updateSankey: sankeyScenario non disponible',
+      window.sankeyScenario
+    );
+    // Afficher un message d'erreur dans le conteneur
+    svg
+      .append('text')
+      .attr('x', width / 2)
+      .attr('y', height / 2)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '16px')
+      .style('fill', '#666')
+      .text('Chargement du scénario...');
+    return;
+  }
 
   // Récupérer les nœuds et liens du scénario
   let nodes = window.sankeyScenario.nodes.map(n => ({
@@ -1488,6 +1523,11 @@ function updateSankey(dimension) {
                   dimension,
                 });
               }
+
+              // Activer le bouton Enregistrer
+              if (typeof setScenarioModifie === 'function') {
+                setScenarioModifie(true);
+              }
             };
           // Handler pour Monter
           dropdownMenu.querySelector('[data-action="up"]').onclick = function (
@@ -1855,6 +1895,11 @@ window.onTransformationSave = (nodeId, transformation) => {
     if (typeof runSankey === 'function' && lot && scenario) {
       runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
     }
+
+    // Activer le bouton Enregistrer
+    if (typeof setScenarioModifie === 'function') {
+      setScenarioModifie(true);
+    }
   } else {
     console.error('Could not find transformation to update');
   }
@@ -1901,6 +1946,11 @@ window.onTransformationAdd = (nodeId, transformation) => {
       hasLot: !!lot,
       hasScenario: !!scenario,
     });
+  }
+
+  // Activer le bouton Enregistrer
+  if (typeof setScenarioModifie === 'function') {
+    setScenarioModifie(true);
   }
 };
 
@@ -1966,6 +2016,11 @@ window.onTransformationMoveUp = (nodeId, transformation) => {
   if (typeof runSankey === 'function' && lot && scenario) {
     runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
   }
+
+  // Activer le bouton Enregistrer
+  if (typeof setScenarioModifie === 'function') {
+    setScenarioModifie(true);
+  }
 };
 
 // Callback global pour descendre une transformation
@@ -1997,6 +2052,11 @@ window.onTransformationMoveDown = (nodeId, transformation) => {
   const dimension = window.currentDimension;
   if (typeof runSankey === 'function' && lot && scenario) {
     runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
+  }
+
+  // Activer le bouton Enregistrer
+  if (typeof setScenarioModifie === 'function') {
+    setScenarioModifie(true);
   }
 };
 

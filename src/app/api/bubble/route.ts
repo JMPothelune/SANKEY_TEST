@@ -62,18 +62,34 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' },
       });
     } catch {
-      console.log('API Bubble - Réponse non-JSON:', text);
-      return new Response(
-        JSON.stringify({
-          error: 'Réponse non-JSON',
+      console.log('API Bubble - Réponse non-JSON (probablement JS):', text);
+      // Si ce n'est pas du JSON, c'est probablement du JavaScript de Bubble
+      // On parse la réponse JavaScript et on la convertit en JSON propre
+      try {
+        // Utiliser Function pour évaluer la réponse JavaScript de manière sécurisée
+        const jsData = new Function('return ' + text)();
+        console.log(
+          'API Bubble - Réponse parsée et convertie en JSON:',
+          jsData
+        );
+        return new Response(JSON.stringify(jsData), {
           status: response.status,
-          raw: text,
-        }),
-        {
-          status: 500,
           headers: { 'Content-Type': 'application/json' },
-        }
-      );
+        });
+      } catch (parseError) {
+        console.log('API Bubble - Erreur lors du parsing JS:', parseError);
+        return new Response(
+          JSON.stringify({
+            error: 'Impossible de parser la réponse de Bubble',
+            status: response.status,
+            raw: text,
+          }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
     }
   } catch (err) {
     console.log('API Bubble - Erreur fetch:', err);

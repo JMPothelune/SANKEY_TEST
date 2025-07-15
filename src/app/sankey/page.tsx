@@ -42,11 +42,27 @@ export default function SankeyPage() {
   >(scenarios[0]); // Premier scénario par défaut
   const [isEditable, setIsEditable] = useState(false);
   const [iframeKey, setIframeKey] = useState(0); // Clé pour forcer le rechargement
+  const [iframeHeight, setIframeHeight] = useState<number>(800);
 
   // Forcer le rechargement de l'iframe quand les paramètres changent
   useEffect(() => {
     setIframeKey(prev => prev + 1);
   }, [dimension, scenarioIdx, selectedLot, selectedScenario, isEditable]);
+
+  // Gérer le redimensionnement de l'iframe
+  useEffect(() => {
+    function handleResizeMessage(event: MessageEvent) {
+      if (
+        event.data &&
+        event.data.type === 'IFRAME_HEIGHT' &&
+        typeof event.data.height === 'number'
+      ) {
+        setIframeHeight(event.data.height);
+      }
+    }
+    window.addEventListener('message', handleResizeMessage);
+    return () => window.removeEventListener('message', handleResizeMessage);
+  }, []);
 
   // Construire l'URL de l'iframe avec tous les paramètres
   const iframeSrc = `/sankey/index.html?dimension=${encodeURIComponent(dimension)}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}&scenarioId=${selectedScenario?.bubbleId || ''}&scenarioIsLive=${selectedScenario?.isLive || false}`;
@@ -143,7 +159,8 @@ export default function SankeyPage() {
           <iframe
             key={iframeKey}
             src={iframeSrc}
-            className="w-full h-[800px] border-0"
+            className="w-full border-0"
+            style={{ minHeight: 400, height: iframeHeight }}
             title="Visualisation Sankey"
           />
         </div>

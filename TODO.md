@@ -4,6 +4,7 @@
 
 [] Affichage tooltip
 [] Standardiser les tooltips
+[] Passer ID des paramètres dans le scenario -> Et modifier toutes les fonctions de sélection et tout...
 [x] Passer en mode 'module' ready pour Bubble
 [x] Intégrer les couleurs
 
