@@ -166,6 +166,14 @@
               saveBtn.textContent = 'Enregistrement...';
               saveBtn.style.opacity = '0.5';
               try {
+                // Récupérer le scénario avec les transformations modifiées
+                const currentScenario =
+                  window.scenarios &&
+                  window.scenarios[window.currentScenarioIdx];
+                if (!currentScenario || !currentScenario.scenario) {
+                  throw new Error('Aucun scénario trouvé à sauvegarder');
+                }
+
                 const response = await fetch('/api/bubble', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -173,7 +181,7 @@
                     endpoint: 'save',
                     params: {
                       scenario_id: params.scenarioId,
-                      value: JSON.stringify(window.sankeyScenario),
+                      value: JSON.stringify(currentScenario.scenario),
                       isLive: params.scenarioIsLive,
                     },
                     method: 'POST',

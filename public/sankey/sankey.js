@@ -115,7 +115,12 @@ const stackbarComponents = {
       if (!lot.formats) return {};
       const values = {};
       Object.entries(lot.formats).forEach(([key, obj]) => {
-        if (typeof obj.pourcentage === 'number') values[key] = obj.pourcentage;
+        if (typeof obj.pourcentage === 'number') {
+          values[key] = {
+            pourcentage: obj.pourcentage,
+            color: obj.color, // Conserver la couleur
+          };
+        }
       });
       return values;
     },
@@ -151,6 +156,30 @@ const stackbarComponents = {
       }
       // Optionnel : indiquer la part sans type (rare, mais pour homogénéité)
       values._missing = 100 - (totalWithType > 0 ? 100 : 0);
+
+      // Conserver les couleurs des types
+      Object.keys(values).forEach(key => {
+        if (key !== '_missing') {
+          // Chercher la couleur dans la structure originale
+          let foundColor = null;
+          Object.values(lot.formats).forEach(formatObj => {
+            if (
+              formatObj.types &&
+              formatObj.types[key] &&
+              formatObj.types[key].color
+            ) {
+              foundColor = formatObj.types[key].color;
+            }
+          });
+          if (foundColor) {
+            values[key] = {
+              pourcentage: values[key],
+              color: foundColor,
+            };
+          }
+        }
+      });
+
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -199,6 +228,34 @@ const stackbarComponents = {
         });
       }
       values._missing = 100 - (sum > 0 ? 100 : 0);
+
+      // Conserver les couleurs des matières
+      Object.keys(values).forEach(key => {
+        if (key !== '_missing') {
+          // Chercher la couleur dans la structure originale
+          let foundColor = null;
+          Object.values(lot.formats).forEach(formatObj => {
+            if (formatObj.types) {
+              Object.values(formatObj.types).forEach(typeObj => {
+                if (
+                  typeObj.matieres &&
+                  typeObj.matieres[key] &&
+                  typeObj.matieres[key].color
+                ) {
+                  foundColor = typeObj.matieres[key].color;
+                }
+              });
+            }
+          });
+          if (foundColor) {
+            values[key] = {
+              pourcentage: values[key],
+              color: foundColor,
+            };
+          }
+        }
+      });
+
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -287,6 +344,38 @@ const stackbarComponents = {
         });
       }
       values._missing = 100 - (sum > 0 ? 100 : 0);
+
+      // Conserver les couleurs des fibres
+      Object.keys(values).forEach(key => {
+        if (key !== '_missing') {
+          // Chercher la couleur dans la structure originale
+          let foundColor = null;
+          Object.values(lot.formats).forEach(formatObj => {
+            if (formatObj.types) {
+              Object.values(formatObj.types).forEach(typeObj => {
+                if (typeObj.matieres) {
+                  Object.values(typeObj.matieres).forEach(matiereObj => {
+                    if (
+                      matiereObj.fibres &&
+                      matiereObj.fibres[key] &&
+                      matiereObj.fibres[key].color
+                    ) {
+                      foundColor = matiereObj.fibres[key].color;
+                    }
+                  });
+                }
+              });
+            }
+          });
+          if (foundColor) {
+            values[key] = {
+              pourcentage: values[key],
+              color: foundColor,
+            };
+          }
+        }
+      });
+
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -347,6 +436,34 @@ const stackbarComponents = {
       if (totalSansCouleur > 0 && totalLot > 0) {
         values['inconnu'] = (totalSansCouleur / totalLot) * 100;
       }
+
+      // Conserver les couleurs des couleurs
+      Object.keys(values).forEach(key => {
+        if (key !== 'inconnu') {
+          // Chercher la couleur dans la structure originale
+          let foundColor = null;
+          Object.values(lot.formats).forEach(formatObj => {
+            if (formatObj.types) {
+              Object.values(formatObj.types).forEach(typeObj => {
+                if (
+                  typeObj.couleurs &&
+                  typeObj.couleurs[key] &&
+                  typeObj.couleurs[key].color
+                ) {
+                  foundColor = typeObj.couleurs[key].color;
+                }
+              });
+            }
+          });
+          if (foundColor) {
+            values[key] = {
+              pourcentage: values[key],
+              color: foundColor,
+            };
+          }
+        }
+      });
+
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
@@ -359,7 +476,12 @@ const stackbarComponents = {
       const values = {};
       Object.entries(lot.qualite).forEach(([qual, pct]) => {
         // pct peut être un nombre ou un objet (selon la structure)
-        values[qual] = typeof pct === 'number' ? pct : pct.pourcentage || 0;
+        const pourcentage =
+          typeof pct === 'number' ? pct : pct.pourcentage || 0;
+        values[qual] = {
+          pourcentage: pourcentage,
+          color: pct.color, // Conserver la couleur si elle existe
+        };
       });
       return values;
     },
@@ -373,7 +495,12 @@ const stackbarComponents = {
       const values = {};
       Object.entries(lot.proprete).forEach(([prop, pct]) => {
         // pct peut être un nombre ou un objet (selon la structure)
-        values[prop] = typeof pct === 'number' ? pct : pct.pourcentage || 0;
+        const pourcentage =
+          typeof pct === 'number' ? pct : pct.pourcentage || 0;
+        values[prop] = {
+          pourcentage: pourcentage,
+          color: pct.color, // Conserver la couleur si elle existe
+        };
       });
       return values;
     },
@@ -955,102 +1082,114 @@ function updateSankey(dimension) {
 
     // Affichage des segments stackbar avec couleur du JSON
     sortedEntries.forEach(([key, value]) => {
-      const height = sum > 0 ? (value / sum) * nodeHeight : 0;
-      // Chercher la couleur dans le JSON du lot
-      let color = '#bbb';
-      if (
-        dimension === 'formats' &&
-        d.lot.formats &&
-        d.lot.formats[key] &&
-        d.lot.formats[key].color
-      ) {
-        color = d.lot.formats[key].color;
-      } else if (dimension === 'types' && d.lot.formats) {
-        // Trouver le type dans chaque format
-        Object.values(d.lot.formats).forEach(formatObj => {
-          if (
-            formatObj.types &&
-            formatObj.types[key] &&
-            formatObj.types[key].color
-          ) {
-            color = formatObj.types[key].color;
-          }
-        });
-      } else if (dimension === 'matieres' && d.lot.formats) {
-        Object.values(d.lot.formats).forEach(formatObj => {
-          if (formatObj.types) {
-            Object.values(formatObj.types).forEach(typeObj => {
-              if (
-                typeObj.matieres &&
-                typeObj.matieres[key] &&
-                typeObj.matieres[key].color
-              ) {
-                color = typeObj.matieres[key].color;
-              }
-            });
-          }
-        });
-      } else if (dimension === 'fibres' && d.lot.formats) {
-        Object.values(d.lot.formats).forEach(formatObj => {
-          if (formatObj.types) {
-            Object.values(formatObj.types).forEach(typeObj => {
-              if (typeObj.matieres) {
-                Object.values(typeObj.matieres).forEach(matiereObj => {
-                  if (
-                    matiereObj.fibres &&
-                    matiereObj.fibres[key] &&
-                    matiereObj.fibres[key].color
-                  ) {
-                    color = matiereObj.fibres[key].color;
-                  }
-                });
-              }
-            });
-          }
-        });
-      } else if (dimension === 'couleurs' && d.lot.formats) {
-        Object.values(d.lot.formats).forEach(formatObj => {
-          if (formatObj.types) {
-            Object.values(formatObj.types).forEach(typeObj => {
-              if (
-                typeObj.couleurs &&
-                typeObj.couleurs[key] &&
-                typeObj.couleurs[key].color
-              ) {
-                color = typeObj.couleurs[key].color;
-              }
-            });
-          }
-        });
-      } else if (
-        dimension === 'qualite' &&
-        d.lot.qualite &&
-        d.lot.qualite[key] &&
-        d.lot.qualite[key].color
-      ) {
-        color = d.lot.qualite[key].color;
-      } else if (
-        dimension === 'proprete' &&
-        d.lot.proprete &&
-        d.lot.proprete[key] &&
-        d.lot.proprete[key].color
-      ) {
-        color = d.lot.proprete[key].color;
-      } else if (dimension === 'perturbateurs' && d.lot.formats) {
-        Object.values(d.lot.formats).forEach(formatObj => {
-          if (formatObj.types) {
-            Object.values(formatObj.types).forEach(typeObj => {
-              if (
-                typeObj.perturbateurs &&
-                typeObj.perturbateurs[key] &&
-                typeObj.perturbateurs[key].color
-              ) {
-                color = typeObj.perturbateurs[key].color;
-              }
-            });
-          }
-        });
+      // Récupérer la valeur et la couleur depuis la nouvelle structure
+      let pourcentage,
+        color = '#bbb';
+
+      if (typeof value === 'object' && value !== null) {
+        // Nouvelle structure avec couleur
+        pourcentage = value.pourcentage || value;
+        color = value.color || '#bbb';
+      } else {
+        // Ancienne structure (fallback)
+        pourcentage = value;
+        // Chercher la couleur dans le JSON du lot (ancienne logique)
+        if (
+          dimension === 'formats' &&
+          d.lot.formats &&
+          d.lot.formats[key] &&
+          d.lot.formats[key].color
+        ) {
+          color = d.lot.formats[key].color;
+        } else if (dimension === 'types' && d.lot.formats) {
+          // Trouver le type dans chaque format
+          Object.values(d.lot.formats).forEach(formatObj => {
+            if (
+              formatObj.types &&
+              formatObj.types[key] &&
+              formatObj.types[key].color
+            ) {
+              color = formatObj.types[key].color;
+            }
+          });
+        } else if (dimension === 'matieres' && d.lot.formats) {
+          Object.values(d.lot.formats).forEach(formatObj => {
+            if (formatObj.types) {
+              Object.values(formatObj.types).forEach(typeObj => {
+                if (
+                  typeObj.matieres &&
+                  typeObj.matieres[key] &&
+                  typeObj.matieres[key].color
+                ) {
+                  color = typeObj.matieres[key].color;
+                }
+              });
+            }
+          });
+        } else if (dimension === 'fibres' && d.lot.formats) {
+          Object.values(d.lot.formats).forEach(formatObj => {
+            if (formatObj.types) {
+              Object.values(formatObj.types).forEach(typeObj => {
+                if (typeObj.matieres) {
+                  Object.values(typeObj.matieres).forEach(matiereObj => {
+                    if (
+                      matiereObj.fibres &&
+                      matiereObj.fibres[key] &&
+                      matiereObj.fibres[key].color
+                    ) {
+                      color = matiereObj.fibres[key].color;
+                    }
+                  });
+                }
+              });
+            }
+          });
+        } else if (dimension === 'couleurs' && d.lot.formats) {
+          Object.values(d.lot.formats).forEach(formatObj => {
+            if (formatObj.types) {
+              Object.values(formatObj.types).forEach(typeObj => {
+                if (
+                  typeObj.couleurs &&
+                  typeObj.couleurs[key] &&
+                  typeObj.couleurs[key].color
+                ) {
+                  color = typeObj.couleurs[key].color;
+                }
+              });
+            }
+          });
+        } else if (
+          dimension === 'qualite' &&
+          d.lot.qualite &&
+          d.lot.qualite[key] &&
+          d.lot.qualite[key].color
+        ) {
+          color = d.lot.qualite[key].color;
+        } else if (
+          dimension === 'proprete' &&
+          d.lot.proprete &&
+          d.lot.proprete[key] &&
+          d.lot.proprete[key].color
+        ) {
+          color = d.lot.proprete[key].color;
+        } else if (dimension === 'perturbateurs' && d.lot.formats) {
+          Object.values(d.lot.formats).forEach(formatObj => {
+            if (formatObj.types) {
+              Object.values(formatObj.types).forEach(typeObj => {
+                if (
+                  typeObj.perturbateurs &&
+                  typeObj.perturbateurs[key] &&
+                  typeObj.perturbateurs[key].color
+                ) {
+                  color = typeObj.perturbateurs[key].color;
+                }
+              });
+            }
+          });
+        }
       }
+
+      const height = sum > 0 ? (pourcentage / sum) * nodeHeight : 0;
       const fillColorStr = color + (color.length === 7 ? '99' : ''); // Opacité 60% si hex, sinon rgba déjà
       const strokeColorStr = color;
       const isUnknown =
