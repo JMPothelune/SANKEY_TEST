@@ -27,6 +27,8 @@
         return {
           dimension: urlParams.get('dimension') || 'format',
           scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
+          scenarioId: urlParams.get('scenarioId') || '',
+          scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
           lotId: urlParams.get('lotId') || '',
           isLive: urlParams.get('isLive') === 'true',
           isEditable: urlParams.get('isEditable') === 'yes',
@@ -34,26 +36,14 @@
       }
 
       // Fonction pour lancer le Sankey avec les paramètres d'URL
-      function launchSankeyFromUrl(lot) {
+      function launchSankeyFromUrl(lot, scenario) {
         const params = getUrlParams();
-        const scenarioIdx = params.scenarioIdx;
-
-        console.log('[HTML] Paramètres reçus:', params);
-        console.log('[HTML] Scénarios disponibles:', window.scenarios);
-        console.log('[HTML] Index demandé:', scenarioIdx);
-        console.log(
-          "[HTML] Scénario à l'index demandé:",
-          window.scenarios?.[scenarioIdx]
-        );
-
-        const scenario = window.scenarios[scenarioIdx]?.scenario;
         const dimension = params.dimension;
 
         console.log('[HTML] Lancement Sankey avec:', {
           lot,
           scenario,
           dimension,
-          scenarioIdx,
           availableScenarios: window.scenarios?.length || 0,
         });
 
@@ -72,6 +62,45 @@
             scenarios: window.scenarios,
           });
         }
+      }
+
+      // Fonction pour charger un scénario depuis l'API Bubble
+      function loadScenarioFromAPI(scenarioId, isLive) {
+        console.log("[HTML] Chargement du scénario depuis l'API Bubble:", {
+          scenarioId,
+          isLive,
+        });
+
+        return fetch('/api/bubble', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            endpoint: 'scenario',
+            params: {
+              id: scenarioId,
+              isLive: isLive,
+            },
+            method: 'POST',
+          }),
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Erreur API: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(scenario => {
+            console.log('[HTML] Scénario chargé depuis API Bubble:', scenario);
+            return scenario;
+          })
+          .catch(error => {
+            console.error(
+              '[HTML] Erreur lors du chargement du scénario depuis API:',
+              error
+            );
+            // Fallback vers scenario-data.js si l'API échoue
+            return window.scenarios?.[0]?.scenario || {};
+          });
       }
 
       document.addEventListener('DOMContentLoaded', function () {
@@ -106,13 +135,48 @@
               console.log('[HTML] Lot chargé depuis API Bubble:', lot);
               window.lotType = lot; // pour compatibilité temporaire
 
-              // Attendre que tous les scripts soient chargés avant de lancer le Sankey
+              // Maintenant charger le scénario depuis l'API
+              // On utilise le scenarioId directement au lieu de l'index
+              const scenarioId = params.scenarioId;
+              const scenarioIsLive = params.scenarioIsLive;
+
+              // Attendre que les scénarios soient chargés depuis scenario-data.js
               setTimeout(() => {
-                console.log(
-                  '[HTML] Vérification des scénarios:',
-                  window.scenarios
-                );
-                launchSankeyFromUrl(lot);
+                if (scenarioId) {
+                  console.log(
+                    '[HTML] Chargement du scénario avec ID:',
+                    scenarioId
+                  );
+
+                  // Charger le scénario depuis l'API Bubble
+                  loadScenarioFromAPI(scenarioId, scenarioIsLive)
+                    .then(scenario => {
+                      console.log(
+                        '[HTML] Scénario chargé, lancement du Sankey'
+                      );
+                      launchSankeyFromUrl(lot, scenario);
+                    })
+                    .catch(error => {
+                      console.error(
+                        '[HTML] Erreur lors du chargement du scénario:',
+                        error
+                      );
+                      // Fallback vers le scénario local par index
+                      const localScenario =
+                        window.scenarios?.[params.scenarioIdx || 0]?.scenario;
+                      if (localScenario) {
+                        launchSankeyFromUrl(lot, localScenario);
+                      }
+                    });
+                } else {
+                  console.error('[HTML] Pas de scenarioId fourni');
+                  // Fallback vers le scénario local par index
+                  const localScenario =
+                    window.scenarios?.[params.scenarioIdx || 0]?.scenario;
+                  if (localScenario) {
+                    launchSankeyFromUrl(lot, localScenario);
+                  }
+                }
               }, 100);
             })
             .catch(error => {
@@ -126,8 +190,36 @@
                 .then(lot => {
                   window.lotType = lot;
                   console.log('[HTML] Fallback vers lot_type.json:', lot);
+
+                  // Charger le scénario depuis l'API
                   setTimeout(() => {
-                    launchSankeyFromUrl(lot);
+                    if (params.scenarioId) {
+                      loadScenarioFromAPI(
+                        params.scenarioId,
+                        params.scenarioIsLive
+                      )
+                        .then(scenario => {
+                          launchSankeyFromUrl(lot, scenario);
+                        })
+                        .catch(error => {
+                          console.error(
+                            '[HTML] Erreur lors du chargement du scénario:',
+                            error
+                          );
+                          const localScenario =
+                            window.scenarios?.[params.scenarioIdx || 0]
+                              ?.scenario;
+                          if (localScenario) {
+                            launchSankeyFromUrl(lot, localScenario);
+                          }
+                        });
+                    } else {
+                      const localScenario =
+                        window.scenarios?.[params.scenarioIdx || 0]?.scenario;
+                      if (localScenario) {
+                        launchSankeyFromUrl(lot, localScenario);
+                      }
+                    }
                   }, 100);
                 });
             });
@@ -138,8 +230,32 @@
             .then(lot => {
               window.lotType = lot;
               console.log('[HTML] Lot chargé depuis lot_type.json:', lot);
+
+              // Charger le scénario depuis l'API
               setTimeout(() => {
-                launchSankeyFromUrl(lot);
+                if (params.scenarioId) {
+                  loadScenarioFromAPI(params.scenarioId, params.scenarioIsLive)
+                    .then(scenario => {
+                      launchSankeyFromUrl(lot, scenario);
+                    })
+                    .catch(error => {
+                      console.error(
+                        '[HTML] Erreur lors du chargement du scénario:',
+                        error
+                      );
+                      const localScenario =
+                        window.scenarios?.[params.scenarioIdx || 0]?.scenario;
+                      if (localScenario) {
+                        launchSankeyFromUrl(lot, localScenario);
+                      }
+                    });
+                } else {
+                  const localScenario =
+                    window.scenarios?.[params.scenarioIdx || 0]?.scenario;
+                  if (localScenario) {
+                    launchSankeyFromUrl(lot, localScenario);
+                  }
+                }
               }, 100);
             })
             .catch(error => {

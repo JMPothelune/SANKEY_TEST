@@ -147,6 +147,20 @@ export const bubbleApiCalls = [
     ],
   },
   {
+    name: 'Get 1 Scenario',
+    endpoint: 'scenario?id={id}',
+    method: 'POST',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
+    ],
+  },
+  {
     name: 'Get dimensions',
     endpoint: 'dimensions',
     method: 'GET',

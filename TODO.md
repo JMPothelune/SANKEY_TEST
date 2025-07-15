@@ -1,29 +1,37 @@
 ## Todo
-### Sankey 
-- Affichage tooltip 
-- Standardiser les tooltips 
-- Passer en mode 'module' ready pour Bubble
-- Intégrer les couleurs 
 
-### Lot 
-- Passer le + à droite de la barre 
-- Pouvoir modifier le % en cliquant dessus 
-- Gestion des effets de bords, genre quand j'enlève tous les éléments d'un lot mais qu'il reste une dimension -> griser la poubelle / empêcher l'action quand il en reste qu'un 
-- Enlever nom du lot pour qu'il soit géré par Bubble 
-- Intégrer les couleurs 
+### Sankey
 
-### Data 
-- Passer le data en modulaire 
-- Ajouter les couleurs 
-- Pouvoir générer le lot type 
+[] Affichage tooltip
+[] Standardiser les tooltips
+[x] Passer en mode 'module' ready pour Bubble
+[x] Intégrer les couleurs
+
+### Lot
+
+[] Passer le + à droite de la barre
+[] Pouvoir modifier le % en cliquant dessus
+[] Gestion des effets de bords, genre quand j'enlève tous les éléments d'un lot mais qu'il reste une dimension -> griser la poubelle / empêcher l'action quand il en reste qu'un
+[x] Intégrer les couleurs
+
+### Data
+
+[x] Données de base dans Bubble
+[x] Créer un json lot dans Bubble API
+[x] Créer un json item dans Bubble API
+[x] Passer le data en modulaire
+[x] Ajouter les couleurs dans les items
+[x] Pouvoir générer le lot type
 
 ---
-## Done 
-- Meilleure visibilité de ce qui est sélectionné -> Passer le reste en opacité basse
-- Pb quand il n'y a qu'un seul item en fin de course. 
-- Affichage quand c'est un truc 'inconnu' ou 'autre' 
-- Pouvoir basculer de dimension quand c'est possible. 
-- Pouvoir changer le poids total
-- Pouvoir ajouter des items 
-- Pouvoir enlever des éléments même quand ils ont pas d'enfant (menu au moins)
-- Pb ajout élément> -> dimension active ! 
+
+## Done
+
+[x] Meilleure visibilité de ce qui est sélectionné -> Passer le reste en opacité basse
+[x] Pb quand il n'y a qu'un seul item en fin de course.
+[x] Affichage quand c'est un truc 'inconnu' ou 'autre'
+[x] Pouvoir basculer de dimension quand c'est possible.
+[x] Pouvoir changer le poids total
+[x] Pouvoir ajouter des items
+[x] Pouvoir enlever des éléments même quand ils ont pas d'enfant (menu au moins)
+[x] Pb ajout élément> -> dimension active !

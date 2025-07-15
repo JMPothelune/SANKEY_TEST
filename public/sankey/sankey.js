@@ -2121,12 +2121,14 @@ function mergeLots(lots) {
 
   // Formats
   Object.entries(masses.formats).forEach(([format, masse]) => {
-    // Chercher la couleur dans les lots fusionnés
+    // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
     let formatColor = null;
-    lots.forEach(lot => {
-      if (lot.formats && lot.formats[format] && lot.formats[format].color)
+    for (const lot of lots) {
+      if (lot.formats && lot.formats[format] && lot.formats[format].color) {
         formatColor = lot.formats[format].color;
-    });
+        break; // Prendre la première couleur trouvée
+      }
+    }
     result.formats[format] = {
       pourcentage: (masse / total) * 100,
       types: {},
@@ -2145,17 +2147,19 @@ function mergeLots(lots) {
 
     typesInFormat.forEach(type => {
       if (!masses.types[type]) return;
-      // Chercher la couleur dans les lots fusionnés
+      // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
       let typeColor = null;
-      lots.forEach(lot => {
+      for (const lot of lots) {
         if (
           lot.formats &&
           lot.formats[format] &&
           lot.formats[format].types[type] &&
           lot.formats[format].types[type].color
-        )
+        ) {
           typeColor = lot.formats[format].types[type].color;
-      });
+          break; // Prendre la première couleur trouvée
+        }
+      }
       result.formats[format].types[type] = {
         pourcentage: (masses.types[type] / masse) * 100,
         matieres: {},
@@ -2183,19 +2187,21 @@ function mergeLots(lots) {
 
       matieresInType.forEach(matiere => {
         if (!masses.matieres[matiere]) return;
-        // Chercher la couleur dans les lots fusionnés
+        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
         let matiereColor = null;
-        lots.forEach(lot => {
+        for (const lot of lots) {
           if (
             lot.formats &&
             lot.formats[format] &&
             lot.formats[format].types[type] &&
             lot.formats[format].types[type].matieres[matiere] &&
             lot.formats[format].types[type].matieres[matiere].color
-          )
+          ) {
             matiereColor =
               lot.formats[format].types[type].matieres[matiere].color;
-        });
+            break; // Prendre la première couleur trouvée
+          }
+        }
 
         // Calculer la distribution des fibres
         const fibresAgg = {};
@@ -2248,8 +2254,8 @@ function mergeLots(lots) {
             fibresObj[fibre] = {
               pourcentage: (pct / fibresSum) * 100,
             };
-            // Chercher la couleur de la fibre dans les lots fusionnés
-            lots.forEach(lot => {
+            // Chercher la couleur de la fibre dans les lots fusionnés (prendre la première trouvée)
+            for (const lot of lots) {
               if (
                 lot.formats &&
                 lot.formats[format] &&
@@ -2265,8 +2271,9 @@ function mergeLots(lots) {
                   lot.formats[format].types[type].matieres[matiere].fibres[
                     fibre
                   ].color;
+                break; // Prendre la première couleur trouvée
               }
-            });
+            }
           });
         }
 
@@ -2296,9 +2303,9 @@ function mergeLots(lots) {
 
       couleursInType.forEach(couleur => {
         if (!masses.couleurs[couleur]) return;
-        // Chercher la couleur dans les lots fusionnés
+        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
         let couleurColor = null;
-        lots.forEach(lot => {
+        for (const lot of lots) {
           if (
             lot.formats &&
             lot.formats[format] &&
@@ -2308,8 +2315,9 @@ function mergeLots(lots) {
           ) {
             couleurColor =
               lot.formats[format].types[type].couleurs[couleur].color;
+            break; // Prendre la première couleur trouvée
           }
-        });
+        }
 
         result.formats[format].types[type].couleurs[couleur] = {
           pourcentage: (masses.couleurs[couleur] / masses.types[type]) * 100,
@@ -2336,9 +2344,9 @@ function mergeLots(lots) {
 
       perturbateursInType.forEach(perturbateur => {
         if (!masses.perturbateurs[perturbateur]) return;
-        // Chercher la couleur dans les lots fusionnés
+        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
         let perturbateurColor = null;
-        lots.forEach(lot => {
+        for (const lot of lots) {
           if (
             lot.formats &&
             lot.formats[format] &&
@@ -2348,8 +2356,9 @@ function mergeLots(lots) {
           ) {
             perturbateurColor =
               lot.formats[format].types[type].perturbateurs[perturbateur].color;
+            break; // Prendre la première couleur trouvée
           }
-        });
+        }
 
         result.formats[format].types[type].perturbateurs[perturbateur] = {
           pourcentage:
@@ -2377,9 +2386,9 @@ function mergeLots(lots) {
 
       qualitesInType.forEach(qualite => {
         if (!masses.qualites[qualite]) return;
-        // Chercher la couleur dans les lots fusionnés
+        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
         let qualiteColor = null;
-        lots.forEach(lot => {
+        for (const lot of lots) {
           if (
             lot.formats &&
             lot.formats[format] &&
@@ -2389,8 +2398,9 @@ function mergeLots(lots) {
           ) {
             qualiteColor =
               lot.formats[format].types[type].qualites[qualite].color;
+            break; // Prendre la première couleur trouvée
           }
-        });
+        }
 
         result.formats[format].types[type].qualites[qualite] = {
           pourcentage: (masses.qualites[qualite] / masses.types[type]) * 100,
@@ -2417,9 +2427,9 @@ function mergeLots(lots) {
 
       propresInType.forEach(propre => {
         if (!masses.propres[propre]) return;
-        // Chercher la couleur dans les lots fusionnés
+        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
         let propreColor = null;
-        lots.forEach(lot => {
+        for (const lot of lots) {
           if (
             lot.formats &&
             lot.formats[format] &&
@@ -2428,8 +2438,9 @@ function mergeLots(lots) {
             lot.formats[format].types[type].propres[propre].color
           ) {
             propreColor = lot.formats[format].types[type].propres[propre].color;
+            break; // Prendre la première couleur trouvée
           }
-        });
+        }
 
         result.formats[format].types[type].propres[propre] = {
           pourcentage: (masses.propres[propre] / masses.types[type]) * 100,

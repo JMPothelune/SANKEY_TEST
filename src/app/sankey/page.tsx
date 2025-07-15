@@ -2,6 +2,7 @@
 import { AppNavbar } from '@/components/ui/AppNavbar';
 import { useEffect, useState } from 'react';
 import { lots } from '@/data/lots';
+import { scenarios } from '@/data/scenarios';
 import {
   Select,
   SelectTrigger,
@@ -32,43 +33,23 @@ declare global {
 
 export default function SankeyPage() {
   const [dimension, setDimension] = useState('format');
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [selectedLot, setSelectedLot] = useState<(typeof lots)[0] | null>(
     lots[0]
   ); // Premier lot par défaut
+  const [selectedScenario, setSelectedScenario] = useState<
+    (typeof scenarios)[0] | null
+  >(scenarios[0]); // Premier scénario par défaut
   const [isEditable, setIsEditable] = useState(false);
   const [iframeKey, setIframeKey] = useState(0); // Clé pour forcer le rechargement
-
-  // Charger les scénarios depuis l'API
-  useEffect(() => {
-    const loadScenarios = async () => {
-      try {
-        const response = await fetch('/api/scenarios');
-        if (response.ok) {
-          const scenariosData = await response.json();
-          setScenarios(scenariosData);
-          if (scenariosData.length > 0) {
-            setScenarioIdx(0);
-          }
-        } else {
-          console.error('Erreur lors du chargement des scénarios');
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des scénarios:', error);
-      }
-    };
-
-    loadScenarios();
-  }, []);
 
   // Forcer le rechargement de l'iframe quand les paramètres changent
   useEffect(() => {
     setIframeKey(prev => prev + 1);
-  }, [dimension, scenarioIdx, selectedLot, isEditable]);
+  }, [dimension, scenarioIdx, selectedLot, selectedScenario, isEditable]);
 
   // Construire l'URL de l'iframe avec tous les paramètres
-  const iframeSrc = `/sankey/index.html?dimension=${encodeURIComponent(dimension)}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
+  const iframeSrc = `/sankey/index.html?dimension=${encodeURIComponent(dimension)}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}&scenarioId=${selectedScenario?.bubbleId || ''}&scenarioIsLive=${selectedScenario?.isLive || false}`;
 
   // Log pour debug
   console.log('URL iframe:', iframeSrc, 'scenarioIdx:', scenarioIdx);
@@ -100,16 +81,23 @@ export default function SankeyPage() {
             <div className="flex items-center gap-2">
               <label className="font-semibold">Scénario :</label>
               <Select
-                value={scenarioIdx.toString()}
-                onValueChange={v => setScenarioIdx(parseInt(v, 10))}
+                value={selectedScenario?.bubbleId || ''}
+                onValueChange={v => {
+                  const scenario = scenarios.find(s => s.bubbleId === v);
+                  setSelectedScenario(scenario || null);
+                  setScenarioIdx(scenarios.findIndex(s => s.bubbleId === v));
+                }}
               >
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Choisir un scénario" />
                 </SelectTrigger>
                 <SelectContent>
-                  {scenarios.map((scenario, idx) => (
-                    <SelectItem value={idx.toString()} key={idx}>
-                      {scenario.title}
+                  {scenarios.map(scenario => (
+                    <SelectItem
+                      value={scenario.bubbleId}
+                      key={scenario.bubbleId}
+                    >
+                      {scenario.nom} ({scenario.isLive ? 'Live' : 'Test'})
                     </SelectItem>
                   ))}
                 </SelectContent>

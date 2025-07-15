@@ -645,22 +645,53 @@ function processDelissage(lot, keys = [], params = {}) {
     const couleurs = {};
     let totalMatiereMass = 0;
     let totalCouleurMass = 0;
+    
+    // Stockage des couleurs pour les formats et types
+    const formatColors = {};
+    const typeColors = {};
+    const matiereColors = {};
+    const fibreColors = {};
+    
     // Parcours tous les formats/types/matières/couleurs
     Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
       const formatMass = mass * (formatObj.pourcentage / 100);
+      
+      // Récupérer la couleur du format
+      if (formatObj.color) {
+        formatColors[formatKey] = formatObj.color;
+      }
+      
       Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
         const typeMass = formatMass * (typeObj.pourcentage / 100);
+        
+        // Récupérer la couleur du type
+        if (typeObj.color) {
+          typeColors[typeKey] = typeObj.color;
+        }
+        
         // Matières
         Object.entries(typeObj.matieres || {}).forEach(([matiereKey, matiereObj]) => {
           const matiereMass = typeMass * (matiereObj.pourcentage / 100);
           matieres[matiereKey] = (matieres[matiereKey] || 0) + matiereMass;
           totalMatiereMass += matiereMass;
+          
+          // Récupérer la couleur de la matière
+          if (matiereObj.color) {
+            matiereColors[matiereKey] = matiereObj.color;
+          }
+          
           // Fibres
           Object.entries(matiereObj.fibres || {}).forEach(([fibreKey, fibreObj]) => {
             const pctFibre = typeof fibreObj === 'object' && fibreObj !== null ? (fibreObj.pourcentage !== undefined ? fibreObj.pourcentage : fibreObj) : fibreObj;
             const fibreMass = matiereMass * (pctFibre / 100);
             if (!fibres[matiereKey]) fibres[matiereKey] = {};
             fibres[matiereKey][fibreKey] = (fibres[matiereKey][fibreKey] || 0) + fibreMass;
+            
+            // Récupérer la couleur de la fibre
+            if (fibreObj && fibreObj.color) {
+              if (!fibreColors[matiereKey]) fibreColors[matiereKey] = {};
+              fibreColors[matiereKey][fibreKey] = fibreObj.color;
+            }
           });
         });
         // Couleurs
@@ -672,20 +703,29 @@ function processDelissage(lot, keys = [], params = {}) {
         });
       });
     });
+    
     // Normalisation en pourcentages
     const matieresPct = {};
     Object.entries(matieres).forEach(([k, v]) => {
       matieresPct[k] = totalMatiereMass > 0 ? (v / totalMatiereMass) * 100 : 0;
     });
-    // Fibres imbriquées dans chaque matière
+    
+    // Fibres imbriquées dans chaque matière avec couleurs
     const fibresPct = {};
     Object.entries(fibres).forEach(([matiereKey, fibresObj]) => {
       const matiereMass = matieres[matiereKey] || 0;
       fibresPct[matiereKey] = {};
       Object.entries(fibresObj).forEach(([fibreKey, fibreMass]) => {
-        fibresPct[matiereKey][fibreKey] = matiereMass > 0 ? (fibreMass / matiereMass) * 100 : 0;
+        fibresPct[matiereKey][fibreKey] = {
+          pourcentage: matiereMass > 0 ? (fibreMass / matiereMass) * 100 : 0
+        };
+        // Ajouter la couleur de la fibre si disponible
+        if (fibreColors[matiereKey] && fibreColors[matiereKey][fibreKey]) {
+          fibresPct[matiereKey][fibreKey].color = fibreColors[matiereKey][fibreKey];
+        }
       });
     });
+    
     // Couleurs imbriquées avec color
     const couleursPct = {};
     Object.entries(couleurs).forEach(([k, v]) => {
@@ -701,11 +741,12 @@ function processDelissage(lot, keys = [], params = {}) {
       };
       if (color) couleursPct[k].color = color;
     });
-    return { matieresPct, fibresPct, couleursPct };
+    
+    return { matieresPct, fibresPct, couleursPct, formatColors, typeColors, matiereColors };
   }
 
   // Fusion pondérée de la répartition d'origine
-  const { matieresPct, fibresPct, couleursPct } = mergeDistrib(lot, total);
+  const { matieresPct, fibresPct, couleursPct, formatColors, typeColors, matiereColors } = mergeDistrib(lot, total);
 
   // Création du lot principal (morceaux de tissu)
   const mainLot = JSON.parse(JSON.stringify(lot));
@@ -713,29 +754,36 @@ function processDelissage(lot, keys = [], params = {}) {
   mainLot.formats = {
     "tissu": {
       pourcentage: 100,
+      color: "#8B4513", // Couleur marron pour le tissu
       types: {
         "morceaux de tissu": {
           pourcentage: 100,
+          color: "#D2691E", // Couleur orange-marron pour les morceaux
           matieres: {},
           couleurs: {}
         }
       }
     }
   };
+  
+  // Ajouter les couleurs pour le format et le type (si on a des couleurs d'origine)
+  if (formatColors["tissu"]) {
+    mainLot.formats["tissu"].color = formatColors["tissu"];
+  }
+  if (typeColors["morceaux de tissu"]) {
+    mainLot.formats["tissu"].types["morceaux de tissu"].color = typeColors["morceaux de tissu"];
+  }
+  
   // Applique la répartition fusionnée
   Object.entries(matieresPct).forEach(([matiere, pct]) => {
-    // Chercher la couleur de la matière
-    let matiereColor = null;
-    Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
-      Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
-        if (typeObj.matieres && typeObj.matieres[matiere] && typeObj.matieres[matiere].color) matiereColor = typeObj.matieres[matiere].color;
-      });
-    });
     mainLot.formats["tissu"].types["morceaux de tissu"].matieres[matiere] = {
       pourcentage: pct,
       fibres: fibresPct[matiere] || {}
     };
-    if (matiereColor) mainLot.formats["tissu"].types["morceaux de tissu"].matieres[matiere].color = matiereColor;
+    // Ajouter la couleur de la matière si disponible
+    if (matiereColors[matiere]) {
+      mainLot.formats["tissu"].types["morceaux de tissu"].matieres[matiere].color = matiereColors[matiere];
+    }
   });
   mainLot.formats["tissu"].types["morceaux de tissu"].couleurs = couleursPct;
 
@@ -747,28 +795,35 @@ function processDelissage(lot, keys = [], params = {}) {
     coProductLot.formats = {
       "tissu": {
         pourcentage: 100,
+        color: "#8B4513", // Couleur marron pour le tissu
         types: {
           "points durs": {
             pourcentage: 100,
+            color: "#A0522D", // Couleur marron plus foncé pour les points durs
             matieres: {},
             couleurs: {}
           }
         }
       }
     };
+    
+    // Ajouter les couleurs pour le format et le type du coproduit (si on a des couleurs d'origine)
+    if (formatColors["tissu"]) {
+      coProductLot.formats["tissu"].color = formatColors["tissu"];
+    }
+    if (typeColors["points durs"]) {
+      coProductLot.formats["tissu"].types["points durs"].color = typeColors["points durs"];
+    }
+    
     Object.entries(matieresPct).forEach(([matiere, pct]) => {
-      // Chercher la couleur de la matière
-      let matiereColor = null;
-      Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
-        Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
-          if (typeObj.matieres && typeObj.matieres[matiere] && typeObj.matieres[matiere].color) matiereColor = typeObj.matieres[matiere].color;
-        });
-      });
       coProductLot.formats["tissu"].types["points durs"].matieres[matiere] = {
         pourcentage: pct,
         fibres: fibresPct[matiere] || {}
       };
-      if (matiereColor) coProductLot.formats["tissu"].types["points durs"].matieres[matiere].color = matiereColor;
+      // Ajouter la couleur de la matière si disponible
+      if (matiereColors[matiere]) {
+        coProductLot.formats["tissu"].types["points durs"].matieres[matiere].color = matiereColors[matiere];
+      }
     });
     coProductLot.formats["tissu"].types["points durs"].couleurs = couleursPct;
   }
