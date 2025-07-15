@@ -148,23 +148,7 @@
         // Initialiser l'état du bouton Enregistrer
         setScenarioModifie(false);
 
-        // Afficher le bouton Enregistrer seulement si isEditable
-        const saveBtnContainer = document.getElementById('save-btn-container');
-        console.log(
-          '[DEBUG] isEditable:',
-          params.isEditable,
-          'type:',
-          typeof params.isEditable
-        );
-        if (saveBtnContainer) {
-          const shouldShow = params.isEditable !== false;
-          console.log('[DEBUG] shouldShow:', shouldShow);
-          saveBtnContainer.style.display = shouldShow ? 'block' : 'none';
-          console.log(
-            '[DEBUG] display set to:',
-            saveBtnContainer.style.display
-          );
-        }
+        // Le bouton est toujours visible maintenant
 
         // Gestion du clic sur le bouton Enregistrer
         const saveBtn = document.getElementById('save-scenario-btn');

@@ -466,15 +466,6 @@ function updateSankey(dimension) {
   // Nettoyer le SVG
   svg.selectAll('*').remove();
 
-  // Forcer l'affichage du bouton après nettoyage
-  setTimeout(() => {
-    const params = getUrlParams();
-    const saveBtnContainer = document.getElementById('save-btn-container');
-    if (saveBtnContainer && params.isEditable !== false) {
-      saveBtnContainer.style.display = 'block';
-    }
-  }, 100);
-
   // Vérifier que le scénario Sankey est disponible
   if (
     !window.sankeyScenario ||
