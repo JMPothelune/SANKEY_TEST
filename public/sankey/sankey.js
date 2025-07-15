@@ -665,10 +665,19 @@ function updateSankey(dimension) {
       let yOffset = 0;
       const component = stackbarComponents[dimension];
       const dimensionValues = component ? component.getStackValues(d.lot) : {};
-      const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
+      const sum = Object.values(dimensionValues).reduce((a, b) => {
+        const value = typeof b === 'object' && b !== null ? b.pourcentage : b;
+        return a + value;
+      }, 0);
       const sortedEntries = Object.entries(dimensionValues)
         .filter(([key]) => !key.startsWith('_'))
-        .sort((a, b) => b[1] - a[1]);
+        .sort((a, b) => {
+          const valueA =
+            typeof a[1] === 'object' && a[1] !== null ? a[1].pourcentage : a[1];
+          const valueB =
+            typeof b[1] === 'object' && b[1] !== null ? b[1].pourcentage : b[1];
+          return valueB - valueA;
+        });
 
       // Si la stackbar est vide, afficher un fond dashed
       if (sortedEntries.length === 0) {
@@ -688,9 +697,17 @@ function updateSankey(dimension) {
 
       // Affichage des segments stackbar avec couleur du JSON
       sortedEntries.forEach(([key, value]) => {
-        const heightSeg = sum > 0 ? (value / sum) * nodeHeight : 0;
+        // Récupérer la valeur depuis la nouvelle structure
+        const pourcentage =
+          typeof value === 'object' && value !== null
+            ? value.pourcentage
+            : value;
+        const heightSeg = sum > 0 ? (pourcentage / sum) * nodeHeight : 0;
         let color = '#bbb';
-        if (
+        // Utiliser la couleur de la nouvelle structure si disponible
+        if (typeof value === 'object' && value !== null && value.color) {
+          color = value.color;
+        } else if (
           dimension === 'formats' &&
           d.lot.formats &&
           d.lot.formats[key] &&
