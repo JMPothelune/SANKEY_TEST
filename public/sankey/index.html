@@ -181,6 +181,7 @@
                     endpoint: 'save',
                     params: {
                       scenario_id: params.scenarioId,
+                      lot_id: '',
                       value: JSON.stringify(currentScenario.scenario),
                       isLive: params.scenarioIsLive,
                     },
@@ -395,9 +396,8 @@
         });
       });
     </script>
-    <script src="../data/processes.js"></script>
+    <script src="processes.js"></script>
 
-    <script src="../data/data.js"></script>
     <script src="scenario.js"></script>
     <script src="transformation-popup.js"></script>
     <script src="sankey.js"></script>
