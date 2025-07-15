@@ -1368,10 +1368,11 @@ function updateSankey(dimension) {
           const dimensionValues = component
             ? component.getStackValues(d.lot)
             : {};
-          const sumPct = Object.values(dimensionValues).reduce(
-            (a, b) => a + b,
-            0
-          );
+          const sumPct = Object.values(dimensionValues).reduce((a, b) => {
+            const value =
+              typeof b === 'object' && b !== null ? b.pourcentage : b;
+            return a + value;
+          }, 0);
           const missingPct = dimensionValues._missing || 0;
           let missingInfo = '';
           if (missingPct > 0.1) {
