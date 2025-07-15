@@ -18,11 +18,12 @@
     <div id="sankey-container"></div>
     <div
       style="
-        display: none;
         height: 60px;
         padding: 10px;
         text-align: right;
         background: white;
+        width: 120px;
+        margin-left: auto;
       "
       id="save-btn-container"
     >
@@ -149,9 +150,20 @@
 
         // Afficher le bouton Enregistrer seulement si isEditable
         const saveBtnContainer = document.getElementById('save-btn-container');
+        console.log(
+          '[DEBUG] isEditable:',
+          params.isEditable,
+          'type:',
+          typeof params.isEditable
+        );
         if (saveBtnContainer) {
-          saveBtnContainer.style.display =
-            params.isEditable === false ? 'none' : 'block';
+          const shouldShow = params.isEditable !== false;
+          console.log('[DEBUG] shouldShow:', shouldShow);
+          saveBtnContainer.style.display = shouldShow ? 'block' : 'none';
+          console.log(
+            '[DEBUG] display set to:',
+            saveBtnContainer.style.display
+          );
         }
 
         // Gestion du clic sur le bouton Enregistrer
