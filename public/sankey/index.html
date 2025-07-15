@@ -57,7 +57,7 @@
           scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
           lotId: urlParams.get('lotId') || '',
           isLive: urlParams.get('isLive') === 'true',
-          isEditable: urlParams.get('isEditable') || 'false',
+          isEditable: urlParams.get('isEditable') !== 'false', // true par défaut
         };
       }
 
@@ -151,7 +151,7 @@
         const saveBtnContainer = document.getElementById('save-btn-container');
         if (saveBtnContainer) {
           saveBtnContainer.style.display =
-            params.isEditable === 'true' ? 'block' : 'none';
+            params.isEditable === false ? 'none' : 'block';
         }
 
         // Gestion du clic sur le bouton Enregistrer
