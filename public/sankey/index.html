@@ -15,30 +15,34 @@
     />
   </head>
   <body>
-    <div class="container">
-      <div id="sankey-container"></div>
-      <div
-        style="display: none; justify-content: flex-end; margin-top: 20px"
-        id="save-btn-container"
+    <div id="sankey-container"></div>
+    <div
+      style="
+        display: none;
+        height: 60px;
+        padding: 10px;
+        text-align: right;
+        background: white;
+      "
+      id="save-btn-container"
+    >
+      <button
+        id="save-scenario-btn"
+        disabled
+        style="
+          padding: 8px 24px;
+          background: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: 1rem;
+          cursor: pointer;
+          opacity: 0.5;
+          transition: opacity 0.2s;
+        "
       >
-        <button
-          id="save-scenario-btn"
-          disabled
-          style="
-            padding: 8px 24px;
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
-            opacity: 0.5;
-            transition: opacity 0.2s;
-          "
-        >
-          Enregistrer
-        </button>
-      </div>
+        Enregistrer
+      </button>
     </div>
     <script>
       console.log('[HTML] script chargé');
@@ -147,7 +151,7 @@
         const saveBtnContainer = document.getElementById('save-btn-container');
         if (saveBtnContainer) {
           saveBtnContainer.style.display =
-            params.isEditable === false ? 'none' : 'flex';
+            params.isEditable === true ? 'block' : 'none';
         }
 
         // Gestion du clic sur le bouton Enregistrer
