@@ -1901,6 +1901,12 @@ window.onTransformationSave = (nodeId, transformation) => {
 window.onTransformationAdd = (nodeId, transformation) => {
   console.log('onTransformationAdd called:', { nodeId, transformation });
 
+  // Vérifier que window.scenarios existe
+  if (!window.scenarios) {
+    console.error('window.scenarios is not defined');
+    return;
+  }
+
   // Trouver le scénario courant
   const scenarioIdx = window.currentScenarioIdx;
   const scenario = window.scenarios[scenarioIdx]?.scenario;
@@ -1982,6 +1988,12 @@ window.addTransformation = function (scenario, path, transformation) {
 window.onTransformationMoveUp = (nodeId, transformation) => {
   console.log('onTransformationMoveUp called:', { nodeId, transformation });
 
+  // Vérifier que window.scenarios existe
+  if (!window.scenarios) {
+    console.error('window.scenarios is not defined');
+    return;
+  }
+
   // Trouver le scénario courant
   const scenarioIdx = window.currentScenarioIdx;
   const scenario = window.scenarios[scenarioIdx]?.scenario;
@@ -2018,6 +2030,12 @@ window.onTransformationMoveUp = (nodeId, transformation) => {
 // Callback global pour descendre une transformation
 window.onTransformationMoveDown = (nodeId, transformation) => {
   console.log('onTransformationMoveDown called:', { nodeId, transformation });
+
+  // Vérifier que window.scenarios existe
+  if (!window.scenarios) {
+    console.error('window.scenarios is not defined');
+    return;
+  }
 
   // Trouver le scénario courant
   const scenarioIdx = window.currentScenarioIdx;

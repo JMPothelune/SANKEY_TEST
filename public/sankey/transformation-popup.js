@@ -357,6 +357,13 @@ class TransformationPopup {
             // Utiliser directement updateTransformation
             const scenarioIdx =
               document.getElementById('scenario-selector').value;
+
+            // Vérifier que window.scenarios existe
+            if (!window.scenarios) {
+              console.error('window.scenarios is not defined');
+              return;
+            }
+
             const scenario = window.scenarios[scenarioIdx]?.scenario;
             if (scenario) {
               window.updateTransformation(

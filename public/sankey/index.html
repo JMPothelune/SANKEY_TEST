@@ -247,6 +247,18 @@
                 loadScenarioFromAPI(scenarioId, scenarioIsLive)
                   .then(scenario => {
                     console.log('[HTML] Scénario chargé, lancement du Sankey');
+
+                    // Créer la structure window.scenarios attendue par le code
+                    window.scenarios = [
+                      {
+                        scenario: scenario,
+                        title: scenario.nom || 'Scénario',
+                        bubbleId: scenarioId,
+                        isLive: scenarioIsLive,
+                      },
+                    ];
+                    window.currentScenarioIdx = 0;
+
                     launchSankeyFromUrl(lot, scenario);
                   })
                   .catch(error => {
@@ -280,6 +292,17 @@
                       params.scenarioIsLive
                     )
                       .then(scenario => {
+                        // Créer la structure window.scenarios attendue par le code
+                        window.scenarios = [
+                          {
+                            scenario: scenario,
+                            title: scenario.nom || 'Scénario',
+                            bubbleId: params.scenarioId,
+                            isLive: params.scenarioIsLive,
+                          },
+                        ];
+                        window.currentScenarioIdx = 0;
+
                         launchSankeyFromUrl(lot, scenario);
                       })
                       .catch(error => {
@@ -309,6 +332,17 @@
               if (params.scenarioId) {
                 loadScenarioFromAPI(params.scenarioId, params.scenarioIsLive)
                   .then(scenario => {
+                    // Créer la structure window.scenarios attendue par le code
+                    window.scenarios = [
+                      {
+                        scenario: scenario,
+                        title: scenario.nom || 'Scénario',
+                        bubbleId: params.scenarioId,
+                        isLive: params.scenarioIsLive,
+                      },
+                    ];
+                    window.currentScenarioIdx = 0;
+
                     launchSankeyFromUrl(lot, scenario);
                   })
                   .catch(error => {
