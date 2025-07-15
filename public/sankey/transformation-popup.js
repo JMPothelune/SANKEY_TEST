@@ -5,6 +5,7 @@ class TransformationPopup {
     this.modal = null;
     this.currentRef = null; // Pour stocker la référence
     this.mode = null; // Pour stocker le mode
+    this._dropdownCloseHandler = null; // Pour gérer le dropdown proprement
   }
 
   show(ref, mode) {
@@ -555,14 +556,21 @@ class TransformationPopup {
             });
 
             // Fermer le dropdown si on clique ailleurs
-            document.addEventListener('mousedown', e => {
+            if (this._dropdownCloseHandler) {
+              document.removeEventListener(
+                'mousedown',
+                this._dropdownCloseHandler
+              );
+            }
+            this._dropdownCloseHandler = e => {
               if (
                 !keyInput.contains(e.target) &&
                 !keyDropdown.contains(e.target)
               ) {
                 keyDropdown.classList.add('hidden');
               }
-            });
+            };
+            document.addEventListener('mousedown', this._dropdownCloseHandler);
           }
           updateSaveButtonState();
         });
@@ -601,6 +609,10 @@ class TransformationPopup {
 
   close() {
     if (this.backdrop) {
+      if (this._dropdownCloseHandler) {
+        document.removeEventListener('mousedown', this._dropdownCloseHandler);
+        this._dropdownCloseHandler = null;
+      }
       this.backdrop.remove();
       this.backdrop = null;
       this.modal = null;
