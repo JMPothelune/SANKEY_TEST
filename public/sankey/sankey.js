@@ -1059,10 +1059,19 @@ function updateSankey(dimension) {
     console.log('[DEBUG] Dimension:', dimension, 'Component:', component);
     const dimensionValues = component ? component.getStackValues(d.lot) : {};
     console.log('[DEBUG] Dimension values:', dimensionValues);
-    const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
+    const sum = Object.values(dimensionValues).reduce((a, b) => {
+      const value = typeof b === 'object' && b !== null ? b.pourcentage : b;
+      return a + value;
+    }, 0);
     const sortedEntries = Object.entries(dimensionValues)
       .filter(([key]) => !key.startsWith('_'))
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => {
+        const valueA =
+          typeof a[1] === 'object' && a[1] !== null ? a[1].pourcentage : a[1];
+        const valueB =
+          typeof b[1] === 'object' && b[1] !== null ? b[1].pourcentage : b[1];
+        return valueB - valueA;
+      });
 
     // Si la stackbar est vide, afficher un fond dashed
     if (sortedEntries.length === 0) {
@@ -1210,8 +1219,13 @@ function updateSankey(dimension) {
         .style('stroke-width', '1px')
         .style('opacity', 1)
         .on('mouseover', function () {
+          // Utiliser la valeur correcte pour le tooltip
+          const tooltipValue =
+            typeof value === 'object' && value !== null
+              ? value.pourcentage
+              : value;
           let tooltipContent = component
-            ? component.getTooltipContent(d.lot, key, value, d.lot.total)
+            ? component.getTooltipContent(d.lot, key, tooltipValue, d.lot.total)
             : '';
           tooltip.transition().duration(200).style('opacity', 0.9);
           const svgRect = svg.node().ownerSVGElement.getBoundingClientRect();
