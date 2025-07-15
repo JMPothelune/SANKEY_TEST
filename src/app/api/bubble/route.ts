@@ -12,7 +12,12 @@ export async function POST(request: Request) {
         }),
         {
           status: 500,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Frame-Options': 'ALLOWALL',
+            'Content-Security-Policy':
+              "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
+          },
         }
       );
     }
@@ -59,7 +64,12 @@ export async function POST(request: Request) {
       console.log('API Bubble - Réponse JSON:', data);
       return new Response(JSON.stringify(data), {
         status: response.status,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frame-Options': 'ALLOWALL',
+          'Content-Security-Policy':
+            "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
+        },
       });
     } catch {
       console.log('API Bubble - Réponse non-JSON (probablement JS):', text);
@@ -74,7 +84,12 @@ export async function POST(request: Request) {
         );
         return new Response(JSON.stringify(jsData), {
           status: response.status,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Frame-Options': 'ALLOWALL',
+            'Content-Security-Policy':
+              "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
+          },
         });
       } catch (parseError) {
         console.log('API Bubble - Erreur lors du parsing JS:', parseError);
@@ -86,7 +101,12 @@ export async function POST(request: Request) {
           }),
           {
             status: 500,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Frame-Options': 'ALLOWALL',
+              'Content-Security-Policy':
+                "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
+            },
           }
         );
       }
@@ -100,7 +120,12 @@ export async function POST(request: Request) {
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frame-Options': 'ALLOWALL',
+          'Content-Security-Policy':
+            "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
+        },
       }
     );
   }
