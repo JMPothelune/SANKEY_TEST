@@ -51,7 +51,7 @@
       function getUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         return {
-          dimension: urlParams.get('dimension') || 'format',
+          dimension: urlParams.get('dimension') || 'formats',
           scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
           scenarioId: urlParams.get('scenarioId') || '',
           scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',

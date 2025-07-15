@@ -12,11 +12,11 @@ import {
 } from '@/components/ui/select';
 
 const DIMENSIONS = [
-  { value: 'format', label: 'Formats' },
-  { value: 'format_type', label: 'Types' },
-  { value: 'matiere', label: 'Matière' },
+  { value: 'formats', label: 'Formats' },
+  { value: 'types', label: 'Types' },
+  { value: 'matieres', label: 'Matière' },
   { value: 'fibres', label: 'Fibres' },
-  { value: 'couleur', label: 'Couleur' },
+  { value: 'couleurs', label: 'Couleur' },
   { value: 'perturbateurs', label: 'Perturbateurs' },
   { value: 'qualite', label: 'Qualité' },
   { value: 'proprete', label: 'Propreté' },
@@ -32,7 +32,7 @@ declare global {
 }
 
 export default function SankeyPage() {
-  const [dimension, setDimension] = useState('format');
+  const [dimension, setDimension] = useState(DIMENSIONS[0].value);
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [selectedLot, setSelectedLot] = useState<(typeof lots)[0] | null>(
     lots[0]

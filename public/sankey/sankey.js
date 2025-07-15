@@ -7,7 +7,7 @@ let height =
   margin.bottom;
 
 // Variables globales pour stocker les valeurs courantes
-window.currentDimension = 'format';
+window.currentDimension = 'formats';
 window.currentScenarioIdx = 0;
 window.currentLotId = '';
 
@@ -25,7 +25,7 @@ window.setScenarioModifie = function (modifie) {
 function getUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
   return {
-    dimension: urlParams.get('dimension') || 'format',
+    dimension: urlParams.get('dimension') || 'formats',
     scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
     lotId: urlParams.get('lotId') || '',
     isEditable: urlParams.get('isEditable') === 'yes',
@@ -110,7 +110,7 @@ const tooltip = d3
 
 // Components pour stackbars et tooltips selon la dimension
 const stackbarComponents = {
-  format: {
+  formats: {
     getStackValues: lot => {
       if (!lot.formats) return {};
       const values = {};
@@ -123,7 +123,7 @@ const stackbarComponents = {
       return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
-  format_type: {
+  types: {
     getStackValues: lot => {
       if (!lot.formats) return {};
       const values = {};
@@ -157,7 +157,7 @@ const stackbarComponents = {
       return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
-  matiere: {
+  matieres: {
     getStackValues: lot => {
       if (!lot.formats) return {};
       const values = {};
@@ -293,13 +293,12 @@ const stackbarComponents = {
       return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
-  couleur: {
+  couleurs: {
     getStackValues: lot => {
       if (!lot.formats) return {};
       const values = {};
       let totalLot = 0;
       let totalSansCouleur = 0;
-
       Object.values(lot.formats).forEach(formatObj => {
         const pctFormat =
           typeof formatObj.pourcentage === 'number'
@@ -307,11 +306,7 @@ const stackbarComponents = {
             : 100;
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
-            const pctType =
-              typeof typeObj.pourcentage === 'number'
-                ? typeObj.pourcentage
-                : 100;
-            const masseType = (pctFormat * pctType) / 100;
+            const masseType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
             totalLot += masseType;
             if (typeObj.couleurs && Object.keys(typeObj.couleurs).length > 0) {
               let sumCouleur = 0;
@@ -342,11 +337,11 @@ const stackbarComponents = {
           });
         }
       });
-
-      // Normalisation sur la masse totale du lot
-      if (totalLot > 0) {
+      // Normalisation pour que la somme fasse 100%
+      const sum = Object.values(values).reduce((a, b) => a + b, 0);
+      if (sum > 0) {
         Object.keys(values).forEach(k => {
-          values[k] = (values[k] / totalLot) * 100;
+          values[k] = (values[k] / sum) * 100;
         });
       }
       if (totalSansCouleur > 0 && totalLot > 0) {
@@ -355,7 +350,7 @@ const stackbarComponents = {
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${Number(value).toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
   qualite: {
@@ -377,6 +372,7 @@ const stackbarComponents = {
       if (!lot.proprete) return {};
       const values = {};
       Object.entries(lot.proprete).forEach(([prop, pct]) => {
+        // pct peut être un nombre ou un objet (selon la structure)
         values[prop] = typeof pct === 'number' ? pct : pct.pourcentage || 0;
       });
       return values;
@@ -568,16 +564,13 @@ function updateSankey(dimension) {
         const heightSeg = sum > 0 ? (value / sum) * nodeHeight : 0;
         let color = '#bbb';
         if (
-          dimension === 'format' &&
+          dimension === 'formats' &&
           d.lot.formats &&
           d.lot.formats[key] &&
           d.lot.formats[key].color
         ) {
           color = d.lot.formats[key].color;
-        } else if (
-          (dimension === 'type' || dimension === 'format_type') &&
-          d.lot.formats
-        ) {
+        } else if (dimension === 'types' && d.lot.formats) {
           Object.values(d.lot.formats).forEach(formatObj => {
             if (
               formatObj.types &&
@@ -587,7 +580,7 @@ function updateSankey(dimension) {
               color = formatObj.types[key].color;
             }
           });
-        } else if (dimension === 'matiere' && d.lot.formats) {
+        } else if (dimension === 'matieres' && d.lot.formats) {
           Object.values(d.lot.formats).forEach(formatObj => {
             if (formatObj.types) {
               Object.values(formatObj.types).forEach(typeObj => {
@@ -619,7 +612,7 @@ function updateSankey(dimension) {
               });
             }
           });
-        } else if (dimension === 'couleur' && d.lot.formats) {
+        } else if (dimension === 'couleurs' && d.lot.formats) {
           Object.values(d.lot.formats).forEach(formatObj => {
             if (formatObj.types) {
               Object.values(formatObj.types).forEach(typeObj => {
@@ -634,19 +627,19 @@ function updateSankey(dimension) {
             }
           });
         } else if (
-          dimension === 'qualite' &&
-          d.lot.qualite &&
-          d.lot.qualite[key] &&
-          d.lot.qualite[key].color
+          dimension === 'qualites' &&
+          d.lot.qualites &&
+          d.lot.qualites[key] &&
+          d.lot.qualites[key].color
         ) {
-          color = d.lot.qualite[key].color;
+          color = d.lot.qualites[key].color;
         } else if (
-          dimension === 'proprete' &&
-          d.lot.proprete &&
-          d.lot.proprete[key] &&
-          d.lot.proprete[key].color
+          dimension === 'propretes' &&
+          d.lot.propretes &&
+          d.lot.propretes[key] &&
+          d.lot.propretes[key].color
         ) {
-          color = d.lot.proprete[key].color;
+          color = d.lot.propretes[key].color;
         } else if (dimension === 'perturbateurs' && d.lot.formats) {
           Object.values(d.lot.formats).forEach(formatObj => {
             if (formatObj.types) {
@@ -936,7 +929,9 @@ function updateSankey(dimension) {
     // Stackbars pour la dimension sélectionnée
     let yOffset = 0;
     const component = stackbarComponents[dimension];
+    console.log('[DEBUG] Dimension:', dimension, 'Component:', component);
     const dimensionValues = component ? component.getStackValues(d.lot) : {};
+    console.log('[DEBUG] Dimension values:', dimensionValues);
     const sum = Object.values(dimensionValues).reduce((a, b) => a + b, 0);
     const sortedEntries = Object.entries(dimensionValues)
       .filter(([key]) => !key.startsWith('_'))
@@ -964,16 +959,13 @@ function updateSankey(dimension) {
       // Chercher la couleur dans le JSON du lot
       let color = '#bbb';
       if (
-        dimension === 'format' &&
+        dimension === 'formats' &&
         d.lot.formats &&
         d.lot.formats[key] &&
         d.lot.formats[key].color
       ) {
         color = d.lot.formats[key].color;
-      } else if (
-        (dimension === 'type' || dimension === 'format_type') &&
-        d.lot.formats
-      ) {
+      } else if (dimension === 'types' && d.lot.formats) {
         // Trouver le type dans chaque format
         Object.values(d.lot.formats).forEach(formatObj => {
           if (
@@ -984,7 +976,7 @@ function updateSankey(dimension) {
             color = formatObj.types[key].color;
           }
         });
-      } else if (dimension === 'matiere' && d.lot.formats) {
+      } else if (dimension === 'matieres' && d.lot.formats) {
         Object.values(d.lot.formats).forEach(formatObj => {
           if (formatObj.types) {
             Object.values(formatObj.types).forEach(typeObj => {
@@ -1016,7 +1008,7 @@ function updateSankey(dimension) {
             });
           }
         });
-      } else if (dimension === 'couleur' && d.lot.formats) {
+      } else if (dimension === 'couleurs' && d.lot.formats) {
         Object.values(d.lot.formats).forEach(formatObj => {
           if (formatObj.types) {
             Object.values(formatObj.types).forEach(typeObj => {
@@ -1115,7 +1107,7 @@ function updateSankey(dimension) {
                   );
                 return hasType(lotToCheck) ? 0.7 : 0.18;
               }
-              if (dimension === 'matiere') {
+              if (dimension === 'matieres') {
                 const hasMatiere = lot =>
                   Object.values(lot.formats || {}).some(
                     f =>
