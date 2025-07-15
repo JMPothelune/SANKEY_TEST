@@ -98,8 +98,8 @@
               '[HTML] Erreur lors du chargement du scénario depuis API:',
               error
             );
-            // Fallback vers scenario-data.js si l'API échoue
-            return window.scenarios?.[0]?.scenario || {};
+            // Pas de fallback vers scenario-data.js car supprimé
+            throw new Error("Impossible de charger le scénario depuis l'API");
           });
       }
 
@@ -140,44 +140,29 @@
               const scenarioId = params.scenarioId;
               const scenarioIsLive = params.scenarioIsLive;
 
-              // Attendre que les scénarios soient chargés depuis scenario-data.js
-              setTimeout(() => {
-                if (scenarioId) {
-                  console.log(
-                    '[HTML] Chargement du scénario avec ID:',
-                    scenarioId
-                  );
+              // Charger le scénario depuis l'API Bubble
+              if (scenarioId) {
+                console.log(
+                  '[HTML] Chargement du scénario avec ID:',
+                  scenarioId
+                );
 
-                  // Charger le scénario depuis l'API Bubble
-                  loadScenarioFromAPI(scenarioId, scenarioIsLive)
-                    .then(scenario => {
-                      console.log(
-                        '[HTML] Scénario chargé, lancement du Sankey'
-                      );
-                      launchSankeyFromUrl(lot, scenario);
-                    })
-                    .catch(error => {
-                      console.error(
-                        '[HTML] Erreur lors du chargement du scénario:',
-                        error
-                      );
-                      // Fallback vers le scénario local par index
-                      const localScenario =
-                        window.scenarios?.[params.scenarioIdx || 0]?.scenario;
-                      if (localScenario) {
-                        launchSankeyFromUrl(lot, localScenario);
-                      }
-                    });
-                } else {
-                  console.error('[HTML] Pas de scenarioId fourni');
-                  // Fallback vers le scénario local par index
-                  const localScenario =
-                    window.scenarios?.[params.scenarioIdx || 0]?.scenario;
-                  if (localScenario) {
-                    launchSankeyFromUrl(lot, localScenario);
-                  }
-                }
-              }, 100);
+                loadScenarioFromAPI(scenarioId, scenarioIsLive)
+                  .then(scenario => {
+                    console.log('[HTML] Scénario chargé, lancement du Sankey');
+                    launchSankeyFromUrl(lot, scenario);
+                  })
+                  .catch(error => {
+                    console.error(
+                      '[HTML] Erreur lors du chargement du scénario:',
+                      error
+                    );
+                    // Pas de fallback vers scenario-data.js car supprimé
+                    console.error('[HTML] Impossible de charger le scénario');
+                  });
+              } else {
+                console.error('[HTML] Pas de scenarioId fourni');
+              }
             })
             .catch(error => {
               console.error(
@@ -192,35 +177,27 @@
                   console.log('[HTML] Fallback vers lot_type.json:', lot);
 
                   // Charger le scénario depuis l'API
-                  setTimeout(() => {
-                    if (params.scenarioId) {
-                      loadScenarioFromAPI(
-                        params.scenarioId,
-                        params.scenarioIsLive
-                      )
-                        .then(scenario => {
-                          launchSankeyFromUrl(lot, scenario);
-                        })
-                        .catch(error => {
-                          console.error(
-                            '[HTML] Erreur lors du chargement du scénario:',
-                            error
-                          );
-                          const localScenario =
-                            window.scenarios?.[params.scenarioIdx || 0]
-                              ?.scenario;
-                          if (localScenario) {
-                            launchSankeyFromUrl(lot, localScenario);
-                          }
-                        });
-                    } else {
-                      const localScenario =
-                        window.scenarios?.[params.scenarioIdx || 0]?.scenario;
-                      if (localScenario) {
-                        launchSankeyFromUrl(lot, localScenario);
-                      }
-                    }
-                  }, 100);
+                  if (params.scenarioId) {
+                    loadScenarioFromAPI(
+                      params.scenarioId,
+                      params.scenarioIsLive
+                    )
+                      .then(scenario => {
+                        launchSankeyFromUrl(lot, scenario);
+                      })
+                      .catch(error => {
+                        console.error(
+                          '[HTML] Erreur lors du chargement du scénario:',
+                          error
+                        );
+                        // Pas de fallback vers scenario-data.js car supprimé
+                        console.error(
+                          '[HTML] Impossible de charger le scénario'
+                        );
+                      });
+                  } else {
+                    console.error('[HTML] Pas de scenarioId fourni');
+                  }
                 });
             });
         } else {
@@ -232,31 +209,22 @@
               console.log('[HTML] Lot chargé depuis lot_type.json:', lot);
 
               // Charger le scénario depuis l'API
-              setTimeout(() => {
-                if (params.scenarioId) {
-                  loadScenarioFromAPI(params.scenarioId, params.scenarioIsLive)
-                    .then(scenario => {
-                      launchSankeyFromUrl(lot, scenario);
-                    })
-                    .catch(error => {
-                      console.error(
-                        '[HTML] Erreur lors du chargement du scénario:',
-                        error
-                      );
-                      const localScenario =
-                        window.scenarios?.[params.scenarioIdx || 0]?.scenario;
-                      if (localScenario) {
-                        launchSankeyFromUrl(lot, localScenario);
-                      }
-                    });
-                } else {
-                  const localScenario =
-                    window.scenarios?.[params.scenarioIdx || 0]?.scenario;
-                  if (localScenario) {
-                    launchSankeyFromUrl(lot, localScenario);
-                  }
-                }
-              }, 100);
+              if (params.scenarioId) {
+                loadScenarioFromAPI(params.scenarioId, params.scenarioIsLive)
+                  .then(scenario => {
+                    launchSankeyFromUrl(lot, scenario);
+                  })
+                  .catch(error => {
+                    console.error(
+                      '[HTML] Erreur lors du chargement du scénario:',
+                      error
+                    );
+                    // Pas de fallback vers scenario-data.js car supprimé
+                    console.error('[HTML] Impossible de charger le scénario');
+                  });
+              } else {
+                console.error('[HTML] Pas de scenarioId fourni');
+              }
             })
             .catch(error => {
               console.error('[HTML] Erreur lors du chargement du lot:', error);
@@ -270,7 +238,7 @@
       });
     </script>
     <script src="../data/processes.js"></script>
-    <script src="../data/scenario-data.js"></script>
+
     <script src="../data/data.js"></script>
     <script src="scenario.js"></script>
     <script src="transformation-popup.js"></script>
