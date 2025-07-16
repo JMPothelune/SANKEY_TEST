@@ -33,20 +33,26 @@ Le scénario est défini comme un objet avec deux propriétés principales :
 
 ```js
 const scenario = {
-  transformations: [
-    {
-      type: 'selectByFormat', // ou autre type de sélection
-      keys: ['vêtements'], // valeurs à sélectionner
-      scenario: {
-        // sous-scénario optionnel
-        target: 'CT2', // destination finale
-        transformations: [], // transformations supplémentaires
+  main: {
+    transformations: [
+      {
+        type: 'selectByFormat', // ou autre type de sélection
+        keys: ['vêtements'], // valeurs à sélectionner
+        scenario: {
+          // sous-scénario optionnel
+          target: 'CT2', // destination finale
+          transformations: [], // transformations supplémentaires
+        },
       },
-    },
-  ],
-  coproduct_scenario: {}, // transformations pour le reste
+    ],
+  },
+  coproduct_scenario: {
+    transformations: [], // transformations pour le reste
+  },
 };
 ```
+
+**Note importante** : La structure a évolué pour séparer clairement les transformations principales (`main.transformations`) des transformations du coproduit (`coproduct_scenario.transformations`).
 
 ### Types de Sélection Disponibles
 
@@ -354,11 +360,13 @@ Ce projet évolue rapidement. Pour toute modification, bien vérifier la corresp
 
 ### Principe général du parsing (logique actuelle)
 
-- **Chaque transformation** du tableau `transformations` découpe sa part dans le lot initial (toutes dimensions confondues).
-- **Tous les paths partent du lot initial** : chaque sélection crée un nœud et un lien depuis le lot initial.
+- **Chaque transformation** du tableau `main.transformations` découpe sa part dans le lot initial (toutes dimensions confondues).
+- **Tous les paths partent du lot initial** : chaque sélection crée un nœud et un lien depuis le lot initial.
 - **Le "reste"** est ce qui n'a pas été sélectionné dans aucune transformation (toutes dimensions confondues), et il est ajouté à la fin comme un nœud supplémentaire.
-- **Aucune logique séquentielle ni croisée** : chaque sélection est indépendante, il n'y a pas d'enchaînement ni d'intersection entre les sélections.
-- **Les sous-scenarios (`scenario`) et les `coproduct_scenario` ne sont pas encore gérés** dans le parsing actuel.
+- **Les sous-scenarios (`scenario`) et les `coproduct_scenario` sont maintenant gérés** avec une logique de paths dynamiques et imbriquées.
+- **Système de paths** : Chaque transformation a un `_path` et un `_index` pour identifier sa position exacte dans la structure imbriquée.
+- **Gestion des coproduits** : Les transformations du coproduit sont dans `coproduct_scenario.transformations` et suivent la même logique récursive.
+- **Ajout de transformations** : Les boutons « + » sont affichés selon la logique dynamique (voir plus bas).
 
 #### Exemple de scénario
 
@@ -424,40 +432,40 @@ const scenario = {
 
 ```js
 const scenario = {
-  transformations: [
-    {
-      transform: {
-        type: 'select',
-        dimension: 'format',
+  main: {
+    transformations: [
+      {
+        type: 'selectByFormat',
         keys: ['Chaussures et bottes'],
-      },
-      scenario: {
-        transformations: [
-          {
-            transform: {
-              type: 'select',
-              dimension: 'matiere',
+        scenario: {
+          transformations: [
+            {
+              type: 'selectByMatiere',
               keys: ['100% coton'],
+              scenario: {
+                transformations: [],
+                coproduct_scenario: { transformations: [] },
+              },
             },
-            scenario: {
-              transformations: [],
-              coproduct_scenario: [],
-            },
-          },
-        ],
-        coproduct_scenario: [],
+          ],
+          coproduct_scenario: { transformations: [] },
+        },
+        _path: ['main', 'transformations', 0],
+        _index: 0,
       },
-    },
-  ],
-  coproduct_scenario: [
-    // transformations à appliquer au reste du lot initial
-  ],
+    ],
+  },
+  coproduct_scenario: {
+    transformations: [
+      // transformations à appliquer au reste du lot initial
+    ],
+  },
 };
 ```
 
 - À chaque niveau, tu peux imbriquer autant de sous-scénarios que tu veux.
-- Les transformations du "reste" (coproduit) sont toujours dans le champ `coproduct_scenario`.
-- Cette structure permet de représenter n'importe quel arbre de transformations, avec une logique homogène et facile à parser.
+- Les transformations du "reste" (coproduit) sont toujours dans le champ `coproduct_scenario.transformations`.
+- Chaque transformation possède un `_path` et un `_index` pour permettre une navigation et une modification dynamique dans l'arbre.
 
 ### Parsing
 
@@ -607,3 +615,534 @@ L'iframe Sankey doit accepter les paramètres suivants (via URL ou postMessage) 
 ---
 
 **Pour toute adaptation ou évolution, suivre ce guide pour garantir la compatibilité et la robustesse de l'intégration Bubble.**
+
+---
+
+# Système de Calcul des Coûts avec Transfo_techs
+
+## Objectif
+
+Intégrer un système de calcul des coûts basé sur les technologies de transformation (transfo_techs) pour évaluer le coût total d'un scénario de valorisation.
+
+## Architecture des Données
+
+### Structure des Transfo_techs
+
+```javascript
+Transfo_tech {
+  id: string,
+  titre: string,
+  debit: number, // kg/heure (débit net)
+  version: string, // pour le versioning
+  couts_fixes: number, // €/heure (maintenance, etc.)
+  consommation_electrique: number, // kWh/heure
+  profils_rh: [
+    {
+      profil_id: string, // Référence vers BaseData.profils_rh
+      temps_requis: number // heures pour 1h d'utilisation de la transfo_tech
+    }
+  ]
+}
+```
+
+### Données de Base (BaseData)
+
+```javascript
+BaseData {
+  profils_rh: [
+    {
+      id: string,
+      nom: string,
+      cout_horaire: number, // €/heure
+    }
+  ],
+  prix_kwh: number, // €/kWh pour cette team
+}
+```
+
+### Structure des Transformations Enrichie
+
+```javascript
+Transformation {
+  // ... données existantes
+  transfo_tech_id: string,
+  nombre_machines: number, // ex: 2 ciseaux = 2x plus rapide
+  couts_calcules: {
+    temps_utile: number, // heures
+    cout_total: number, // €
+    cout_unitaire: number, // €/kg
+    consommation_totale: number, // kWh
+    couts_fixes: number, // €
+    couts_rh: number, // €
+    version_transfo_tech: string // pour détecter les changements
+  }
+}
+```
+
+## Logique de Calcul
+
+### Calcul du Temps Utile
+
+```javascript
+temps_utile = volume_lot_input / (debit_transfo_tech × nombre_machines)
+```
+
+### Calcul des Coûts
+
+```javascript
+function calculateTransformationCosts(transformation, transfoTech, baseData) {
+  if (!transfoTech) {
+    return null; // Pas de calcul si pas de transfo_tech
+  }
+
+  const volume = transformation.lot_input_volume;
+  const temps_utile =
+    volume / (transfoTech.debit * transformation.nombre_machines);
+
+  // Coûts fixes
+  const couts_fixes = transfoTech.couts_fixes * temps_utile;
+
+  // Coûts RH (calcul complexe)
+  let couts_rh = 0;
+  transfoTech.profils_rh.forEach(profil => {
+    const profil_data = baseData.profils_rh.find(
+      p => p.id === profil.profil_id
+    );
+    if (profil_data) {
+      // Pour 1h de transfo_tech, on a besoin de X heures de ce profil
+      const temps_profil = profil.temps_requis * temps_utile;
+      couts_rh += temps_profil * profil_data.cout_horaire;
+    }
+  });
+
+  // Consommation électrique
+  const consommation_totale = transfoTech.consommation_electrique * temps_utile;
+  const cout_energie = consommation_totale * baseData.prix_kwh;
+
+  const cout_total = couts_fixes + couts_rh + cout_energie;
+  const cout_unitaire = volume > 0 ? cout_total / volume : 0;
+
+  return {
+    temps_utile,
+    cout_total,
+    cout_unitaire,
+    consommation_totale,
+    couts_fixes,
+    couts_rh,
+    cout_energie,
+    version_transfo_tech: transfoTech.version,
+  };
+}
+```
+
+## Exemple Concret
+
+### Données de Base
+
+```javascript
+{
+  profils_rh: [
+    { id: "op1", nom: "Opérateur", cout_horaire: 25 },
+    { id: "sup1", nom: "Superviseur", cout_horaire: 45 },
+    { id: "tech1", nom: "Technicien", cout_horaire: 35 }
+  ],
+  prix_kwh: 0.15
+}
+```
+
+### Transfo_tech
+
+```javascript
+{
+  id: "ciseaux_electriques",
+  debit: 100, // kg/heure
+  couts_fixes: 5, // €/heure
+  consommation_electrique: 2, // kWh/heure
+  profils_rh: [
+    { profil_id: "op1", temps_requis: 0.8 }, // 48min d'opérateur pour 1h
+    { profil_id: "sup1", temps_requis: 0.1 }, // 6min de superviseur pour 1h
+    { profil_id: "tech1", temps_requis: 0.3 } // 18min de technicien pour 1h
+  ]
+}
+```
+
+### Transformation
+
+```javascript
+{
+  volume: 500, // kg
+  nombre_machines: 2,
+  // Résultat : temps_utile = 500 / (100 * 2) = 2.5 heures
+}
+```
+
+## API et Chargement des Données
+
+### Nouvel Endpoint pour les Données de Base
+
+```javascript
+fetch('/api/bubble', {
+  endpoint: 'base_data',
+  params: { isLive: params.isLive },
+  method: 'POST',
+});
+```
+
+### Versioning Intelligent
+
+```javascript
+async function checkTransfoTechVersions() {
+  const currentVersions = await fetchTransfoTechVersions();
+
+  transformations.forEach(transfo => {
+    if (
+      transfo.couts_calcules.version_transfo_tech !==
+      currentVersions[transfo.transfo_tech_id]
+    ) {
+      transfo.needs_recalculation = true;
+    }
+  });
+}
+```
+
+## Interface Utilisateur
+
+### Affichage des Coûts
+
+- **Tooltips enrichis** : Afficher coût unitaire, temps, consommation
+- **Résumé centralisé** : Tableau récapitulatif des coûts par transformation
+- **Indicateurs visuels** : Barres de progression pour les coûts, alertes pour les versions obsolètes
+
+### Bouton de Recalcul
+
+```javascript
+document.getElementById('recalculate-costs-btn').onclick =
+  calculateScenarioCosts;
+```
+
+## Gestion des Erreurs
+
+### Cas Edge
+
+- **Transfo_tech supprimée** : Ne pas calculer de coûts pour ce nœud
+- **Profil RH manquant** : Afficher un warning ou ignorer
+- **Débit = 0** : Afficher une erreur ou utiliser un débit par défaut
+- **Prix kWh manquant** : Utiliser une valeur par défaut ou bloquer
+
+## Plan d'Implémentation
+
+### Phase 1 : Structure et API
+
+1. **API pour les données de base** (profils RH, prix kWh)
+2. **Modification de l'API transfo_tech** pour inclure les nouveaux champs
+
+### Phase 2 : Calculs de Base
+
+1. **Fonction de calcul** avec la logique corrigée
+2. **Gestion des cas edge** (pas de transfo_tech, données manquantes)
+3. **Tests avec des exemples concrets**
+
+### Phase 3 : Interface Utilisateur
+
+1. **Tooltips enrichis** avec coûts détaillés
+2. **Bouton de recalcul** avec indicateurs de progression
+3. **Résumé centralisé** des coûts totaux
+
+### Phase 4 : Optimisations
+
+1. **Cache intelligent** avec versioning
+2. **Calculs différés** pour les gros scénarios
+3. **Indicateurs visuels** pour les coûts obsolètes
+
+## Points Techniques
+
+### Performance
+
+- **Calculs par lots** : Traiter les transformations par groupes pour éviter de bloquer l'UI
+- **Cache local** : Stocker les résultats dans localStorage pour éviter les recalculs inutiles
+- **Indicateurs de progression** : "Calcul en cours... 3/10 transformations"
+
+### Données Manquantes
+
+- **Volume du lot d'entrée** : Listé au premier niveau dans la clé 'total' du lot json.
+- **Métadonnées** : Ajouter des infos sur les unités, précision, etc.
+
+### Interface Utilisateur
+
+- **Affichage des coûts** : Dans les tooltips, format détaillé ou résumé ?
+- **Unité de temps** : Afficher en heures ou en heures:minutes ?
+- **Devise** : € par défaut ou configurable ?
+
+---
+
+**Ce système permettra d'évaluer précisément les coûts de valorisation en tenant compte des technologies utilisées, des ressources humaines nécessaires et des consommations énergétiques.**
+
+---
+
+# Système de Transformations Dynamiques (Bubble)
+
+## Objectif
+
+Permettre de créer des transformations configurables dans Bubble (vs les transformations statiques `selectBy*` hardcodées dans `processes.js`). Ces transformations modifient des dimensions et créent 2 lots avec des rendements différents.
+
+## Architecture des Données
+
+### Structure des Transformations Dynamiques
+
+```javascript
+DynamicTransfo {
+  id: string,
+  nom: string,
+  version: string,
+  yield: number, // % du lot principal (ex: 80 pour 80%)
+  conditions_application: [
+    {
+      dimension: 'format',
+      valeurs_acceptees: ['vêtements'] // ou IDs
+    }
+  ],
+  modifications: {
+    principal: {
+      format: { nouvelle_valeur_id: 'tissu_decoupe_123', nouvelle_valeur_nom: 'Tissu découpé' },
+      type: { nouvelle_valeur_id: 'tissu_decoupe_456', nouvelle_valeur_nom: 'Tissu découpé' }
+      // propreté: undefined → hérite de l'entrée
+      // qualité: undefined → hérite de l'entrée
+    },
+    coproduit: {
+      type: { nouvelle_valeur_id: 'chiquettes_789', nouvelle_valeur_nom: 'Chiquettes' }
+      // format: undefined → hérite de l'entrée
+      // propreté: undefined → hérite de l'entrée
+    }
+  }
+}
+```
+
+### Structure dans le Scénario
+
+```javascript
+// Transformation statique (actuelle)
+{
+  type: 'selectByFormat',
+  transfo_type: 'hardcoded',
+  keys: ['vêtements']
+}
+
+// Transformation dynamique (nouvelle)
+{
+  type: 'dynamic_transfo',
+  transfo_type: 'dynamic',
+  dynamic_transfo_id: 'lavage_123'
+}
+```
+
+## Exemples Concrets
+
+### Lavage (simple)
+
+```javascript
+{
+  id: 'lavage_123',
+  nom: 'Lavage',
+  yield: 100,
+  conditions_application: [], // s'applique à tout
+  modifications: {
+    principal: {
+      propreté: { nouvelle_valeur_id: 'propre_456', nouvelle_valeur_nom: 'Propre' }
+    },
+    coproduit: {} // pas de coproduit (yield: 100%)
+  }
+}
+```
+
+### Délissage (complexe)
+
+```javascript
+{
+  id: 'delissage_789',
+  nom: 'Délissage',
+  yield: 80,
+  conditions_application: [
+    {
+      dimension: 'format',
+      valeurs_acceptees: ['vêtements']
+    }
+  ],
+  modifications: {
+    principal: {
+      format: { nouvelle_valeur_id: 'tissu_decoupe_123', nouvelle_valeur_nom: 'Tissu découpé' },
+      type: { nouvelle_valeur_id: 'tissu_decoupe_456', nouvelle_valeur_nom: 'Tissu découpé' }
+    },
+    coproduit: {
+      type: { nouvelle_valeur_id: 'chiquettes_789', nouvelle_valeur_nom: 'Chiquettes' }
+    }
+  }
+}
+```
+
+## Logique de Traitement
+
+### Fonction de Traitement
+
+```javascript
+function applyDynamicTransfo(lot, transfo) {
+  // 1. Séparer les éléments selon les conditions
+  const elements_applicables = filterByConditions(
+    lot,
+    transfo.conditions_application
+  );
+  const elements_non_applicables = filterNonApplicables(
+    lot,
+    transfo.conditions_application
+  );
+
+  // 2. Calculer les volumes
+  const volume_applicable = elements_applicables.total;
+  const volume_principal = volume_applicable * (transfo.yield / 100);
+  const volume_coproduit = volume_applicable - volume_principal;
+
+  // 3. Créer le lot principal (éléments applicables transformés)
+  const lot_principal = {
+    ...elements_applicables,
+    total: volume_principal,
+    // Appliquer les modifications du principal
+    ...applyModifications(
+      elements_applicables,
+      transfo.modifications.principal
+    ),
+  };
+
+  // 4. Créer le coproduit (éléments non transformés + éléments applicables non principaux)
+  const lot_coproduit = {
+    ...elements_non_applicables,
+    total: elements_non_applicables.total + volume_coproduit,
+    // Fusionner avec les éléments applicables non principaux
+    ...mergeWithNonPrincipal(
+      elements_applicables,
+      volume_coproduit,
+      transfo.modifications.coproduit
+    ),
+  };
+
+  return { principal: lot_principal, coproduit: lot_coproduit };
+}
+```
+
+### Héritage des Dimensions
+
+- **Dimensions non spécifiées** : Héritent de l'entrée
+- **Dimensions spécifiées** : Remplacent les valeurs d'entrée
+
+### Gestion des Conditions
+
+- **Éléments applicables** : Transformés selon le yield
+- **Éléments non applicables** : Vont dans le coproduit (non transformés)
+
+## API et Chargement des Données
+
+### Chargement avec BaseData
+
+```javascript
+BaseData {
+  profils_rh: [...],
+  prix_kwh: number,
+  transformations_dynamiques: [
+    {
+      id: 'lavage_123',
+      nom: 'Lavage',
+      version: '1.0',
+      yield: 100,
+      conditions_application: [...],
+      modifications: {...}
+    }
+  ]
+}
+```
+
+### Nouvel Endpoint
+
+```javascript
+fetch('/api/bubble', {
+  endpoint: 'base_data',
+  params: { isLive: params.isLive },
+  method: 'POST',
+});
+```
+
+## Interface Utilisateur
+
+### Dropdown Enrichi
+
+Les transformations dynamiques apparaissent à la suite des transformations statiques :
+
+```
+- selectByFormat
+- selectByType
+- ...
+- Lavage (dynamic_transfo)
+- Délissage (dynamic_transfo)
+```
+
+### Affichage dans le Sankey
+
+- **Même style** que les autres transformations
+- **Tooltips enrichis** avec conditions d'application
+- **Pas d'icônes distinctes**
+
+## Gestion des Erreurs
+
+### Cas Edge
+
+- **Transformation supprimée** : Afficher un warning ou utiliser une transformation par défaut
+- **Conditions non remplies** : Éléments non applicables vont dans le coproduit
+- **Yield invalide** : Utiliser une valeur par défaut ou bloquer
+
+## Plan d'Implémentation
+
+### Phase 1 : Structure et API
+
+1. **API pour les transformations dynamiques** (chargement avec BaseData)
+2. **Structure unifiée** dans le scénario (`transfo_type: 'dynamic'`)
+3. **Fonction de parsing** avec gestion des conditions et modifications
+
+### Phase 2 : Logique de Traitement
+
+1. **Vérification des conditions** d'application (éléments applicables vs non applicables)
+2. **Calcul des rendements** (yield → séparation principal/coproduit)
+3. **Application des modifications** avec héritage des dimensions non spécifiées
+4. **Fusion des lots** (non applicables + coproduit)
+
+### Phase 3 : Interface Utilisateur
+
+1. **Dropdown enrichi** avec transformations dynamiques
+2. **Affichage des conditions** dans les tooltips
+3. **Gestion des cas edge** (éléments non applicables)
+
+### Phase 4 : Tests et Optimisations
+
+1. **Test avec lavage** (simple, yield: 100%)
+2. **Test avec délissage** (complexe, yield: 80%, conditions)
+3. **Cache et versioning** (comme pour les transfo_techs)
+
+## Points Techniques
+
+### Performance
+
+- **Cache intelligent** : Charger les transformations avec BaseData
+- **Versioning** : Détecter les changements et recalculer si nécessaire
+- **Calculs optimisés** : Traiter les conditions et modifications efficacement
+
+### Données Manquantes
+
+- **Mapping des valeurs** : Comment faire le lien entre IDs Bubble et noms d'affichage ?
+- **Validation** : Vérifier la cohérence des conditions et modifications
+- **Fallback** : Que faire si une transformation est supprimée ?
+
+### Interface Utilisateur
+
+- **Sélection** : Comment présenter les transformations dynamiques dans le dropdown ?
+- **Prévisualisation** : Afficher les conditions et modifications avant application ?
+- **Feedback** : Indicateurs visuels pour les transformations applicables/non applicables ?
+
+---
+
+**Ce système permettra de créer des transformations configurables dans Bubble tout en maintenant la compatibilité avec les transformations statiques existantes.**

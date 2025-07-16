@@ -3,8 +3,8 @@ console.log('lot.js chargé !');
 
 // --- Configuration des options de frequency ---
 const FREQUENCY_OPTIONS = {
-  recurrent: {
-    value: 'recurrent',
+  récurrent: {
+    value: 'récurrent',
     label: 'Récurrent',
     icon: 'arrow-clockwise',
   },
@@ -145,34 +145,39 @@ function afficherDropdownRefresh(button) {
 
   // Créer le dropdown
   const dropdown = document.createElement('div');
-  dropdown.className = 'refresh-dropdown absolute z-50';
+  dropdown.className =
+    'refresh-dropdown fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] max-w-[160px]';
   dropdown.style.top = '100%';
   dropdown.style.right = '0';
 
-  // Récupérer la valeur actuelle de frequency (par défaut 'recurrent' si null)
-  const currentFrequency = lotCourant.frequency || 'recurrent';
+  // Récupérer la valeur actuelle de frequency (par défaut 'récurrent' si null)
+  const currentFrequency = lotCourant.frequency || 'récurrent';
+
+  console.log('Frequency actuelle:', currentFrequency);
 
   dropdown.innerHTML = `
-    <div role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+    <div role="menu" aria-orientation="vertical" aria-labelledby="options-menu" class="py-1">
       ${Object.values(FREQUENCY_OPTIONS)
-        .map(
-          option => `
-        <button class="${currentFrequency === option.value ? 'selected' : ''}" role="menuitem" data-action="${option.value}">
-          <i class="ph ph-${option.icon}"></i>
+        .map(option => {
+          const isSelected = currentFrequency === option.value;
+          return `
+        <button class="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center ${isSelected ? 'text-blue-600 font-semibold' : 'text-gray-700'}" role="menuitem" data-action="${option.value}">
+          <i class="ph ph-${option.icon} mr-2 w-4 h-4 ${isSelected ? 'text-blue-600' : ''}"></i>
           ${option.label}
-          ${currentFrequency === option.value ? '<i class="ph ph-check ml-auto"></i>' : ''}
+          ${isSelected ? '<i class="ph ph-check ml-auto w-4 h-4 text-blue-600"></i>' : ''}
         </button>
-      `
-        )
+      `;
+        })
         .join('')}
     </div>
   `;
 
-  // Positionner le dropdown
+  // Positionner le dropdown correctement
   const buttonRect = button.getBoundingClientRect();
   dropdown.style.position = 'fixed';
   dropdown.style.top = `${buttonRect.bottom + 5}px`;
-  dropdown.style.left = `${buttonRect.right - 192}px`; // 192px = w-48 (largeur du dropdown)
+  // Aligner le dropdown à droite du bouton
+  dropdown.style.left = `${buttonRect.right - 140}px`; // Largeur réduite du dropdown
 
   // Ajouter le dropdown au body pour éviter les problèmes de positionnement
   document.body.appendChild(dropdown);
@@ -924,7 +929,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         ${
           niveau === 0
             ? (() => {
-                const currentFrequency = lotCourant.frequency || 'recurrent';
+                const currentFrequency = lotCourant.frequency || 'récurrent';
                 const iconName =
                   FREQUENCY_OPTIONS[currentFrequency]?.icon ||
                   'arrow-clockwise';
