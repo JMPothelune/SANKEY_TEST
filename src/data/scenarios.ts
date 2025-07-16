@@ -7,6 +7,11 @@ export interface Scenario {
 export const scenarios: Scenario[] = [
   // Exemple de scenarios, à compléter
   {
+    nom: 'Empty',
+    bubbleId: '1752565103191x919028191983493100',
+    isLive: false,
+  },
+  {
     nom: 'Legacy',
     bubbleId: '1752564737384x601182683666114400',
     isLive: false,
@@ -19,11 +24,6 @@ export const scenarios: Scenario[] = [
   {
     nom: 'Test processes',
     bubbleId: '1752565035081x996348588023394400',
-    isLive: false,
-  },
-  {
-    nom: 'Empty',
-    bubbleId: '1752565103191x919028191983493100',
     isLive: false,
   },
 ];

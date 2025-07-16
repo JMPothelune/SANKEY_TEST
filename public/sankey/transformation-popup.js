@@ -6,6 +6,11 @@ class TransformationPopup {
     this.currentRef = null; // Pour stocker la référence
     this.mode = null; // Pour stocker le mode
     this._dropdownCloseHandler = null; // Pour gérer le dropdown proprement
+    this.selectedKeys = []; // Pour stocker les keys sélectionnées
+  }
+
+  getSelectedKeys() {
+    return this.selectedKeys;
   }
 
   show(ref, mode) {
@@ -105,7 +110,7 @@ class TransformationPopup {
       ? `
       <div class="relative mt-2">
         <input id="key-input" type="text" autocomplete="off" placeholder="Paramètres" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-        <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 hidden max-h-40 overflow-y-auto"></div>
+        <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto hidden">${keyOptions}</div>
       </div>
     `
       : '';
@@ -182,31 +187,38 @@ class TransformationPopup {
         ? lastTransfo.keys[0]
         : [];
 
-    // Pills pour les keys
-    const pills = keys
-      .map(
-        (key, i) =>
-          `<span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2">
-        ${key}
+    // Pills pour les keys (utiliser _displayNames si disponible, sinon les keys)
+    const displayNames =
+      lastTransfo && lastTransfo._displayNames
+        ? lastTransfo._displayNames[0]
+        : keys;
+    const pills = displayNames
+      .map((name, i) => {
+        // Vérifier si c'est un ID Bubble (format: nombrexnombre)
+        const keyId = keys[i] || name;
+        const isBubbleId = /^\d+x\d+$/.test(keyId);
+        const textColor = isBubbleId ? 'text-blue-800' : 'text-red-600';
+        return `<span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 ${textColor} text-sm mr-2 mb-2">
+        ${name}
         <button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${i}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-      </span>`
-      )
+      </span>`;
+      })
       .join('');
 
-    // Générer les options du dropdown à partir de keyListData
-    const keyOptions = Object.keys(keyListData || {})
+    // Générer les options du dropdown à partir de keyListData avec bubble_id
+    const keyOptions = Object.entries(keyListData || {})
       .map(
-        k =>
-          `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-key="${k}">${k}</div>`
+        ([name, value]) =>
+          `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${value.bubble_id}">${name}</div>`
       )
       .join('');
     const keyInputHTML = keyList
       ? `
       <div class="relative mt-2">
         <input id="key-input" type="text" autocomplete="off" placeholder="Paramètres" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-        <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto">${keyOptions}</div>
+        <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto hidden">${keyOptions}</div>
       </div>
     `
       : '';
@@ -281,6 +293,225 @@ class TransformationPopup {
 
     // Attacher les listeners seulement ici, quand le DOM est complètement prêt
     this.attachEventListeners();
+
+    // Ajouter les listeners pour les pills existantes
+    const keysContainer = this.modal.querySelector('#transfo-keys');
+    if (keysContainer) {
+      keysContainer.querySelectorAll('button[data-key-index]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          const pill = btn.closest('span');
+          if (pill) {
+            const index = parseInt(btn.dataset.keyIndex);
+            // Récupérer selectedKeys depuis attachEventListeners
+            const selectedKeys = this.getSelectedKeys();
+            if (selectedKeys && index >= 0 && index < selectedKeys.length) {
+              selectedKeys.splice(index, 1);
+              pill.remove();
+              // Mettre à jour l'état du bouton
+              const saveBtn = this.modal.querySelector('#save-btn');
+              const transfoTypeSelect =
+                this.modal.querySelector('#transfo-type');
+              if (saveBtn && transfoTypeSelect) {
+                const selectedType = transfoTypeSelect.value;
+                const isDropdownEmpty = !selectedType;
+                const keyList =
+                  window.transformationTypes &&
+                  window.transformationTypes[selectedType] &&
+                  window.transformationTypes[selectedType].keyList;
+                const isRequiredKey =
+                  window.transformationTypes &&
+                  window.transformationTypes[selectedType] &&
+                  window.transformationTypes[selectedType].requiredKey;
+                const hasKeys = this.selectedKeys.length > 0;
+                const isValid =
+                  !isDropdownEmpty && (!keyList || !isRequiredKey || hasKeys);
+                saveBtn.disabled = !isValid;
+                saveBtn.className = isValid
+                  ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
+                  : 'px-4 py-2 bg-gray-400 text-gray-200 rounded cursor-not-allowed';
+              }
+            }
+          }
+        });
+      });
+    }
+
+    // Ajouter les listeners pour le dropdown existant si keyListData est disponible
+    if (keyListData && keyList) {
+      const keyInput = this.modal.querySelector('#key-input');
+      const keyDropdown = this.modal.querySelector('#key-dropdown');
+      const keysContainer = this.modal.querySelector('#transfo-keys');
+
+      if (keyInput && keyDropdown && keysContainer) {
+        // Récupérer les keys sélectionnées existantes
+        if (this.currentRef && this.currentRef.transformation) {
+          const lastTransfo = this.currentRef.transformation;
+          const keys =
+            lastTransfo && lastTransfo.keys && lastTransfo.keys[0]
+              ? lastTransfo.keys[0]
+              : [];
+          const displayNames =
+            lastTransfo && lastTransfo._displayNames
+              ? lastTransfo._displayNames[0]
+              : keys;
+
+          if (displayNames && displayNames.length > 0) {
+            this.selectedKeys = displayNames.map((name, index) => {
+              if (lastTransfo && lastTransfo._displayNames && keys[index]) {
+                return { name, id: keys[index] };
+              } else {
+                return { name, id: name };
+              }
+            });
+          }
+        }
+
+        // Fonction pour mettre à jour l'état du bouton de sauvegarde
+        const updateSaveButtonState = () => {
+          const saveBtn = this.modal.querySelector('#save-btn');
+          const transfoTypeSelect = this.modal.querySelector('#transfo-type');
+          const selectedType = transfoTypeSelect.value;
+          const isDropdownEmpty = !selectedType;
+          const keyList =
+            window.transformationTypes &&
+            window.transformationTypes[selectedType] &&
+            window.transformationTypes[selectedType].keyList;
+          const isRequiredKey =
+            window.transformationTypes &&
+            window.transformationTypes[selectedType] &&
+            window.transformationTypes[selectedType].requiredKey;
+          const hasKeys = this.selectedKeys.length > 0;
+          const isValid =
+            !isDropdownEmpty && (!keyList || !isRequiredKey || hasKeys);
+          saveBtn.disabled = !isValid;
+          saveBtn.className = isValid
+            ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
+            : 'px-4 py-2 bg-gray-400 text-gray-200 rounded cursor-not-allowed';
+        };
+
+        // Listener pour le dropdown
+        keyDropdown.addEventListener('mousedown', e => {
+          if (e.target && e.target.dataset.name) {
+            const name = e.target.dataset.name;
+            const id = e.target.dataset.id;
+            if (!this.selectedKeys.some(k => k.name === name && k.id === id)) {
+              this.selectedKeys.push({ name, id });
+              // Ajouter le pill visuellement
+              const pill = document.createElement('span');
+              pill.innerHTML = `${name}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${this.selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+              pill.className =
+                'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
+              keysContainer.appendChild(pill);
+              // Ajout du listener pour suppression
+              pill
+                .querySelector('button[data-key-index]')
+                .addEventListener('click', ev => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  const button = ev.target.closest('button');
+                  if (button) {
+                    const index = parseInt(button.dataset.keyIndex);
+                    if (index >= 0 && index < this.selectedKeys.length) {
+                      this.selectedKeys.splice(index, 1);
+                      pill.remove();
+                      updateSaveButtonState();
+                    }
+                  }
+                });
+              updateSaveButtonState();
+            }
+            keyDropdown.classList.add('hidden');
+            keyInput.value = '';
+          }
+        });
+
+        // Listener pour l'input
+        keyInput.addEventListener('focus', () => {
+          const showFilteredOptions = (searchValue = '') => {
+            const allKeys = Object.entries(keyListData || {});
+            const filtered = allKeys.filter(
+              ([name, itemData]) =>
+                name &&
+                name.toLowerCase().includes(searchValue.toLowerCase()) &&
+                !this.selectedKeys.some(
+                  k => k.name === name && k.id === itemData.bubble_id
+                )
+            );
+            if (filtered.length > 0) {
+              keyDropdown.innerHTML = filtered
+                .map(
+                  ([name, itemData]) =>
+                    `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${name}</div>`
+                )
+                .join('');
+              keyDropdown.classList.remove('hidden');
+            } else {
+              keyDropdown.innerHTML = '';
+              keyDropdown.classList.add('hidden');
+            }
+          };
+          showFilteredOptions();
+        });
+
+        keyInput.addEventListener('input', e => {
+          const showFilteredOptions = (searchValue = '') => {
+            const allKeys = Object.entries(keyListData || {});
+            const filtered = allKeys.filter(
+              ([name, itemData]) =>
+                name &&
+                name.toLowerCase().includes(searchValue.toLowerCase()) &&
+                !this.selectedKeys.some(
+                  k => k.name === name && k.id === itemData.bubble_id
+                )
+            );
+            if (filtered.length > 0) {
+              keyDropdown.innerHTML = filtered
+                .map(
+                  ([name, itemData]) =>
+                    `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${name}</div>`
+                )
+                .join('');
+              keyDropdown.classList.remove('hidden');
+            } else {
+              keyDropdown.innerHTML = '';
+              keyDropdown.classList.add('hidden');
+            }
+          };
+          showFilteredOptions(e.target.value.trim());
+        });
+
+        // Fermer le dropdown si on clique ailleurs
+        if (this._dropdownCloseHandler) {
+          document.removeEventListener('mousedown', this._dropdownCloseHandler);
+        }
+        this._dropdownCloseHandler = e => {
+          if (keyInput && keyDropdown) {
+            if (
+              !keyInput.contains(e.target) &&
+              !keyDropdown.contains(e.target)
+            ) {
+              keyDropdown.classList.add('hidden');
+              keyInput.value = '';
+            }
+          }
+        };
+        document.addEventListener('mousedown', this._dropdownCloseHandler);
+
+        // Ajouter un listener pour fermer le dropdown avec Escape
+        if (this._escapeHandler) {
+          document.removeEventListener('keydown', this._escapeHandler);
+        }
+        this._escapeHandler = e => {
+          if (e.key === 'Escape' && keyDropdown) {
+            keyDropdown.classList.add('hidden');
+            keyInput.value = '';
+          }
+        };
+        document.addEventListener('keydown', this._escapeHandler);
+      }
+    }
   }
 
   attachEventListeners() {
@@ -292,19 +523,13 @@ class TransformationPopup {
     const keyInput = this.modal.querySelector('#key-input');
     const keyDropdown = this.modal.querySelector('#key-dropdown');
 
-    // Pour garder la liste des keys sélectionnées (CORRIGÉ)
-    let selectedKeys = keysContainer
-      ? Array.from(keysContainer.querySelectorAll('span')).map(span =>
-          span.textContent.trim().replace(/×$/, '').trim()
-        )
-      : [];
+    // Pour garder la liste des keys sélectionnées
+    this.selectedKeys = [];
 
     // Fonction pour vérifier si le bouton de sauvegarde doit être activé
     const updateSaveButtonState = () => {
       const selectedType = transfoTypeSelect.value;
-      // 1. Dropdown vide ?
       const isDropdownEmpty = !selectedType;
-      // 2. Cette transfo nécessite des paramètres ? (input visible = keyList défini)
       const keyList =
         window.transformationTypes &&
         window.transformationTypes[selectedType] &&
@@ -313,10 +538,7 @@ class TransformationPopup {
         window.transformationTypes &&
         window.transformationTypes[selectedType] &&
         window.transformationTypes[selectedType].requiredKey;
-      const hasKeys = selectedKeys.length > 0;
-      // Le bouton est enabled seulement si :
-      // - une transfo est sélectionnée
-      // - ET (si keyList existe et requiredKey, alors il faut au moins une key)
+      const hasKeys = this.selectedKeys.length > 0;
       const isValid =
         !isDropdownEmpty && (!keyList || !isRequiredKey || hasKeys);
       saveBtn.disabled = !isValid;
@@ -328,12 +550,53 @@ class TransformationPopup {
     // Initialiser l'état du bouton
     updateSaveButtonState();
 
+    // Écouter les changements de type
+    transfoTypeSelect.addEventListener('change', e => {
+      const newType = e.target.value;
+
+      if (window.transformationUtils) {
+        transfoDescription.textContent =
+          window.transformationUtils.getTransformationDescription(newType);
+      }
+
+      // Vérifier si la nouvelle transformation nécessite des paramètres
+      const keyList =
+        window.transformationTypes &&
+        window.transformationTypes[newType] &&
+        window.transformationTypes[newType].keyList;
+
+      if (keyList) {
+        // Créer une nouvelle référence avec le nouveau type mais sans les anciens paramètres
+        const existingTransfo = this.currentRef.transformation;
+        const newRef = {
+          ...this.currentRef,
+          transformation: {
+            type: [newType],
+            keys: [[]],
+            _displayNames: [[]],
+            // Conserver les métadonnées importantes
+            _path: existingTransfo?._path,
+            _index: existingTransfo?._index,
+          },
+        };
+        this.close();
+        this.show(newRef, this.mode);
+      }
+
+      updateSaveButtonState();
+    });
+
     cancelBtn.onclick = () => this.close();
 
     saveBtn.onclick = () => {
+      // Séparer les IDs et les noms pour la transformation
+      const selectedIds = this.selectedKeys.map(k => k.id);
+      const selectedNames = this.selectedKeys.map(k => k.name);
+
       const transformation = {
         type: [transfoTypeSelect.value],
-        keys: [selectedKeys],
+        keys: [selectedIds], // IDs pour les calculs
+        _displayNames: [selectedNames], // Noms pour l'affichage
       };
 
       if (this.currentRef) {
@@ -356,15 +619,7 @@ class TransformationPopup {
             typeof existingTransfo._index === 'number'
           ) {
             // Utiliser directement updateTransformation
-            const scenarioIdx =
-              document.getElementById('scenario-selector').value;
-
-            // Vérifier que window.scenarios existe
-            if (!window.scenarios) {
-              console.error('window.scenarios is not defined');
-              return;
-            }
-
+            const scenarioIdx = window.currentScenarioIdx;
             const scenario = window.scenarios[scenarioIdx]?.scenario;
             if (scenario) {
               window.updateTransformation(
@@ -375,8 +630,7 @@ class TransformationPopup {
               );
               // Relancer le Sankey
               const lot = window.lotType;
-              const dimension =
-                document.getElementById('dimension-selector').value;
+              const dimension = window.currentDimension;
               if (typeof runSankey === 'function') {
                 runSankey({
                   lot,
@@ -393,218 +647,46 @@ class TransformationPopup {
         }
       }
 
+      // Activer le bouton Enregistrer de la page principale
+      if (typeof setScenarioModifie === 'function') {
+        setScenarioModifie(true);
+      }
+
       this.close();
     };
 
-    transfoTypeSelect.addEventListener('change', e => {
-      const newType = e.target.value;
-
-      if (window.transformationUtils) {
-        transfoDescription.textContent =
-          window.transformationUtils.getTransformationDescription(newType);
-      }
-
-      // Réinitialiser les clés sélectionnées lors du changement de type
-      selectedKeys = [];
-      keysContainer.innerHTML = '';
-      if (keyInput) keyInput.value = '';
-      if (keyDropdown) keyDropdown.classList.add('hidden');
-
-      // Vérifier si la nouvelle transformation nécessite des paramètres
-      const keyList =
-        window.transformationTypes &&
-        window.transformationTypes[newType] &&
-        window.transformationTypes[newType].keyList;
-
-      if (keyList) {
-        // Créer l'input et le dropdown s'ils n'existent pas
-        let keyInputContainer = this.modal.querySelector(
-          '#key-input-container'
-        );
-        if (!keyInputContainer) {
-          keyInputContainer = document.createElement('div');
-          keyInputContainer.className = 'relative mt-2';
-          keyInputContainer.id = 'key-input-container';
-
-          const inputHTML = `
-            <input id="key-input" type="text" autocomplete="off" placeholder="Paramètres" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-            <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto hidden"></div>
-          `;
-          keyInputContainer.innerHTML = inputHTML;
-
-          // Insérer après le container des keys
-          const keysContainerParent = keysContainer.parentNode;
-          keysContainerParent.insertBefore(
-            keyInputContainer,
-            keysContainer.nextSibling
-          );
-        }
-
-        // Afficher le loader dans l'input et le dropdown
-        const keyInput = this.modal.querySelector('#key-input');
-        const keyDropdown = this.modal.querySelector('#key-dropdown');
-        if (keyInput && keyDropdown) {
-          keyInput.value = '';
-          keyInput.placeholder = 'Chargement des paramètres...';
-          keyInput.disabled = true;
-          keyDropdown.innerHTML =
-            '<div class="flex items-center justify-center p-4"><div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div><span class="text-gray-600 text-sm">Chargement...</span></div>';
-          keyDropdown.classList.remove('hidden');
-        }
-
-        // Charger les données dynamiquement sans fermer la popup
-        chargerDonneesBaseAPI(keyList).then(data => {
-          // Mettre à jour l'input et le dropdown avec les nouvelles données
-          const keyInput = this.modal.querySelector('#key-input');
-          const keyDropdown = this.modal.querySelector('#key-dropdown');
-
-          if (keyInput && keyDropdown) {
-            // Restaurer l'input
-            keyInput.placeholder = 'Paramètres';
-            keyInput.disabled = false;
-
-            // Générer les options du dropdown à partir des nouvelles données
-            const keyOptions = Object.keys(data || {})
-              .map(
-                k =>
-                  `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-key="${k}">${k}</div>`
-              )
-              .join('');
-
-            // Mettre à jour le dropdown
-            keyDropdown.innerHTML = keyOptions;
-            keyDropdown.classList.add('hidden'); // Cacher par défaut
-
-            // Réattacher les listeners pour le nouveau dropdown (CORRIGÉ)
-            keyDropdown.addEventListener('mousedown', e => {
-              if (e.target && e.target.dataset.key) {
-                const key = e.target.dataset.key;
-                if (!selectedKeys.includes(key)) {
-                  selectedKeys.push(key);
-                  // Ajouter le pill visuellement
-                  const pill = document.createElement('span');
-                  pill.className =
-                    'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
-                  pill.innerHTML = `${key}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
-                  keysContainer.appendChild(pill);
-                  // Ajout du listener pour suppression
-                  pill
-                    .querySelector('button[data-key-index]')
-                    .addEventListener('click', ev => {
-                      ev.preventDefault();
-                      selectedKeys = selectedKeys.filter(k2 => k2 !== key);
-                      pill.remove();
-                      updateSaveButtonState();
-                    });
-                  updateSaveButtonState();
-                }
-                keyDropdown.classList.add('hidden');
-                keyDropdown.innerHTML = '';
-                keyInput.value = '';
-              }
-            });
-
-            // Réattacher les listeners pour l'input
-            keyInput.addEventListener('focus', () => {
-              const showFilteredOptions = (value = '') => {
-                const allKeys = Object.keys(data || {});
-                const filtered = allKeys.filter(
-                  k =>
-                    k &&
-                    k.toLowerCase().includes(value.toLowerCase()) &&
-                    !selectedKeys.includes(k)
-                );
-                if (filtered.length > 0) {
-                  keyDropdown.innerHTML = filtered
-                    .map(
-                      k =>
-                        `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-key="${k}">${k}</div>`
-                    )
-                    .join('');
-                  keyDropdown.classList.remove('hidden');
-                } else {
-                  keyDropdown.innerHTML = '';
-                  keyDropdown.classList.add('hidden');
-                }
-              };
-              showFilteredOptions();
-            });
-
-            keyInput.addEventListener('input', e => {
-              const showFilteredOptions = (value = '') => {
-                const allKeys = Object.keys(data || {});
-                const filtered = allKeys.filter(
-                  k =>
-                    k &&
-                    k.toLowerCase().includes(value.toLowerCase()) &&
-                    !selectedKeys.includes(k)
-                );
-                if (filtered.length > 0) {
-                  keyDropdown.innerHTML = filtered
-                    .map(
-                      k =>
-                        `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-key="${k}">${k}</div>`
-                    )
-                    .join('');
-                  keyDropdown.classList.remove('hidden');
-                } else {
-                  keyDropdown.innerHTML = '';
-                  keyDropdown.classList.add('hidden');
-                }
-              };
-              showFilteredOptions(e.target.value.trim());
-            });
-
-            // Fermer le dropdown si on clique ailleurs
-            if (this._dropdownCloseHandler) {
-              document.removeEventListener(
-                'mousedown',
-                this._dropdownCloseHandler
-              );
-            }
-            this._dropdownCloseHandler = e => {
-              if (
-                !keyInput.contains(e.target) &&
-                !keyDropdown.contains(e.target)
-              ) {
-                keyDropdown.classList.add('hidden');
-              }
-            };
-            document.addEventListener('mousedown', this._dropdownCloseHandler);
-          }
-          updateSaveButtonState();
-        });
-      } else {
-        // Pas de paramètres nécessaires, supprimer l'input s'il existe
-        const keyInputContainer = this.modal.querySelector(
-          '#key-input-container'
-        );
-        if (keyInputContainer) {
-          keyInputContainer.remove();
-        }
-        updateSaveButtonState();
-      }
-    });
-
-    // Suppression visuelle d'une key (et du modèle)
+    // Suppression visuelle d'une key (et du modèle) - CORRIGÉ
     if (keysContainer) {
-      keysContainer.querySelectorAll('button[data-key-index]').forEach(btn => {
-        btn.addEventListener('click', e => {
+      // Utiliser la délégation d'événements pour éviter les problèmes de listeners multiples
+      keysContainer.addEventListener('click', e => {
+        if (e.target.closest('button[data-key-index]')) {
           e.preventDefault();
-          const pill = btn.closest('span');
-          if (pill) {
-            const key = pill.textContent.trim();
-            selectedKeys = selectedKeys.filter(k => k !== key);
-            pill.remove();
-            updateSaveButtonState(); // Mettre à jour l'état du bouton
+          e.stopPropagation();
+          const button = e.target.closest('button[data-key-index]');
+          const pill = button.closest('span');
+          if (pill && button) {
+            const index = parseInt(button.dataset.keyIndex);
+            if (index >= 0 && index < this.selectedKeys.length) {
+              this.selectedKeys.splice(index, 1);
+              pill.remove();
+              updateSaveButtonState();
+            }
           }
-        });
+        }
       });
     }
 
-    this.backdrop.onclick = e => {
-      if (e.target === this.backdrop) this.close();
+    // SUPPRIMER le this.backdrop.onclick
+    // Ajouter un listener global pour fermer la popup si clic hors modal
+    if (this._globalCloseHandler) {
+      document.removeEventListener('mousedown', this._globalCloseHandler);
+    }
+    this._globalCloseHandler = e => {
+      if (this.modal && !this.modal.contains(e.target)) {
+        this.close();
+      }
     };
+    document.addEventListener('mousedown', this._globalCloseHandler);
   }
 
   close() {
@@ -612,6 +694,14 @@ class TransformationPopup {
       if (this._dropdownCloseHandler) {
         document.removeEventListener('mousedown', this._dropdownCloseHandler);
         this._dropdownCloseHandler = null;
+      }
+      if (this._escapeHandler) {
+        document.removeEventListener('keydown', this._escapeHandler);
+        this._escapeHandler = null;
+      }
+      if (this._globalCloseHandler) {
+        document.removeEventListener('mousedown', this._globalCloseHandler);
+        this._globalCloseHandler = null;
       }
       this.backdrop.remove();
       this.backdrop = null;

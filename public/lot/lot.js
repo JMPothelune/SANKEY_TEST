@@ -604,10 +604,12 @@ function renderStackbar(
     if (!node[dimension]) return;
     for (let i = 0; i < repartitionState.length; i++) {
       const key = repartitionState[i].name;
+      // Arrondir à 1 décimale pour correspondre à l'affichage
+      const roundedPercent = Math.round(repartitionState[i].percent * 10) / 10;
       if (typeof node[dimension][key] === 'object') {
-        node[dimension][key].pourcentage = repartitionState[i].percent;
+        node[dimension][key].pourcentage = roundedPercent;
       } else {
-        node[dimension][key] = repartitionState[i].percent;
+        node[dimension][key] = roundedPercent;
       }
     }
     window.lotCourant = lotCourant;

@@ -7,13 +7,8 @@ export interface Lot {
 export const lots: Lot[] = [
   // Exemple de lots, à compléter
   {
-    nom: 'Lozanje',
-    bubbleId: '1750146281135x404411678767972350',
-    isLive: false,
-  },
-  {
-    nom: 'Lot Virginie',
-    bubbleId: '1749571945284x153699441044094980',
+    nom: 'Brut de collecte',
+    bubbleId: '1752646696978x547596530614272000',
     isLive: false,
   },
   {

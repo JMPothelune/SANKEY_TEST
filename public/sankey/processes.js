@@ -8,7 +8,8 @@ function selectByFormat(lot, selectedFormats) {
   let restPct = 0;
 
   Object.entries(dist).forEach(([key, value]) => {
-    if (selectedFormats.includes(key)) {
+    // Comparer avec les bubble_id au lieu des noms
+    if (selectedFormats.includes(value.bubble_id)) {
       selected[key] = { ...value };
       if (value.color) selected[key].color = value.color;
       selectedPct += value.pourcentage;
@@ -72,7 +73,8 @@ function selectByType(lot, selectedTypes) {
 
     Object.entries(dist).forEach(([key, value]) => {
       let pct = typeof value === 'number' ? value : value.pourcentage;
-      if (selectedTypes.includes(key)) {
+      // Comparer uniquement avec les bubble_id
+      if (selectedTypes.includes(value.bubble_id)) {
         selected[key] = JSON.parse(JSON.stringify(value));
         if (value.color) selected[key].color = value.color;
         selected[key].pourcentage = pct;
@@ -84,6 +86,11 @@ function selectByType(lot, selectedTypes) {
         restPct += pct;
       }
     });
+
+    // Si aucun type n'est sélectionné, tout va au reste
+    if (selectedPct === 0) {
+      restPct = 100;
+    }
 
     // Recalcul des pourcentages pour ce format
     Object.keys(selected).forEach(k => {
@@ -166,7 +173,8 @@ function selectByMatiere(lot, selectedMatieres) {
       }
 
       Object.entries(matieresObj).forEach(([nom, matiere]) => {
-        if (selectedMatieres.includes(nom)) {
+        // Comparer avec les bubble_id au lieu des noms
+        if (selectedMatieres.includes(matiere.bubble_id)) {
           selectedMatieresObj[nom] = JSON.parse(JSON.stringify(matiere));
           if (matiere.color) selectedMatieresObj[nom].color = matiere.color;
           selectedPct += matiere.pourcentage;
@@ -279,7 +287,8 @@ function selectByQualite(lot, selectedQualites) {
           : 0
         : value;
 
-    if (selectedQualites.includes(key)) {
+    // Comparer avec les bubble_id au lieu des noms
+    if (selectedQualites.includes(value.bubble_id)) {
       selected[key] = {
         pourcentage: pct,
       };
@@ -362,7 +371,8 @@ function selectByCouleur(lot, selectedCouleurs) {
             couleurObj.pourcentage *
             (typeObj.pourcentage / 100) *
             (formatObj.pourcentage / 100);
-          if (selectedCouleurs.includes(couleur)) {
+          // Comparer avec les bubble_id au lieu des noms
+          if (selectedCouleurs.includes(couleurObj.bubble_id)) {
             selectedPct += pct;
           } else {
             restPct += pct;
@@ -383,7 +393,8 @@ function selectByCouleur(lot, selectedCouleurs) {
         const selected = {};
         const rest = {};
         Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-          if (selectedCouleurs.includes(couleur)) {
+          // Comparer avec les bubble_id au lieu des noms
+          if (selectedCouleurs.includes(couleurObj.bubble_id)) {
             selected[couleur] = { ...couleurObj };
             if (couleurObj.color) selected[couleur].color = couleurObj.color;
           } else {
@@ -403,7 +414,8 @@ function selectByCouleur(lot, selectedCouleurs) {
         const selected = {};
         const rest = {};
         Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-          if (selectedCouleurs.includes(couleur)) {
+          // Comparer avec les bubble_id au lieu des noms
+          if (selectedCouleurs.includes(couleurObj.bubble_id)) {
             selected[couleur] = { ...couleurObj };
             if (couleurObj.color) selected[couleur].color = couleurObj.color;
           } else {
@@ -480,7 +492,8 @@ function selectByFibre(
                   ? fibreObj.pourcentage
                   : fibreObj
                 : fibreObj;
-            if (!selectedFibres.includes(fibre)) return false;
+            // Comparer avec les bubble_id au lieu des noms
+            if (!selectedFibres.includes(fibreObj.bubble_id)) return false;
             if (threshold !== null && condition !== null) {
               if (condition === 'over') return pctFibre >= threshold;
               if (condition === 'under') return pctFibre <= threshold;
@@ -587,7 +600,8 @@ function selectByProprete(lot, selectedProprete) {
   if (lot.proprete) {
     Object.entries(lot.proprete).forEach(([prop, pct]) => {
       const mass = lot.total * (pct.pourcentage / 100);
-      if (selectedArray.includes(prop)) {
+      // Comparer avec les bubble_id au lieu des noms
+      if (selectedArray.includes(pct.bubble_id)) {
         targetMass += mass;
       } else {
         coProductMass += mass;
@@ -603,7 +617,8 @@ function selectByProprete(lot, selectedProprete) {
   if (targetMass > 0) {
     const targetProprete = {};
     Object.entries(lot.proprete).forEach(([prop, pct]) => {
-      if (selectedArray.includes(prop)) {
+      // Comparer avec les bubble_id au lieu des noms
+      if (selectedArray.includes(pct.bubble_id)) {
         targetProprete[prop] = {
           pourcentage: (pct.pourcentage * lot.total) / targetMass,
         };
@@ -616,7 +631,8 @@ function selectByProprete(lot, selectedProprete) {
   if (coProductMass > 0) {
     const coProductProprete = {};
     Object.entries(lot.proprete).forEach(([prop, pct]) => {
-      if (!selectedArray.includes(prop)) {
+      // Comparer avec les bubble_id au lieu des noms
+      if (!selectedArray.includes(pct.bubble_id)) {
         coProductProprete[prop] = {
           pourcentage: (pct.pourcentage * lot.total) / coProductMass,
         };
@@ -663,7 +679,8 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
               perturbateurObj.pourcentage *
               (typeObj.pourcentage / 100) *
               (formatObj.pourcentage / 100);
-            if (selectedPerturbateurs.includes(perturbateur)) {
+            // Comparer avec les bubble_id au lieu des noms
+            if (selectedPerturbateurs.includes(perturbateurObj.bubble_id)) {
               selectedPct += pct;
             } else {
               restPct += pct;
@@ -686,7 +703,8 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
         const rest = {};
         Object.entries(typeObj.perturbateurs).forEach(
           ([perturbateur, perturbateurObj]) => {
-            if (selectedPerturbateurs.includes(perturbateur)) {
+            // Comparer avec les bubble_id au lieu des noms
+            if (selectedPerturbateurs.includes(perturbateurObj.bubble_id)) {
               selected[perturbateur] = { ...perturbateurObj };
               if (perturbateurObj.color)
                 selected[perturbateur].color = perturbateurObj.color;
@@ -710,7 +728,8 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
         const rest = {};
         Object.entries(typeObj.perturbateurs).forEach(
           ([perturbateur, perturbateurObj]) => {
-            if (selectedPerturbateurs.includes(perturbateur)) {
+            // Comparer avec les bubble_id au lieu des noms
+            if (selectedPerturbateurs.includes(perturbateurObj.bubble_id)) {
               selected[perturbateur] = { ...perturbateurObj };
               if (perturbateurObj.color)
                 selected[perturbateur].color = perturbateurObj.color;

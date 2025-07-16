@@ -907,13 +907,7 @@ function updateSankey(dimension) {
           ) {
             // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
             if (d.name && d.name.startsWith('Reste')) {
-              path = [
-                ...lastTransfo._path,
-                lastTransfo._index,
-                'scenario',
-                'coproduct_scenario',
-                'transformations',
-              ];
+              path = [...lastTransfo._path, 'scenario', 'coproduct_scenario'];
             } else {
               // Sinon, pointer vers le sous-scénario
               path = [
@@ -1073,9 +1067,7 @@ function updateSankey(dimension) {
     // Stackbars pour la dimension sélectionnée
     let yOffset = 0;
     const component = stackbarComponents[dimension];
-    console.log('[DEBUG] Dimension:', dimension, 'Component:', component);
     const dimensionValues = component ? component.getStackValues(d.lot) : {};
-    console.log('[DEBUG] Dimension values:', dimensionValues);
     const sum = Object.values(dimensionValues).reduce((a, b) => {
       const value = typeof b === 'object' && b !== null ? b.pourcentage : b;
       return a + value;
@@ -1771,13 +1763,7 @@ function updateSankey(dimension) {
           ) {
             // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
             if (d.name && d.name.startsWith('Reste')) {
-              path = [
-                ...lastTransfo._path,
-                lastTransfo._index,
-                'scenario',
-                'coproduct_scenario',
-                'transformations',
-              ];
+              path = [...lastTransfo._path, 'scenario', 'coproduct_scenario'];
             } else {
               // Sinon, pointer vers le sous-scénario
               path = [
@@ -1850,13 +1836,7 @@ function updateSankey(dimension) {
           ) {
             // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
             if (d.name && d.name.startsWith('Reste')) {
-              path = [
-                ...lastTransfo._path,
-                lastTransfo._index,
-                'scenario',
-                'coproduct_scenario',
-                'transformations',
-              ];
+              path = [...lastTransfo._path, 'scenario', 'coproduct_scenario'];
             } else {
               // Sinon, pointer vers le sous-scénario
               path = [
@@ -2035,13 +2015,39 @@ window.onTransformationSave = (nodeId, transformation) => {
           return true;
         }
       }
+
+      // Chercher aussi dans les coproducts des sous-scénarios
+      if (t.scenario?.coproduct_scenario?.transformations) {
+        if (
+          findTransformation(t.scenario.coproduct_scenario.transformations, [
+            ...currentPath,
+            i,
+            'scenario',
+            'coproduct_scenario',
+            'transformations',
+          ])
+        ) {
+          return true;
+        }
+      }
     }
     return false;
   };
 
-  findTransformation(
-    scenario.main?.transformations || scenario.transformations
-  );
+  // Chercher d'abord dans les transformations principales
+  if (
+    findTransformation(
+      scenario.main?.transformations || scenario.transformations
+    )
+  ) {
+    // Transformation trouvée dans les transformations principales
+  } else {
+    // Chercher dans les coproducts du scénario racine
+    findTransformation(scenario.coproduct_scenario?.transformations || [], [
+      'coproduct_scenario',
+      'transformations',
+    ]);
+  }
 
   console.log('Found path and index:', { path, index });
 
@@ -2101,11 +2107,7 @@ window.onTransformationAdd = (nodeId, transformation) => {
   // Relancer le Sankey
   const lot = window.lotType;
   const dimension = window.currentDimension;
-  console.log('Reloading Sankey with:', {
-    lot: !!lot,
-    dimension,
-    hasRunSankey: typeof runSankey === 'function',
-  });
+
   if (typeof runSankey === 'function' && lot && scenario) {
     console.log('Calling runSankey...');
     runSankey({ lot, scenario, containerId: 'sankey-container', dimension });
@@ -2780,13 +2782,6 @@ function applyScenario(
   const parentTotal = lot.total;
   let totalChildren = 0;
 
-  console.log('applyScenario - scenario structure:', {
-    hasMain: !!scenario.main,
-    mainTransformations: scenario.main?.transformations?.length || 0,
-    rootTransformations: scenario.transformations?.length || 0,
-    scenarioKeys: Object.keys(scenario),
-  });
-
   (scenario.main?.transformations || scenario.transformations || []).forEach(
     (transfo, idx) => {
       let result;
@@ -2797,16 +2792,6 @@ function applyScenario(
       // --- Marquage du path et de l'index sur la transformation ---
       if (!transfo._path) transfo._path = [...pathArr];
       if (typeof transfo._index !== 'number') transfo._index = idx;
-
-      // Log temporaire pour vérifier le marquage
-      if (window.DEBUG_TRANSFO_PATH) {
-        console.log(
-          'TRANSFO PATH/INDEX',
-          transfo._path,
-          transfo._index,
-          transfo
-        );
-      }
 
       if (type === 'selectByFormat') {
         result = window.processes['selectByFormat'](resteLot, keys);
@@ -2865,14 +2850,7 @@ function applyScenario(
 
       // On crée d'abord le nœud
       transfo._nodeId = nodeId;
-      console.log(
-        'applyScenario - pathArr:',
-        pathArr,
-        'idx:',
-        idx,
-        'nodePath:',
-        [...pathArr, idx]
-      );
+
       const nodePath = [...pathArr, idx];
       nodes.push({
         id: nodeId,
@@ -2935,18 +2913,13 @@ function applyScenario(
       typeof pathArr[pathArr.length - 1] === 'number'
     ) {
       // On est dans une transformation du scénario principal ou d'un sous-scenario
-      coproductPath = [
-        ...pathArr,
-        'scenario',
-        'coproduct_scenario',
-        'transformations',
-      ];
+      coproductPath = [...pathArr, 'scenario', 'coproduct_scenario'];
     } else if (isRoot) {
       // Vrai coproduit racine
-      coproductPath = ['coproduct_scenario', 'transformations'];
+      coproductPath = ['coproduct_scenario'];
     } else {
       // Fallback (devrait être rare)
-      coproductPath = [...pathArr, 'coproduct_scenario', 'transformations'];
+      coproductPath = [...pathArr, 'coproduct_scenario'];
     }
     resteLot.id = coproductNodeId;
     resteLot._path = coproductPath;
@@ -2966,9 +2939,13 @@ function applyScenario(
     ) {
       scenario.coproduct_scenario.transformations.forEach(
         (coproTransfo, cidx) => {
-          if (!coproTransfo._path) coproTransfo._path = [...coproductPath];
-          if (typeof coproTransfo._index !== 'number')
-            coproTransfo._index = cidx;
+          // Toujours mettre à jour le path et l'index pour s'assurer qu'ils sont corrects
+          coproTransfo._path = [...coproductPath];
+          coproTransfo._index = cidx;
+          // Chaque transformation dans le coproduit doit avoir son propre nodeId
+          if (!coproTransfo._nodeId) {
+            coproTransfo._nodeId = `${idGenObj.id++}`;
+          }
         }
       );
     }
@@ -2996,7 +2973,7 @@ function applyScenario(
         transformations_appliquees,
         depth + 1,
         titre,
-        coproPath
+        coproductPath // Utiliser coproductPath au lieu de coproPath
       );
     }
   }
