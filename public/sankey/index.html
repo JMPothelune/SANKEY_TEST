@@ -48,9 +48,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         return {
           dimension: urlParams.get('dimension') || 'formats',
-          scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
+          // Supprimer scenarioIdx car il n'est pas nécessaire en mode iframe
+          // scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
           scenarioId: urlParams.get('scenarioId') || '',
-          scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
+          // Supprimer scenarioIsLive, utiliser isLive pour tout
+          // scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
           lotId: urlParams.get('lotId') || '',
           isLive: urlParams.get('isLive') === 'true',
           isEditable: urlParams.get('isEditable') !== 'false', // true par défaut
@@ -183,7 +185,7 @@
                       scenario_id: params.scenarioId,
                       lot_id: '',
                       value: JSON.stringify(currentScenario.scenario),
-                      isLive: params.scenarioIsLive,
+                      isLive: params.isLive,
                     },
                     method: 'POST',
                   }),
@@ -244,7 +246,7 @@
               // Maintenant charger le scénario depuis l'API
               // On utilise le scenarioId directement au lieu de l'index
               const scenarioId = params.scenarioId;
-              const scenarioIsLive = params.scenarioIsLive;
+              // const scenarioIsLive = params.scenarioIsLive;
 
               // Charger le scénario depuis l'API Bubble
               if (scenarioId) {
@@ -253,7 +255,7 @@
                   scenarioId
                 );
 
-                loadScenarioFromAPI(scenarioId, scenarioIsLive)
+                loadScenarioFromAPI(scenarioId, params.isLive)
                   .then(scenario => {
                     console.log('[HTML] Scénario chargé, lancement du Sankey');
 
@@ -263,7 +265,7 @@
                         scenario: scenario,
                         title: scenario.nom || 'Scénario',
                         bubbleId: scenarioId,
-                        isLive: scenarioIsLive,
+                        isLive: params.isLive,
                       },
                     ];
                     window.currentScenarioIdx = 0;
@@ -296,10 +298,7 @@
 
                   // Charger le scénario depuis l'API
                   if (params.scenarioId) {
-                    loadScenarioFromAPI(
-                      params.scenarioId,
-                      params.scenarioIsLive
-                    )
+                    loadScenarioFromAPI(params.scenarioId, params.isLive)
                       .then(scenario => {
                         // Créer la structure window.scenarios attendue par le code
                         window.scenarios = [
@@ -307,7 +306,7 @@
                             scenario: scenario,
                             title: scenario.nom || 'Scénario',
                             bubbleId: params.scenarioId,
-                            isLive: params.scenarioIsLive,
+                            isLive: params.isLive,
                           },
                         ];
                         window.currentScenarioIdx = 0;
@@ -339,7 +338,7 @@
 
               // Charger le scénario depuis l'API
               if (params.scenarioId) {
-                loadScenarioFromAPI(params.scenarioId, params.scenarioIsLive)
+                loadScenarioFromAPI(params.scenarioId, params.isLive)
                   .then(scenario => {
                     // Créer la structure window.scenarios attendue par le code
                     window.scenarios = [
@@ -347,7 +346,7 @@
                         scenario: scenario,
                         title: scenario.nom || 'Scénario',
                         bubbleId: params.scenarioId,
-                        isLive: params.scenarioIsLive,
+                        isLive: params.isLive,
                       },
                     ];
                     window.currentScenarioIdx = 0;

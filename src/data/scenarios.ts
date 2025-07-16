@@ -26,4 +26,9 @@ export const scenarios: Scenario[] = [
     bubbleId: '1752565035081x996348588023394400',
     isLive: false,
   },
+  {
+    nom: 'Vide Live',
+    bubbleId: '1752657446787x193212466860654600',
+    isLive: true,
+  },
 ];

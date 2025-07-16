@@ -16,4 +16,9 @@ export const lots: Lot[] = [
     bubbleId: '1751975189188x893746317083279400',
     isLive: false,
   },
+  {
+    nom: 'Brut Live',
+    bubbleId: '1752657140914x969406016835551200',
+    isLive: true,
+  },
 ];

@@ -26,12 +26,16 @@ function getUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
   return {
     dimension: urlParams.get('dimension') || 'formats',
-    scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
+    // Supprimer scenarioIdx car il n'est pas nécessaire en mode iframe
+    // scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
     lotId: urlParams.get('lotId') || '',
-    isEditable: urlParams.get('isEditable') === 'yes',
+    // Harmoniser avec index.html : true par défaut, false seulement si explicitement 'false'
+    isEditable: urlParams.get('isEditable') !== 'false',
     scenarioId: urlParams.get('scenarioId') || '',
-    scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
+    // Utiliser isLive pour tout, pas besoin de scenarioIsLive séparé
     isLive: urlParams.get('isLive') === 'true',
+    // Supprimer scenarioIsLive car redondant avec isLive
+    // scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
   };
 }
 
