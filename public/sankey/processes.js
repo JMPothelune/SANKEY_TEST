@@ -357,96 +357,156 @@ function selectByQualite(lot, selectedQualites) {
 
 // Sélectionne une ou plusieurs couleurs dans un lot
 function selectByCouleur(lot, selectedCouleurs) {
-  // Deep clone pour ne pas modifier l'objet d'origine
-  const newLot = JSON.parse(JSON.stringify(lot));
-  let selectedPct = 0;
-  let restPct = 0;
-
-  // Parcourir tous les formats et types pour agréger les couleurs
-  Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
-    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
-      if (typeObj.couleurs) {
-        Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-          const pct =
-            couleurObj.pourcentage *
-            (typeObj.pourcentage / 100) *
-            (formatObj.pourcentage / 100);
-          // Comparer avec les bubble_id au lieu des noms
-          if (selectedCouleurs.includes(couleurObj.bubble_id)) {
-            selectedPct += pct;
-          } else {
-            restPct += pct;
-          }
-        });
-      }
-    });
-  });
-
-  // Création des deux lots
   const targetLot = JSON.parse(JSON.stringify(lot));
   const coProductLot = JSON.parse(JSON.stringify(lot));
+  let selectedMassTotal = 0;
+  let restMassTotal = 0;
 
-  // Mise à jour des couleurs dans les deux lots
-  Object.entries(targetLot.formats).forEach(([formatKey, formatObj]) => {
-    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
-      if (typeObj.couleurs) {
-        const selected = {};
-        const rest = {};
-        Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-          // Comparer avec les bubble_id au lieu des noms
-          if (selectedCouleurs.includes(couleurObj.bubble_id)) {
-            selected[couleur] = { ...couleurObj };
-            if (couleurObj.color) selected[couleur].color = couleurObj.color;
-          } else {
-            rest[couleur] = { ...couleurObj };
-            if (couleurObj.color) rest[couleur].color = couleurObj.color;
-          }
+  // Initialiser les formats vides
+  targetLot.formats = {};
+  coProductLot.formats = {};
+
+  Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
+    const typesObj = formatObj.types;
+    let selectedTypes = {};
+    let restTypes = {};
+    let typeMassesSelected = {};
+    let typeMassesRest = {};
+    let formatSelectedMass = 0;
+    let formatRestMass = 0;
+
+    Object.entries(typesObj).forEach(([typeKey, typeObj]) => {
+      const couleursObj = typeObj.couleurs || {};
+      let selectedCouleursObj = {};
+      let restCouleursObj = {};
+      let selectedPct = 0;
+      let restPct = 0;
+
+      // Si le type n'a pas de couleurs, le traiter comme un type "reste"
+      if (Object.keys(couleursObj).length === 0) {
+        restTypes[typeKey] = JSON.parse(JSON.stringify(typeObj));
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        const typeMass =
+          lot.total *
+          (formatObj.pourcentage / 100) *
+          (typeObj.pourcentage / 100);
+        typeMassesRest[typeKey] = typeMass;
+        formatRestMass += typeMass;
+        return; // Passer au type suivant
+      }
+
+      Object.entries(couleursObj).forEach(([couleur, couleurObj]) => {
+        // Comparer avec les bubble_id au lieu des noms
+        if (selectedCouleurs.includes(couleurObj.bubble_id)) {
+          selectedCouleursObj[couleur] = JSON.parse(JSON.stringify(couleurObj));
+          if (couleurObj.color)
+            selectedCouleursObj[couleur].color = couleurObj.color;
+          selectedPct += couleurObj.pourcentage;
+        } else {
+          restCouleursObj[couleur] = JSON.parse(JSON.stringify(couleurObj));
+          if (couleurObj.color)
+            restCouleursObj[couleur].color = couleurObj.color;
+          restPct += couleurObj.pourcentage;
+        }
+      });
+
+      const typeMass =
+        lot.total * (formatObj.pourcentage / 100) * (typeObj.pourcentage / 100);
+      const selectedMass = typeMass * (selectedPct / 100);
+      const restMass = typeMass * (restPct / 100);
+
+      // Toujours ajouter le type, même si aucune couleur n'est sélectionnée
+      if (selectedPct > 0) {
+        Object.keys(selectedCouleursObj).forEach(couleur => {
+          selectedCouleursObj[couleur].pourcentage =
+            (selectedCouleursObj[couleur].pourcentage / selectedPct) * 100;
         });
-        // Mettre à jour les couleurs dans le type
-        typeObj.couleurs = selected;
+        selectedTypes[typeKey] = {
+          ...typeObj,
+          couleurs: selectedCouleursObj,
+        };
+        if (typeObj.color) selectedTypes[typeKey].color = typeObj.color;
+        typeMassesSelected[typeKey] = selectedMass;
+        formatSelectedMass += selectedMass;
+      }
+
+      // Toujours ajouter le type au reste, même si toutes les couleurs sont sélectionnées
+      if (restPct > 0) {
+        Object.keys(restCouleursObj).forEach(couleur => {
+          restCouleursObj[couleur].pourcentage =
+            (restCouleursObj[couleur].pourcentage / restPct) * 100;
+        });
+        restTypes[typeKey] = {
+          ...typeObj,
+          couleurs: restCouleursObj,
+        };
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        typeMassesRest[typeKey] = restMass;
+        formatRestMass += restMass;
+      }
+
+      // Si le type n'a ni couleurs sélectionnées ni couleurs restantes, l'ajouter au reste
+      if (selectedPct === 0 && restPct === 0) {
+        restTypes[typeKey] = JSON.parse(JSON.stringify(typeObj));
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        typeMassesRest[typeKey] = typeMass;
+        formatRestMass += typeMass;
       }
     });
-  });
 
-  Object.entries(coProductLot.formats).forEach(([formatKey, formatObj]) => {
-    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
-      if (typeObj.couleurs) {
-        const selected = {};
-        const rest = {};
-        Object.entries(typeObj.couleurs).forEach(([couleur, couleurObj]) => {
-          // Comparer avec les bubble_id au lieu des noms
-          if (selectedCouleurs.includes(couleurObj.bubble_id)) {
-            selected[couleur] = { ...couleurObj };
-            if (couleurObj.color) selected[couleur].color = couleurObj.color;
-          } else {
-            rest[couleur] = { ...couleurObj };
-            if (couleurObj.color) rest[couleur].color = couleurObj.color;
-          }
-        });
-        // Mettre à jour les couleurs dans le type
-        typeObj.couleurs = rest;
-      }
-    });
+    // Recalcul des pourcentages des types dans chaque format
+    if (formatSelectedMass > 0) {
+      Object.keys(selectedTypes).forEach(typeKey => {
+        selectedTypes[typeKey].pourcentage =
+          (typeMassesSelected[typeKey] / formatSelectedMass) * 100;
+      });
+      targetLot.formats[formatKey] = {
+        ...formatObj,
+        types: selectedTypes,
+        pourcentage: (formatSelectedMass / lot.total) * 100,
+      };
+    }
+    if (formatRestMass > 0) {
+      Object.keys(restTypes).forEach(typeKey => {
+        restTypes[typeKey].pourcentage =
+          (typeMassesRest[typeKey] / formatRestMass) * 100;
+      });
+      coProductLot.formats[formatKey] = {
+        ...formatObj,
+        types: restTypes,
+        pourcentage: (formatRestMass / lot.total) * 100,
+      };
+    }
+
+    // Si le format n'a pas de types avec couleurs, l'ajouter au reste
+    if (formatSelectedMass === 0 && formatRestMass === 0) {
+      const formatMass = lot.total * (formatObj.pourcentage / 100);
+      coProductLot.formats[formatKey] = {
+        ...formatObj,
+        types: typesObj, // Garder tous les types
+        pourcentage: (formatMass / lot.total) * 100,
+      };
+      restMassTotal += formatMass;
+    } else {
+      selectedMassTotal += formatSelectedMass;
+      restMassTotal += formatRestMass;
+    }
   });
 
   // Mise à jour des totaux
-  targetLot.total = lot.total * (selectedPct / 100);
-  coProductLot.total = lot.total * (restPct / 100);
+  targetLot.total = selectedMassTotal;
+  coProductLot.total = restMassTotal;
 
-  if (
-    Math.abs(
-      lot.total - ((targetLot?.total || 0) + (coProductLot?.total || 0))
-    ) > 2
-  ) {
+  if (Math.abs(lot.total - (targetLot.total + coProductLot.total)) > 2) {
     console.warn(
       '[selectByCouleur] Poids incohérent : origine =',
       lot.total,
       'target =',
-      targetLot?.total || 0,
+      targetLot.total,
       'reste =',
-      coProductLot?.total || 0,
+      coProductLot.total,
       'somme =',
-      (targetLot?.total || 0) + (coProductLot?.total || 0)
+      targetLot.total + coProductLot.total
     );
   }
 
@@ -665,105 +725,127 @@ function selectByProprete(lot, selectedProprete) {
 // Sélectionne un ou plusieurs perturbateurs dans un lot
 function selectByPerturbateur(lot, selectedPerturbateurs) {
   // Deep clone pour ne pas modifier l'objet d'origine
-  const newLot = JSON.parse(JSON.stringify(lot));
-  let selectedPct = 0;
-  let restPct = 0;
-
-  // Parcourir tous les formats et types pour agréger les perturbateurs
-  Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
-    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
-      if (typeObj.perturbateurs) {
-        Object.entries(typeObj.perturbateurs).forEach(
-          ([perturbateur, perturbateurObj]) => {
-            const pct =
-              perturbateurObj.pourcentage *
-              (typeObj.pourcentage / 100) *
-              (formatObj.pourcentage / 100);
-            // Comparer avec les bubble_id au lieu des noms
-            if (selectedPerturbateurs.includes(perturbateurObj.bubble_id)) {
-              selectedPct += pct;
-            } else {
-              restPct += pct;
-            }
-          }
-        );
-      }
-    });
-  });
-
-  // Création des deux lots
   const targetLot = JSON.parse(JSON.stringify(lot));
   const coProductLot = JSON.parse(JSON.stringify(lot));
+  let selectedMassTotal = 0;
+  let restMassTotal = 0;
 
-  // Mise à jour des perturbateurs dans les deux lots
-  Object.entries(targetLot.formats).forEach(([formatKey, formatObj]) => {
-    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
-      if (typeObj.perturbateurs) {
-        const selected = {};
-        const rest = {};
-        Object.entries(typeObj.perturbateurs).forEach(
-          ([perturbateur, perturbateurObj]) => {
-            // Comparer avec les bubble_id au lieu des noms
-            if (selectedPerturbateurs.includes(perturbateurObj.bubble_id)) {
-              selected[perturbateur] = { ...perturbateurObj };
-              if (perturbateurObj.color)
-                selected[perturbateur].color = perturbateurObj.color;
-            } else {
-              rest[perturbateur] = { ...perturbateurObj };
-              if (perturbateurObj.color)
-                rest[perturbateur].color = perturbateurObj.color;
-            }
-          }
-        );
-        // Mettre à jour les perturbateurs dans le type
-        typeObj.perturbateurs = selected;
+  Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
+    const typesObj = formatObj.types;
+    let selectedTypes = {};
+    let restTypes = {};
+    let typeMassesSelected = {};
+    let typeMassesRest = {};
+    let formatSelectedMass = 0;
+    let formatRestMass = 0;
+
+    Object.entries(typesObj).forEach(([typeKey, typeObj]) => {
+      const perturbateursObj = typeObj.perturbateurs || {};
+      let selectedPerturbateursObj = {};
+      let restPerturbateursObj = {};
+      let selectedPct = 0;
+      let restPct = 0;
+
+      // Si le type n'a pas de perturbateurs, le traiter comme un type "reste"
+      if (Object.keys(perturbateursObj).length === 0) {
+        restTypes[typeKey] = JSON.parse(JSON.stringify(typeObj));
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        const typeMass =
+          lot.total *
+          (formatObj.pourcentage / 100) *
+          (typeObj.pourcentage / 100);
+        typeMassesRest[typeKey] = typeMass;
+        formatRestMass += typeMass;
+        return; // Passer au type suivant
+      }
+
+      Object.entries(perturbateursObj).forEach(([nom, perturbateur]) => {
+        // Comparer avec les bubble_id au lieu des noms
+        if (selectedPerturbateurs.includes(perturbateur.bubble_id)) {
+          selectedPerturbateursObj[nom] = JSON.parse(
+            JSON.stringify(perturbateur)
+          );
+          if (perturbateur.color)
+            selectedPerturbateursObj[nom].color = perturbateur.color;
+          selectedPct += perturbateur.pourcentage;
+        } else {
+          restPerturbateursObj[nom] = JSON.parse(JSON.stringify(perturbateur));
+          if (perturbateur.color)
+            restPerturbateursObj[nom].color = perturbateur.color;
+          restPct += perturbateur.pourcentage;
+        }
+      });
+
+      const typeMass =
+        lot.total * (formatObj.pourcentage / 100) * (typeObj.pourcentage / 100);
+      const selectedMass = typeMass * (selectedPct / 100);
+      const restMass = typeMass * (restPct / 100);
+
+      // Toujours ajouter le type, même si aucun perturbateur n'est sélectionné
+      if (selectedPct > 0) {
+        Object.keys(selectedPerturbateursObj).forEach(nom => {
+          selectedPerturbateursObj[nom].pourcentage =
+            (selectedPerturbateursObj[nom].pourcentage / selectedPct) * 100;
+        });
+        selectedTypes[typeKey] = {
+          ...typeObj,
+          perturbateurs: selectedPerturbateursObj,
+        };
+        if (typeObj.color) selectedTypes[typeKey].color = typeObj.color;
+        typeMassesSelected[typeKey] = selectedMass;
+        formatSelectedMass += selectedMass;
+      }
+
+      if (restPct > 0) {
+        Object.keys(restPerturbateursObj).forEach(nom => {
+          restPerturbateursObj[nom].pourcentage =
+            (restPerturbateursObj[nom].pourcentage / restPct) * 100;
+        });
+        restTypes[typeKey] = {
+          ...typeObj,
+          perturbateurs: restPerturbateursObj,
+        };
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        typeMassesRest[typeKey] = restMass;
+        formatRestMass += restMass;
       }
     });
-  });
 
-  Object.entries(coProductLot.formats).forEach(([formatKey, formatObj]) => {
-    Object.entries(formatObj.types).forEach(([typeKey, typeObj]) => {
-      if (typeObj.perturbateurs) {
-        const selected = {};
-        const rest = {};
-        Object.entries(typeObj.perturbateurs).forEach(
-          ([perturbateur, perturbateurObj]) => {
-            // Comparer avec les bubble_id au lieu des noms
-            if (selectedPerturbateurs.includes(perturbateurObj.bubble_id)) {
-              selected[perturbateur] = { ...perturbateurObj };
-              if (perturbateurObj.color)
-                selected[perturbateur].color = perturbateurObj.color;
-            } else {
-              rest[perturbateur] = { ...perturbateurObj };
-              if (perturbateurObj.color)
-                rest[perturbateur].color = perturbateurObj.color;
-            }
-          }
-        );
-        // Mettre à jour les perturbateurs dans le type
-        typeObj.perturbateurs = rest;
-      }
-    });
+    // Mise à jour des formats dans les deux lots
+    if (Object.keys(selectedTypes).length > 0) {
+      targetLot.formats[formatKey] = {
+        ...formatObj,
+        types: selectedTypes,
+      };
+      if (formatObj.color) targetLot.formats[formatKey].color = formatObj.color;
+      selectedMassTotal += formatSelectedMass;
+    }
+
+    if (Object.keys(restTypes).length > 0) {
+      coProductLot.formats[formatKey] = {
+        ...formatObj,
+        types: restTypes,
+      };
+      if (formatObj.color)
+        coProductLot.formats[formatKey].color = formatObj.color;
+      restMassTotal += formatRestMass;
+    }
   });
 
   // Mise à jour des totaux
-  targetLot.total = lot.total * (selectedPct / 100);
-  coProductLot.total = lot.total * (restPct / 100);
+  targetLot.total = selectedMassTotal;
+  coProductLot.total = restMassTotal;
 
-  if (
-    Math.abs(
-      lot.total - ((targetLot?.total || 0) + (coProductLot?.total || 0))
-    ) > 2
-  ) {
+  if (Math.abs(lot.total - (targetLot.total + coProductLot.total)) > 2) {
     console.warn(
       '[selectByPerturbateur] Poids incohérent : origine =',
       lot.total,
       'target =',
-      targetLot?.total || 0,
+      targetLot.total,
       'reste =',
-      coProductLot?.total || 0,
+      coProductLot.total,
       'somme =',
-      (targetLot?.total || 0) + (coProductLot?.total || 0)
+      targetLot.total + coProductLot.total
     );
   }
 
