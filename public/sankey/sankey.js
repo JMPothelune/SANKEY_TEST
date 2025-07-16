@@ -892,64 +892,7 @@ function updateSankey(dimension) {
       div.addEventListener('click', function (event) {
         event.stopPropagation();
 
-        // Construire le path selon notre logique
-        let path = ['transformations']; // fallback racine
-
-        // PRIORITÉ 1: Utiliser le _path du nœud s'il existe (pour les coproduits)
-        if (d._path && Array.isArray(d._path)) {
-          // Si le path se termine déjà par 'transformations', ne pas en ajouter un autre
-          if (d._path[d._path.length - 1] === 'transformations') {
-            path = [...d._path];
-          } else {
-            path = [...d._path, 'transformations'];
-          }
-        }
-        // PRIORITÉ 2: Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
-        else if (
-          d.transformations_appliquees &&
-          d.transformations_appliquees.length > 0
-        ) {
-          const lastTransfo =
-            d.transformations_appliquees[
-              d.transformations_appliquees.length - 1
-            ];
-          if (
-            lastTransfo &&
-            lastTransfo._path &&
-            typeof lastTransfo._index === 'number'
-          ) {
-            // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
-            if (d.name && d.name.startsWith('Reste')) {
-              if (
-                lastTransfo._path.length === 1 &&
-                lastTransfo._path[0] === 'transformations'
-              ) {
-                path = ['coproduct_scenario'];
-              } else {
-                if (
-                  lastTransfo._path.length === 1 &&
-                  lastTransfo._path[0] === 'transformations'
-                ) {
-                  path = ['coproduct_scenario'];
-                } else {
-                  path = [
-                    ...lastTransfo._path,
-                    'scenario',
-                    'coproduct_scenario',
-                  ];
-                }
-              }
-            } else {
-              // Sinon, pointer vers le sous-scénario
-              path = [
-                ...lastTransfo._path,
-                lastTransfo._index,
-                'scenario',
-                'transformations',
-              ];
-            }
-          }
-        }
+        const path = getPathForNewTransformation(d);
 
         const ref = {
           nodeId: d.id,
@@ -1775,64 +1718,8 @@ function updateSankey(dimension) {
       div.addEventListener('click', function (event) {
         event.stopPropagation();
 
-        // Construire le path selon notre logique
-        let path = ['transformations']; // fallback racine
-
-        // PRIORITÉ 1: Utiliser le _path du nœud s'il existe (pour les coproduits)
-        if (d._path && Array.isArray(d._path)) {
-          // Si le path se termine déjà par 'transformations', ne pas en ajouter un autre
-          if (d._path[d._path.length - 1] === 'transformations') {
-            path = [...d._path];
-          } else {
-            path = [...d._path, 'transformations'];
-          }
-        }
-        // PRIORITÉ 2: Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
-        else if (
-          d.transformations_appliquees &&
-          d.transformations_appliquees.length > 0
-        ) {
-          const lastTransfo =
-            d.transformations_appliquees[
-              d.transformations_appliquees.length - 1
-            ];
-          if (
-            lastTransfo &&
-            lastTransfo._path &&
-            typeof lastTransfo._index === 'number'
-          ) {
-            // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
-            if (d.name && d.name.startsWith('Reste')) {
-              if (
-                lastTransfo._path.length === 1 &&
-                lastTransfo._path[0] === 'transformations'
-              ) {
-                path = ['coproduct_scenario'];
-              } else {
-                if (
-                  lastTransfo._path.length === 1 &&
-                  lastTransfo._path[0] === 'transformations'
-                ) {
-                  path = ['coproduct_scenario'];
-                } else {
-                  path = [
-                    ...lastTransfo._path,
-                    'scenario',
-                    'coproduct_scenario',
-                  ];
-                }
-              }
-            } else {
-              // Sinon, pointer vers le sous-scénario
-              path = [
-                ...lastTransfo._path,
-                lastTransfo._index,
-                'scenario',
-                'transformations',
-              ];
-            }
-          }
-        }
+        // Construction du path CORRIGÉE
+        const path = getPathForNewTransformation(d);
 
         const ref = {
           nodeId: d.id,
@@ -1875,64 +1762,8 @@ function updateSankey(dimension) {
       div.addEventListener('click', function (event) {
         event.stopPropagation();
 
-        // Construire le path selon notre logique
-        let path = ['transformations']; // fallback racine
-
-        // PRIORITÉ 1: Utiliser le _path du nœud s'il existe (pour les coproduits)
-        if (d._path && Array.isArray(d._path)) {
-          // Si le path se termine déjà par 'transformations', ne pas en ajouter un autre
-          if (d._path[d._path.length - 1] === 'transformations') {
-            path = [...d._path];
-          } else {
-            path = [...d._path, 'transformations'];
-          }
-        }
-        // PRIORITÉ 2: Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
-        else if (
-          d.transformations_appliquees &&
-          d.transformations_appliquees.length > 0
-        ) {
-          const lastTransfo =
-            d.transformations_appliquees[
-              d.transformations_appliquees.length - 1
-            ];
-          if (
-            lastTransfo &&
-            lastTransfo._path &&
-            typeof lastTransfo._index === 'number'
-          ) {
-            // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
-            if (d.name && d.name.startsWith('Reste')) {
-              if (
-                lastTransfo._path.length === 1 &&
-                lastTransfo._path[0] === 'transformations'
-              ) {
-                path = ['coproduct_scenario'];
-              } else {
-                if (
-                  lastTransfo._path.length === 1 &&
-                  lastTransfo._path[0] === 'transformations'
-                ) {
-                  path = ['coproduct_scenario'];
-                } else {
-                  path = [
-                    ...lastTransfo._path,
-                    'scenario',
-                    'coproduct_scenario',
-                  ];
-                }
-              }
-            } else {
-              // Sinon, pointer vers le sous-scénario
-              path = [
-                ...lastTransfo._path,
-                lastTransfo._index,
-                'scenario',
-                'transformations',
-              ];
-            }
-          }
-        }
+        // Construction du path CORRIGÉE
+        const path = getPathForNewTransformation(d);
 
         const ref = {
           nodeId: d.id,
@@ -2041,6 +1872,8 @@ window.addEventListener('resize', function () {
 
 // Fonction principale pour lancer le Sankey depuis le HTML
 function runSankey({ lot, scenario, dimension = 'format' }) {
+  // Stocker le lot globalement pour les callbacks
+
   // Appliquer le scénario au lot
   const sankeyScenario = applyScenario(lot, scenario);
 
@@ -2998,13 +2831,18 @@ function applyScenario(
       typeof pathArr[pathArr.length - 1] === 'number'
     ) {
       // On est dans une transformation du scénario principal ou d'un sous-scenario
-      coproductPath = [...pathArr, 'scenario', 'coproduct_scenario'];
+      coproductPath = [
+        ...pathArr,
+        'scenario',
+        'coproduct_scenario',
+        'transformations',
+      ];
     } else if (isRoot) {
       // Vrai coproduit racine
-      coproductPath = ['coproduct_scenario'];
+      coproductPath = ['coproduct_scenario', 'transformations'];
     } else {
       // Fallback (devrait être rare)
-      coproductPath = [...pathArr, 'coproduct_scenario'];
+      coproductPath = [...pathArr, 'coproduct_scenario', 'transformations'];
     }
     resteLot.id = coproductNodeId;
     resteLot._path = coproductPath;
@@ -3079,3 +2917,53 @@ function applyScenario(
   return { nodes, links };
 }
 window.applyScenario = applyScenario;
+
+// Fonction utilitaire pour construire le path de manière simple
+function getPathForNewTransformation(node) {
+  // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
+  if (
+    node.transformations_appliquees &&
+    node.transformations_appliquees.length > 0
+  ) {
+    const lastTransfo =
+      node.transformations_appliquees[
+        node.transformations_appliquees.length - 1
+      ];
+    if (
+      lastTransfo &&
+      lastTransfo._path &&
+      typeof lastTransfo._index === 'number'
+    ) {
+      // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
+      if (node.name && node.name.startsWith('Reste')) {
+        return [
+          ...lastTransfo._path,
+          lastTransfo._index,
+          'scenario',
+          'coproduct_scenario',
+          'transformations',
+        ];
+      }
+      // Sinon, pointer vers le sous-scénario
+      return [
+        ...lastTransfo._path,
+        lastTransfo._index,
+        'scenario',
+        'transformations',
+      ];
+    }
+  }
+
+  // Cas spécial : coproduit racine (nœud "Reste" sans transformations_appliquees)
+  if (
+    node.name &&
+    node.name.startsWith('Reste') &&
+    (!node.transformations_appliquees ||
+      node.transformations_appliquees.length === 0)
+  ) {
+    return ['coproduct_scenario', 'transformations'];
+  }
+
+  // Fallback : racine
+  return ['transformations'];
+}

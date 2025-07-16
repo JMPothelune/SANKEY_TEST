@@ -94,6 +94,55 @@ function moveTransformationDown(scenario, path, index) {
   console.log('Transformation moved down successfully');
 }
 
+// Fonction pour supprimer une transformation
+function removeTransformation(scenario, path, index) {
+  console.log('removeTransformation called:', { path, index });
+
+  // Nettoyer le path s'il est incorrect
+  const cleanedPath = cleanPath(path);
+  if (JSON.stringify(cleanedPath) !== JSON.stringify(path)) {
+    console.log('Path cleaned:', { original: path, cleaned: cleanedPath });
+    path = cleanedPath;
+  }
+
+  // Naviguer jusqu'au tableau de transformations
+  let arr = scenario;
+  for (let i = 0; i < path.length; i++) {
+    const key = path[i];
+    if (Array.isArray(arr)) {
+      arr = arr[key];
+    } else if (arr && typeof arr === 'object') {
+      arr = arr[key];
+    }
+  }
+
+  if (!Array.isArray(arr)) {
+    console.error('Invalid array for removal');
+    console.error('Path:', path);
+    console.error('Final object:', arr);
+    return;
+  }
+
+  if (index < 0 || index >= arr.length) {
+    console.error('Invalid index for removal');
+    console.error('Index:', index, 'Array length:', arr.length);
+    return;
+  }
+
+  // Supprimer la transformation à l'index spécifié
+  arr.splice(index, 1);
+
+  // Mettre à jour les index des transformations restantes
+  for (let i = index; i < arr.length; i++) {
+    if (arr[i]._index !== undefined) {
+      arr[i]._index = i;
+    }
+  }
+
+  console.log('Transformation removed successfully');
+  console.log('Remaining transformations count:', arr.length);
+}
+
 // Fonction pour nettoyer les paths incorrects
 function cleanPath(path) {
   // Si le path contient 'transformations' juste avant 'coproduct_scenario', le supprimer
@@ -183,4 +232,5 @@ function updateTransformation(scenario, path, index, newTransformation) {
 
 window.moveTransformationUp = moveTransformationUp;
 window.moveTransformationDown = moveTransformationDown;
+window.removeTransformation = removeTransformation;
 window.updateTransformation = updateTransformation;
