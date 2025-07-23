@@ -891,11 +891,11 @@ Permettre de créer des transformations configurables dans Bubble (vs les transf
 
 ```javascript
 DynamicTransfo {
-  id: string,
-  nom: string,
+  bubble_id: string,
+  title: string,
   version: string,
   yield: number, // % du lot principal (ex: 80 pour 80%)
-  conditions_application: [
+  conditions: [
     {
       dimension: 'format',
       valeurs_acceptees: ['vêtements'] // ou IDs
@@ -909,10 +909,11 @@ DynamicTransfo {
       // qualité: undefined → hérite de l'entrée
     },
     coproduit: {
-      type: { nouvelle_valeur_id: 'chiquettes_789', nouvelle_valeur_nom: 'Chiquettes' }
-      // format: undefined → hérite de l'entrée
-      // propreté: undefined → hérite de l'entrée
-    }
+      formats: {
+        // avec distribution
+      },
+      qualité: {},
+      propreté: {}
   }
 }
 ```

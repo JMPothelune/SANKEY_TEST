@@ -2,9 +2,14 @@
 
 ### Sankey
 
-[] Affichage tooltip
+[] Affichage tooltip à droite
 [] Standardiser les tooltips
-[] Passer ID des paramètres dans le scenario -> Et modifier toutes les fonctions de sélection et tout...
+[] Gérer les titres des noeuds
+[x] SelectByMatiere ? Ou bug de Juliette -> il se passe rien
+[x] Function Remove
+[x] Path quand c'est un path direct
+[x] SelectByCouleur
+[x] Passer ID des paramètres dans le scenario -> Et modifier toutes les fonctions de sélection et tout...
 [x] Passer en mode 'module' ready pour Bubble
 [x] Intégrer les couleurs
 

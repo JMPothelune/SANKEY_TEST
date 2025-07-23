@@ -42,6 +42,8 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      // Ajouter un timeout de 30 secondes
+      signal: AbortSignal.timeout(30000), // 30 secondes
     };
     // Envoie le body pour les requêtes POST avec des paramètres
     if (
@@ -113,6 +115,26 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.log('API Bubble - Erreur fetch:', err);
+
+    // Gestion spécifique du timeout
+    if (err instanceof Error && err.name === 'AbortError') {
+      return new Response(
+        JSON.stringify({
+          error: 'Timeout de la requête vers Bubble',
+          message: 'La requête a pris plus de 30 secondes',
+        }),
+        {
+          status: 504,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Frame-Options': 'ALLOWALL',
+            'Content-Security-Policy':
+              "frame-ancestors 'self' https://app.valoramix.com https://*.valoramix.com",
+          },
+        }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         error: 'Erreur lors du fetch',
