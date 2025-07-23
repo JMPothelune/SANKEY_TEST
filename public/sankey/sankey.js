@@ -1382,11 +1382,57 @@ function updateSankey(dimension) {
                         `;
           }
 
+          // Déterminer le titre à afficher dans le tooltip
+          let tooltipTitle = '';
+          if (d.isTarget) {
+            tooltipTitle = d.name;
+          } else if (d.id === '0') {
+            tooltipTitle = d.lot && d.lot.title ? d.lot.title : d.name;
+          } else if (d.name && d.name.startsWith('Reste')) {
+            tooltipTitle = 'Reste';
+          } else {
+            // Pour les nœuds de transformation, afficher le nom français de la transformation
+            const incomingLink = sankeyLinks.find(l => l.target.id === d.id);
+            if (incomingLink && incomingLink.transformation) {
+              const transfo = incomingLink.transformation;
+              const type = Array.isArray(transfo.type)
+                ? transfo.type[0]
+                : transfo.type;
+
+              if (transfo.title) {
+                tooltipTitle = transfo.title;
+              } else {
+                const frenchName = window.transformationUtils
+                  ? window.transformationUtils.getTransformationLabel(type)
+                  : type;
+                tooltipTitle = frenchName;
+              }
+
+              // Ajouter les paramètres en français si disponibles
+              if (
+                transfo._displayNames &&
+                transfo._displayNames[0] &&
+                transfo._displayNames[0].length > 0
+              ) {
+                tooltipTitle += ` : ${transfo._displayNames[0].join(', ')}`;
+              } else if (
+                transfo.keys &&
+                transfo.keys[0] &&
+                transfo.keys[0].length > 0
+              ) {
+                // Fallback sur les keys si pas de displayNames
+                tooltipTitle += ` : ${transfo.keys[0].join(', ')}`;
+              }
+            } else {
+              tooltipTitle = d.lot && d.lot.title ? d.lot.title : d.name;
+            }
+          }
+
           tooltip.transition().duration(200).style('opacity', 0.9);
           tooltip
             .html(
               `
-                        <strong>${d.name}</strong><br/>
+                        <strong>${tooltipTitle}</strong><br/>
                         Poids du lot : ${Math.round(d.lot.total)} kg<br/>
                         <span style='font-size:12px;color:#666;'>Somme des % stackbar : ${sumPct.toFixed(1)}%</span>
                         ${missingInfo}
@@ -1463,13 +1509,25 @@ function updateSankey(dimension) {
               ? window.transformationUtils.getTransformationLabel(type)
               : type;
             let params = '';
-            if (transfo.keys && transfo.keys.length && transfo.keys[0].length) {
+            if (
+              transfo._displayNames &&
+              transfo._displayNames[0] &&
+              transfo._displayNames[0].length > 0
+            ) {
+              // Utiliser les noms d'affichage français
+              params += `<div>Clés : <span class='font-mono text-xs'>${transfo._displayNames[0].join(', ')}</span></div>`;
+            } else if (
+              transfo.keys &&
+              transfo.keys.length &&
+              transfo.keys[0].length
+            ) {
+              // Fallback sur les keys si pas de displayNames
               params += `<div>Clés : <span class='font-mono text-xs'>${transfo.keys[0].join(', ')}</span></div>`;
             }
             if (transfo.scenario && transfo.scenario.target) {
               params += `<div>Cible : <span class='font-mono text-xs'>${transfo.scenario.target}</span></div>`;
             }
-            tooltipContent = `<strong>${label}</strong><div class='text-xs text-gray-500 mb-1'>${typeLabel}</div>${params ? '<br/>' + params : ''}`;
+            tooltipContent = `<strong>${label}</strong>${params ? '<br/>' + params : ''}`;
           } else {
             tooltipContent = '<strong>Ajouter une transformation</strong>';
           }
@@ -1519,7 +1577,7 @@ function updateSankey(dimension) {
           // Créer le menu dropdown
           dropdownMenu = document.createElement('div');
           dropdownMenu.className =
-            'absolute z-50 mt-2 right-0 bg-white rounded-xl shadow-xl py-2 flex flex-col gap-1 border border-gray-200'; // min-w supprimé
+            'absolute z-50 mt-1 right-0 bg-white rounded-xl shadow-xl py-1 flex flex-col gap-0 border border-gray-200'; // min-w supprimé
           dropdownMenu.style.width = '170px'; // Largeur fixe, lisible, style shadcn/ui
           dropdownMenu.style.position = 'absolute';
           dropdownMenu.style.padding = '0';
@@ -1550,7 +1608,7 @@ function updateSankey(dimension) {
             btn.style.outline = 'none';
             btn.style.fontSize = '1rem';
             btn.style.fontWeight = '500';
-            btn.style.padding = '0.65em 0.8em'; // padding horizontal réduit
+            btn.style.padding = '0.4em 0.8em'; // padding vertical réduit
             btn.style.borderRadius = '0.7em';
             btn.style.transition =
               'background 0.13s, color 0.13s, box-shadow 0.13s';
@@ -1854,13 +1912,51 @@ function updateSankey(dimension) {
   svg.selectAll('.titles-layer').remove();
   const titlesLayer = svg.append('g').attr('class', 'titles-layer');
   sankeyNodes.forEach(d => {
+    // Déterminer le titre à afficher
+    let displayTitle = '';
+
+    if (d.isTarget) {
+      // Pour les nœuds target, afficher le nom du target
+      displayTitle = d.name;
+    } else if (d.id === '0') {
+      // Pour le nœud initial, afficher le nom du lot d'entrée
+      displayTitle = d.lot && d.lot.title ? d.lot.title : d.name;
+    } else if (d.name && d.name.startsWith('Reste')) {
+      // Pour les nœuds co-produits (reste), afficher "Reste"
+      displayTitle = 'Reste';
+    } else {
+      // Pour les autres nœuds, afficher le nom de la transformation en français
+      // Chercher la transformation qui a créé ce nœud
+      const incomingLink = sankeyLinks.find(l => l.target.id === d.id);
+      if (incomingLink && incomingLink.transformation) {
+        const transfo = incomingLink.transformation;
+        const type = Array.isArray(transfo.type)
+          ? transfo.type[0]
+          : transfo.type;
+
+        // Utiliser le titre de la transformation s'il existe
+        if (transfo.title) {
+          displayTitle = transfo.title;
+        } else {
+          // Sinon utiliser le nom français de la transformation
+          const frenchName = window.transformationUtils
+            ? window.transformationUtils.getTransformationLabel(type)
+            : type;
+          displayTitle = frenchName;
+        }
+      } else {
+        // Fallback sur le nom du lot
+        displayTitle = d.lot && d.lot.title ? d.lot.title : d.name;
+      }
+    }
+
     titlesLayer
       .append('text')
       .attr('class', 'lot-title')
       .attr('x', (d.x0 + d.x1) / 2 - extraBlockWidth / 2)
       .attr('y', d.y0 - 8)
       .attr('text-anchor', 'middle')
-      .text(d.lot && d.lot.title ? d.lot.title : d.name)
+      .text(displayTitle)
       .style('font-size', '11px')
       .style('fill', '#666')
       .style('pointer-events', 'none');
