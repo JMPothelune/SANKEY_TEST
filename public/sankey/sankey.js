@@ -112,6 +112,11 @@ const tooltip = d3
   .attr('class', 'tooltip')
   .style('opacity', 0);
 
+// Fonction utilitaire pour masquer le tooltip
+function hideTooltip() {
+  tooltip.style('opacity', 0);
+}
+
 // Components pour stackbars et tooltips selon la dimension
 const stackbarComponents = {
   formats: {
@@ -892,6 +897,9 @@ function updateSankey(dimension) {
       div.addEventListener('click', function (event) {
         event.stopPropagation();
 
+        // Masquer le tooltip immédiatement quand on clique
+        hideTooltip();
+
         const path = getPathForNewTransformation(d);
 
         const ref = {
@@ -1475,6 +1483,10 @@ function updateSankey(dimension) {
         });
         div.addEventListener('click', function (event) {
           event.stopPropagation();
+
+          // Masquer le tooltip immédiatement quand on clique
+          hideTooltip();
+
           if (!isFork) {
             // Comportement + classique
             const chemin = `${d.name} → ${link.target.name}`;
@@ -1718,6 +1730,9 @@ function updateSankey(dimension) {
       div.addEventListener('click', function (event) {
         event.stopPropagation();
 
+        // Masquer le tooltip immédiatement quand on clique
+        hideTooltip();
+
         // Construction du path CORRIGÉE
         const path = getPathForNewTransformation(d);
 
@@ -1761,6 +1776,9 @@ function updateSankey(dimension) {
       });
       div.addEventListener('click', function (event) {
         event.stopPropagation();
+
+        // Masquer le tooltip immédiatement quand on clique
+        hideTooltip();
 
         // Construction du path CORRIGÉE
         const path = getPathForNewTransformation(d);

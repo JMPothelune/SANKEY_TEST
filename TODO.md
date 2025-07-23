@@ -10,11 +10,11 @@
 [] Affichage tooltip à droite
 [] Standardiser les tooltips
 [] Gérer les titres des noeuds
-[] Garder le scénario wip quand on change de lots / dimension -> passer dimension dans l'iframe.
 [] Search dans dropdown transfo
-[] Pouvoir sauvegarder des lots
+[] Pouvoir sauvegarder des lots intermédiaires dans le Sankey
 [] Checker taille d'écran du Sankey
 [] Remettre les clés dans le tooltip
+[x] Garder le scénario wip quand on change de lots / dimension -> passer dimension dans l'iframe.
 [x] SelectByMatiere ? Ou bug de Juliette -> il se passe rien
 [x] Function Remove
 [x] Path quand c'est un path direct
