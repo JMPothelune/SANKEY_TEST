@@ -15,6 +15,37 @@
     />
   </head>
   <body>
+    <!-- Header avec dropdown des dimensions -->
+    <div class="bg-white px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">Dimension :</label>
+        <div class="relative">
+          <select
+            id="dimension-select"
+            class="appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+            style="min-width: 140px"
+          ></select>
+          <div
+            class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none"
+          >
+            <svg
+              class="h-4 w-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              ></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="position: relative">
       <div id="sankey-container"></div>
       <div
@@ -43,16 +74,115 @@
     <script>
       console.log('[HTML] script chargé');
 
+      // Variables globales
+      let currentDimension = 'formats';
+      let dimensions = [
+        { value: 'formats', label: 'Formats' },
+        { value: 'types', label: 'Types' },
+        { value: 'matieres', label: 'Matières' },
+        { value: 'fibres', label: 'Fibres' },
+        { value: 'couleurs', label: 'Couleurs' },
+        { value: 'perturbateurs', label: 'Perturbateurs' },
+        { value: 'qualite', label: 'Qualité' },
+        { value: 'proprete', label: 'Propreté' },
+      ];
+
+      // Fonction pour charger les dimensions depuis Bubble
+      async function loadDimensionsFromBubble(isLive) {
+        try {
+          console.log(
+            '[HTML] Chargement des dimensions depuis Bubble, isLive:',
+            isLive
+          );
+
+          const response = await fetch('/api/bubble', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoint: 'dimensions',
+              params: { isLive },
+              method: 'GET',
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Erreur API: ${response.status}`);
+          }
+
+          const bubbleDimensions = await response.json();
+          console.log(
+            '[HTML] Dimensions récupérées depuis Bubble:',
+            bubbleDimensions
+          );
+
+          // Transformer les données Bubble en format attendu
+          if (bubbleDimensions && typeof bubbleDimensions === 'object') {
+            // Si c'est un objet, convertir en array
+            if (Array.isArray(bubbleDimensions)) {
+              dimensions = bubbleDimensions.map(dim => ({
+                value: dim.value || dim.name || dim.id,
+                label: dim.label || dim.title || dim.name || dim.id,
+              }));
+            } else {
+              // Si c'est un objet avec des clés, convertir en array
+              dimensions = Object.keys(bubbleDimensions).map(key => ({
+                value: key,
+                label: bubbleDimensions[key].fr_fr || key, // Utiliser la traduction française
+              }));
+            }
+
+            console.log('[HTML] Dimensions transformées:', dimensions);
+          } else {
+            console.log(
+              '[HTML] Aucune dimension reçue de Bubble, utilisation des dimensions par défaut'
+            );
+          }
+        } catch (error) {
+          console.error(
+            '[HTML] Erreur lors du chargement des dimensions:',
+            error
+          );
+          console.log('[HTML] Utilisation des dimensions par défaut');
+          // Garder les dimensions par défaut en cas d'erreur
+        } finally {
+          // Toujours mettre à jour le dropdown, même en cas d'erreur
+          updateDimensionDropdown();
+        }
+      }
+
+      // Fonction pour mettre à jour le dropdown des dimensions
+      function updateDimensionDropdown() {
+        const select = document.getElementById('dimension-select');
+        if (!select) return;
+
+        // Sauvegarder la valeur actuelle
+        const currentValue = select.value;
+
+        // Vider le select
+        select.innerHTML = '';
+
+        // Ajouter les nouvelles options
+        dimensions.forEach(dim => {
+          const option = document.createElement('option');
+          option.value = dim.value;
+          option.textContent = dim.label;
+          select.appendChild(option);
+        });
+
+        // Restaurer la valeur actuelle si elle existe encore, sinon prendre la première
+        if (dimensions.find(d => d.value === currentValue)) {
+          select.value = currentValue;
+        } else if (dimensions.length > 0) {
+          select.value = dimensions[0].value;
+        }
+      }
+
       // Fonction utilitaire pour lire les paramètres d'URL
       function getUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         return {
-          dimension: urlParams.get('dimension') || 'formats',
-          // Supprimer scenarioIdx car il n'est pas nécessaire en mode iframe
-          // scenarioIdx: parseInt(urlParams.get('scenarioIdx') || '0', 10),
+          dimension: 'formats', // Dimension par défaut, plus de paramètre dans l'URL
           scenarioId: urlParams.get('scenarioId') || '',
-          // Supprimer scenarioIsLive, utiliser isLive pour tout
-          // scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
           lotId: urlParams.get('lotId') || '',
           isLive: urlParams.get('isLive') === 'true',
           isEditable: urlParams.get('isEditable') !== 'false', // true par défaut
@@ -69,15 +199,15 @@
         }
       }
 
-      // Fonction pour lancer le Sankey avec les paramètres d'URL
-      function launchSankeyFromUrl(lot, scenario) {
+      // Fonction pour lancer le Sankey avec une dimension spécifique
+      function launchSankeyFromUrl(lot, scenario, dimension = null) {
         const params = getUrlParams();
-        const dimension = params.dimension;
+        const selectedDimension = dimension || params.dimension;
 
         console.log('[HTML] Lancement Sankey avec:', {
           lot,
           scenario,
-          dimension,
+          dimension: selectedDimension,
           availableScenarios: window.scenarios?.length || 0,
         });
 
@@ -86,7 +216,7 @@
             lot,
             scenario,
             containerId: 'sankey-container',
-            dimension,
+            dimension: selectedDimension,
           });
         } else {
           console.error('[HTML] Impossible de lancer le Sankey:', {
@@ -141,6 +271,41 @@
         console.log('[HTML] DOMContentLoaded');
 
         const params = getUrlParams();
+
+        // Initialiser le dropdown des dimensions
+        const dimensionSelect = document.getElementById('dimension-select');
+        if (dimensionSelect) {
+          // Définir la valeur initiale depuis les paramètres d'URL
+          dimensionSelect.value = params.dimension;
+          currentDimension = params.dimension;
+
+          // Gestion du changement de dimension
+          dimensionSelect.addEventListener('change', function () {
+            const newDimension = this.value;
+            console.log('[HTML] Changement de dimension:', newDimension);
+            currentDimension = newDimension;
+
+            // Relancer le Sankey avec la nouvelle dimension si les données sont disponibles
+            if (
+              window.lotType &&
+              window.scenarios &&
+              window.scenarios.length > 0
+            ) {
+              const currentScenario =
+                window.scenarios[window.currentScenarioIdx];
+              if (currentScenario && currentScenario.scenario) {
+                launchSankeyFromUrl(
+                  window.lotType,
+                  currentScenario.scenario,
+                  newDimension
+                );
+              }
+            }
+          });
+        }
+
+        // Charger les dimensions depuis Bubble
+        loadDimensionsFromBubble(params.isLive);
 
         // Initialiser l'état du bouton Enregistrer
         setScenarioModifie(false);
@@ -270,7 +435,7 @@
                     ];
                     window.currentScenarioIdx = 0;
 
-                    launchSankeyFromUrl(lot, scenario);
+                    launchSankeyFromUrl(lot, scenario, currentDimension);
                   })
                   .catch(error => {
                     console.error(
@@ -311,7 +476,7 @@
                         ];
                         window.currentScenarioIdx = 0;
 
-                        launchSankeyFromUrl(lot, scenario);
+                        launchSankeyFromUrl(lot, scenario, currentDimension);
                       })
                       .catch(error => {
                         console.error(
@@ -351,7 +516,7 @@
                     ];
                     window.currentScenarioIdx = 0;
 
-                    launchSankeyFromUrl(lot, scenario);
+                    launchSankeyFromUrl(lot, scenario, currentDimension);
                   })
                   .catch(error => {
                     console.error(
