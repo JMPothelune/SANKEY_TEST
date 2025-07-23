@@ -84,3 +84,77 @@ select {
 .focus\\:border-blue-500:focus {
   border-color: #3b82f6 !important;
 }
+
+/* Skeleton Loading */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 3s infinite;
+}
+
+.skeleton-container {
+  padding: 16px;
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: 40px;
+}
+
+.skeleton-title {
+  flex: 1;
+  height: 20px;
+  margin: 0 16px;
+  border-radius: 4px;
+}
+
+.skeleton-percent {
+  width: 60px;
+  height: 16px;
+  margin: 0 12px;
+  border-radius: 4px;
+}
+
+.skeleton-weight {
+  width: 80px;
+  height: 16px;
+  margin: 0 16px;
+  border-radius: 4px;
+}
+
+.skeleton-stackbar {
+  display: flex;
+  width: 100%;
+  height: 64px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.skeleton-segment {
+  height: 100%;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.skeleton-segment:last-child {
+  border-right: none;
+}

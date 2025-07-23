@@ -41,6 +41,35 @@ function getIconSVG(name, className = '') {
   return `<i class="ph ${iconClass} ${className}"></i>`;
 }
 
+// --- Fonctions pour le Skeleton Loading ---
+function afficherSkeleton(container) {
+  console.log('Affichage du skeleton loading');
+  container.innerHTML = `
+    <div class="skeleton-container">
+      <div class="skeleton-header">
+        <div class="skeleton-title skeleton-shimmer"></div>
+        <div class="skeleton-percent skeleton-shimmer"></div>
+        <div class="skeleton-weight skeleton-shimmer"></div>
+      </div>
+      <div class="skeleton-stackbar">
+        <div class="skeleton-segment skeleton-shimmer" style="width: 60%"></div>
+        <div class="skeleton-segment skeleton-shimmer" style="width: 25%"></div>
+        <div class="skeleton-segment skeleton-shimmer" style="width: 15%"></div>
+      </div>
+      <div class="skeleton-stackbar">
+        <div class="skeleton-segment skeleton-shimmer" style="width: 45%"></div>
+        <div class="skeleton-segment skeleton-shimmer" style="width: 35%"></div>
+        <div class="skeleton-segment skeleton-shimmer" style="width: 20%"></div>
+      </div>
+    </div>
+  `;
+}
+
+function masquerSkeleton(container) {
+  console.log('Masquage du skeleton loading');
+  // Le skeleton sera remplacé par le vrai contenu
+}
+
 // --- Fonction utilitaire pour obtenir les dimensions accessibles à partir d'un nœud (hors pourcentage, total, title)
 function getDimensionsFromNode(node) {
   // Si node est une string, on essaie de la parser
@@ -551,12 +580,22 @@ function initLotUI(container, lotInitial) {
   cheminSelection = [];
   console.log('lotCourant après init', window.lotCourant);
   console.log('Frequency après init:', lotCourant.frequency);
+
+  // Nettoyer le container et afficher le vrai contenu
+  container.innerHTML = '';
   afficherStackbars(lotCourant, cheminSelection);
 }
 
 function lancerLotUI(container, lotInitial) {
   console.log('Entrée dans lancerLotUI', container, lotInitial);
-  initLotUI(container, lotInitial);
+
+  // Afficher le skeleton loading immédiatement
+  afficherSkeleton(container);
+
+  // Simuler un délai de chargement pour voir l'effet (optionnel)
+  setTimeout(() => {
+    initLotUI(container, lotInitial);
+  }, 500); // 500ms de délai pour voir l'effet
 }
 
 // --- Publication de l'état du lot (Bubble-ready) ---
