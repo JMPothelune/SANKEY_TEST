@@ -54,8 +54,7 @@ class TransformationPopup {
 
     // Création du backdrop (transparent comme dans /lots)
     this.backdrop = document.createElement('div');
-    this.backdrop.className =
-      'fixed inset-0 flex items-center justify-center z-50';
+    this.backdrop.className = 'fixed inset-0 z-50';
     this.backdrop.style.background = 'none';
 
     // Création de la modal avec ombre prononcée comme dans /lots
@@ -64,6 +63,10 @@ class TransformationPopup {
       'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
     this.modal.style.boxShadow =
       '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+    this.modal.style.position = 'absolute';
+    this.modal.style.top = '200px';
+    this.modal.style.left = '50%';
+    this.modal.style.transform = 'translateX(-50%)';
 
     // Génération dynamique des options du select
     let options = '';
@@ -164,8 +167,7 @@ class TransformationPopup {
   createPopupWithKeyList(ref, keyList, keyListData) {
     // Création du backdrop (transparent comme dans /lots)
     this.backdrop = document.createElement('div');
-    this.backdrop.className =
-      'fixed inset-0 flex items-center justify-center z-50';
+    this.backdrop.className = 'fixed inset-0 z-50';
     this.backdrop.style.background = 'none';
 
     // Création de la modal avec ombre prononcée comme dans /lots
@@ -174,6 +176,10 @@ class TransformationPopup {
       'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
     this.modal.style.boxShadow =
       '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+    this.modal.style.position = 'absolute';
+    this.modal.style.top = '200px';
+    this.modal.style.left = '50%';
+    this.modal.style.transform = 'translateX(-50%)';
 
     // Récupération de la transformation du lien cliqué
     const lastTransfo = ref.transformation || null;

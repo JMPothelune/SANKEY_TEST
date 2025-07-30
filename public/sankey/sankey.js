@@ -32,6 +32,7 @@ function getUrlParams() {
     // Harmoniser avec index.html : true par défaut, false seulement si explicitement 'false'
     isEditable: urlParams.get('isEditable') !== 'false',
     scenarioId: urlParams.get('scenarioId') || '',
+    teamId: urlParams.get('teamId') || '',
     // Utiliser isLive pour tout, pas besoin de scenarioIsLive séparé
     isLive: urlParams.get('isLive') === 'true',
     // Supprimer scenarioIsLive car redondant avec isLive
@@ -115,6 +116,32 @@ const tooltip = d3
 // Fonction utilitaire pour masquer le tooltip
 function hideTooltip() {
   tooltip.style('opacity', 0);
+}
+
+// Fonction pour charger les données de la team
+function loadTeamData() {
+  const teamId = getUrlParams().teamId;
+  console.log('loadTeamData appelée avec teamId:', teamId);
+  if (teamId) {
+    console.log('Chargement des données de la team...');
+    fetch('/api/bubble', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: 'team',
+        params: { id: teamId, isLive: getUrlParams().isLive },
+        method: 'POST',
+      }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Données de la team reçues:', data);
+        window.teamData = data;
+      })
+      .catch(error => console.error('Erreur chargement team:', error));
+  } else {
+    console.log('Pas de teamId trouvé');
+  }
 }
 
 // Components pour stackbars et tooltips selon la dimension
@@ -1508,30 +1535,182 @@ function updateSankey(dimension) {
             const typeLabel = window.transformationUtils
               ? window.transformationUtils.getTransformationLabel(type)
               : type;
-            let params = '';
+            let tableRows = '';
+
             if (
               transfo._displayNames &&
               transfo._displayNames[0] &&
               transfo._displayNames[0].length > 0
             ) {
               // Utiliser les noms d'affichage français
-              params += `<div>Clés : <span class='font-mono text-xs'>${transfo._displayNames[0].join(', ')}</span></div>`;
+              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Clés :</span> <span class='font-mono text-xs'>${transfo._displayNames[0].join(', ')}</span></td></tr>`;
             } else if (
               transfo.keys &&
               transfo.keys.length &&
               transfo.keys[0].length
             ) {
               // Fallback sur les keys si pas de displayNames
-              params += `<div>Clés : <span class='font-mono text-xs'>${transfo.keys[0].join(', ')}</span></div>`;
+              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Clés :</span> <span class='font-mono text-xs'>${transfo.keys[0].join(', ')}</span></td></tr>`;
             }
             if (transfo.scenario && transfo.scenario.target) {
-              params += `<div>Cible : <span class='font-mono text-xs'>${transfo.scenario.target}</span></div>`;
+              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Cible :</span> <span class='font-mono text-xs'>${transfo.scenario.target}</span></td></tr>`;
             }
+            // Ajouter le poids du lot (toujours affiché)
+            const poids = d.lot.total; // kg
+            const poidsFormate = poids.toFixed(2);
+            tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Poids d'entrée :</span> <span class='font-mono text-xs'>${poidsFormate} kg</span></td></tr>`;
+
             // Ajouter les informations de la tech si elle existe
             if (transfo.tech) {
-              params += `<div>Outil : <span class='font-mono text-xs'>${transfo.tech.name} (x${transfo.tech.quantity})</span></div>`;
+              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Outil :</span> <span class='font-mono text-xs'>${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
+
+              // Calculer le temps utile
+              const volume = d.lot.total; // kg
+              const rate = transfo.tech.rate; // kg/h par machine
+              const quantity = transfo.tech.quantity; // nombre de machines
+              const totalRate = rate * quantity; // kg/h total
+              const tempsUtile = volume / totalRate; // heures
+
+              // Formater le temps en heures et minutes
+              const heures = Math.floor(tempsUtile);
+              const minutes = Math.round((tempsUtile - heures) * 60);
+              let tempsFormate = '';
+              if (heures > 0) {
+                tempsFormate += `${heures}h`;
+              }
+              if (minutes > 0) {
+                tempsFormate += `${minutes}min`;
+              }
+              if (heures === 0 && minutes === 0) {
+                tempsFormate = '< 1min';
+              }
+
+              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Temps utile :</span> <span class='font-mono text-xs'>${tempsFormate}</span></td></tr>`;
+
+              // Ajouter les profils nécessaires depuis la team
+              const teamId = getUrlParams().teamId;
+              console.log('TeamId:', teamId);
+              console.log('Window.teamData:', window.teamData);
+
+              let totalPrix = 0; // Pour calculer le total
+
+              if (teamId && window.teamData && window.teamData.profils) {
+                console.log('Profils trouvés:', window.teamData.profils);
+                // Récupérer les données de la tech pour avoir les vrais timeh
+                if (transfo.tech.bubble_id) {
+                  fetch('/api/bubble', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      endpoint: 'tech',
+                      params: {
+                        id: transfo.tech.bubble_id,
+                        isLive: getUrlParams().isLive,
+                      },
+                      method: 'POST',
+                    }),
+                  })
+                    .then(response => response.json())
+                    .then(techData => {
+                      console.log('Données de la tech reçues:', techData);
+
+                      // Utiliser les profils de la tech avec les vrais timeh
+                      if (
+                        techData.profils &&
+                        window.teamData &&
+                        window.teamData.profils
+                      ) {
+                        Object.entries(techData.profils).forEach(
+                          ([profilName, profilData]) => {
+                            // Calculer le temps utile pour ce profil avec le vrai timeh
+                            // timeh est en heures par unité de temps utile de la machine
+                            const profilTempsUtile =
+                              tempsUtile * profilData.timeh;
+
+                            // Formater le temps du profil
+                            const profilHeures = Math.floor(profilTempsUtile);
+                            const profilMinutes = Math.round(
+                              (profilTempsUtile - profilHeures) * 60
+                            );
+                            let profilTempsFormate = '';
+                            if (profilHeures > 0) {
+                              profilTempsFormate += `${profilHeures}h`;
+                            }
+                            if (profilMinutes > 0) {
+                              profilTempsFormate += `${profilMinutes}min`;
+                            }
+                            if (profilHeures === 0 && profilMinutes === 0) {
+                              profilTempsFormate = '< 1min';
+                            }
+
+                            // Calculer le prix avec le pricerate de la team
+                            const teamProfilData =
+                              window.teamData.profils[profilName];
+                            if (teamProfilData) {
+                              const prix =
+                                teamProfilData.pricerate * profilTempsUtile;
+                              const prixFormate = prix.toFixed(2);
+                              totalPrix += prix; // Ajouter au total
+
+                              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>${profilName} :</span> <span class='font-mono text-xs'>${profilTempsFormate} (${prixFormate}€)</span></td></tr>`;
+                            }
+                          }
+                        );
+                      }
+
+                      // Ajouter la consommation électrique
+                      if (techData.conso && window.teamData.elec) {
+                        console.log('Debug conso:', {
+                          conso: techData.conso,
+                          tempsUtile: tempsUtile,
+                          quantity: quantity,
+                          teamElec: window.teamData.elec,
+                        });
+
+                        const consoWh = techData.conso * tempsUtile * quantity; // W × h × qté = Wh
+                        const consoKwh = consoWh / 1000; // Convertir en kWh
+                        const prixElec = consoKwh * window.teamData.elec; // kWh × prix/kWh
+                        const prixElecFormate = prixElec.toFixed(2);
+                        totalPrix += prixElec; // Ajouter au total
+
+                        console.log('Calcul conso final:', {
+                          consoWh: consoWh,
+                          consoKwh: consoKwh,
+                          prixElec: prixElec,
+                          prixElecFormate: prixElecFormate,
+                        });
+
+                        tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Conso élec :</span> <span class='font-mono text-xs'>${consoKwh.toFixed(4)} kWh (${prixElecFormate}€)</span></td></tr>`;
+                      }
+
+                      // Ajouter le total
+                      const totalFormate = totalPrix.toFixed(2);
+                      tableRows += `<tr><td style="padding: 4px 12px; font-weight: bold; border-top: 2px solid #ddd; display: flex; justify-content: space-between;"><span>Total :</span> <span class='font-mono text-xs'>${totalFormate}€</span></td></tr>`;
+
+                      // Mettre à jour le tooltip avec le contenu final
+                      const finalTooltipContent = `<strong>${label}</strong>${tableRows ? '<table style="width: calc(100% + 16px); margin-top: 8px; border-collapse: collapse; margin-left: -8px; margin-right: -8px;">' + tableRows + '</table>' : ''}`;
+                      tooltip.html(finalTooltipContent);
+
+                      // Forcer la mise à jour du tooltip
+                      setTimeout(() => {
+                        tooltip.style('opacity', 1);
+                      }, 100);
+                    })
+                    .catch(error =>
+                      console.error('Erreur chargement tech:', error)
+                    );
+                }
+              } else if (teamId) {
+                // Si pas de données de team, afficher un message
+                console.log('Pas de données de team disponibles');
+                tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee;">Profils : <span class='font-mono text-xs'>Chargement...</span></td></tr>`;
+              } else {
+                console.log('Pas de teamId');
+              }
             }
-            tooltipContent = `<strong>${label}</strong>${params ? '<br/>' + params : ''}`;
+
+            // Générer le tooltip initial (sera mis à jour par la promesse si nécessaire)
+            tooltipContent = `<strong>${label}</strong>${tableRows ? '<table style="width: calc(100% + 16px); margin-top: 8px; border-collapse: collapse; margin-left: -8px; margin-right: -8px;">' + tableRows + '</table>' : ''}`;
           } else {
             tooltipContent = '<strong>Ajouter une transformation</strong>';
           }
@@ -2291,6 +2470,7 @@ window.onTransformationMoveDown = (nodeId, transformation) => {
 // Initialisation automatique quand le DOM est prêt
 document.addEventListener('DOMContentLoaded', function () {
   initializeFromUrl();
+  loadTeamData(); // Charger les données de la team
 });
 
 // Écouter les changements d'URL pour recharger le Sankey

@@ -639,7 +639,7 @@ Transfo_tech {
   profils_rh: {
     profile_name: {
       bubble_id: string, // Référence vers BaseData.profils_rh
-      rate: number, // coût horaire du profil en €
+      pricerate: number, // coût horaire du profil en €
       timeh: number // heures pour 1h d'utilisation de la transfo_tech
     },
     ...
@@ -733,17 +733,18 @@ Par API Bubble :
 {
   "title": "Testchtera",
   "bubble_id": "1730809932159x273229509786599420",
+  "elec": 0.2,
   "profils": {
     "Chef d'atelier": {
-      "rate": 20,
+      "pricerate": 20,
       "bubble_id": "1752674004466x758392426243031000"
     },
     "Opérateur de ligne": {
-      "rate": 14,
+      "pricerate": 14,
       "bubble_id": "1752674021593x353734521788825600"
     },
     "Tourneur/fraiseur": {
-      "rate": 100,
+      "pricerate": 100,
       "bubble_id": "1752674049729x862972045792641000"
     }
   },

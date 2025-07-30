@@ -12,8 +12,12 @@
 [] Search dans dropdown transfo
 [] Pouvoir sauvegarder des lots intermédiaires dans le Sankey
 [] Checker taille d'écran du Sankey
+[] Mettre à jour tech si pas la même version
+[] Ajouter les steps dans le scénario
+[] Coût dans le tooltip pour un noeud
+[] Coût global
 [] isEditable
-[] Pouvoir ajouter des transfos_techs
+[x] Pouvoir ajouter des transfos_techs
 [x] Gérer les titres des noeuds
 [x] Remettre les clés dans le tooltip
 [x] Garder le scénario wip quand on change de lots / dimension -> passer dimension dans l'iframe.

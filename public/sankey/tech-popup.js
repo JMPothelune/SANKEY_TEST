@@ -63,8 +63,7 @@ class TechPopup {
   createPopupWithTechs() {
     // Création du backdrop (transparent comme les autres popups)
     this.backdrop = document.createElement('div');
-    this.backdrop.className =
-      'fixed inset-0 flex items-center justify-center z-50';
+    this.backdrop.className = 'fixed inset-0 z-50';
     this.backdrop.style.background = 'none';
 
     // Création de la modal avec ombre prononcée comme les autres popups
@@ -73,6 +72,10 @@ class TechPopup {
       'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
     this.modal.style.boxShadow =
       '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+    this.modal.style.position = 'absolute';
+    this.modal.style.top = '200px';
+    this.modal.style.left = '50%';
+    this.modal.style.transform = 'translateX(-50%)';
 
     // Récupérer la tech existante si en mode edit
     const existingTech = this.getExistingTech();
@@ -117,8 +120,7 @@ class TechPopup {
   createPopupWithError(message) {
     // Création du backdrop
     this.backdrop = document.createElement('div');
-    this.backdrop.className =
-      'fixed inset-0 flex items-center justify-center z-50';
+    this.backdrop.className = 'fixed inset-0 z-50';
     this.backdrop.style.background = 'none';
 
     // Création de la modal
@@ -127,6 +129,10 @@ class TechPopup {
       'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
     this.modal.style.boxShadow =
       '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+    this.modal.style.position = 'absolute';
+    this.modal.style.top = '200px';
+    this.modal.style.left = '50%';
+    this.modal.style.transform = 'translateX(-50%)';
 
     this.modal.innerHTML = `
       <h3 class="text-lg font-semibold mb-4 text-red-600">Erreur</h3>
