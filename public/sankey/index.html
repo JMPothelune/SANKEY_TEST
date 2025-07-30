@@ -184,6 +184,7 @@
           dimension: 'formats', // Dimension par défaut, plus de paramètre dans l'URL
           scenarioId: urlParams.get('scenarioId') || '',
           lotId: urlParams.get('lotId') || '',
+          teamId: urlParams.get('teamId') || '',
           isLive: urlParams.get('isLive') === 'true',
           isEditable: urlParams.get('isEditable') !== 'false', // true par défaut
         };
@@ -564,6 +565,7 @@
     <script src="processes.js"></script>
     <script src="scenario.js"></script>
     <script src="transformation-popup.js"></script>
+    <script src="tech-popup.js"></script>
     <script src="sankey.js"></script>
   </body>
 </html>

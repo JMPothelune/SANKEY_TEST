@@ -3,6 +3,7 @@ import { AppNavbar } from '@/components/ui/AppNavbar';
 import { useEffect, useState } from 'react';
 import { lots } from '@/data/lots';
 import { scenarios } from '@/data/scenarios';
+import { teams } from '@/data/teams';
 import {
   Select,
   SelectTrigger,
@@ -28,6 +29,9 @@ export default function SankeyPage() {
   const [selectedScenario, setSelectedScenario] = useState<
     (typeof scenarios)[0] | null
   >(scenarios[0]);
+  const [selectedTeam, setSelectedTeam] = useState<(typeof teams)[0] | null>(
+    teams[0]
+  );
   const [isEditable, setIsEditable] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [iframeHeight, setIframeHeight] = useState<number>(800);
@@ -35,7 +39,7 @@ export default function SankeyPage() {
   // Forcer le rechargement de l'iframe quand les paramètres changent
   useEffect(() => {
     setIframeKey(prev => prev + 1);
-  }, [scenarioIdx, selectedLot, selectedScenario, isEditable]);
+  }, [scenarioIdx, selectedLot, selectedScenario, selectedTeam, isEditable]);
 
   // Gérer le redimensionnement de l'iframe
   useEffect(() => {
@@ -53,7 +57,7 @@ export default function SankeyPage() {
   }, []);
 
   // Construire l'URL de l'iframe avec tous les paramètres (sans dimension)
-  const iframeSrc = `/sankey/index.html?scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}&scenarioId=${selectedScenario?.bubbleId || ''}&scenarioIsLive=${selectedScenario?.isLive || false}`;
+  const iframeSrc = `/sankey/index.html?scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&scenarioId=${selectedScenario?.bubbleId || ''}&teamId=${selectedTeam?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
 
   // Log pour debug
   console.log('URL iframe:', iframeSrc, 'scenarioIdx:', scenarioIdx);
@@ -108,6 +112,28 @@ export default function SankeyPage() {
                   {lots.map(lot => (
                     <SelectItem value={lot.bubbleId} key={lot.bubbleId}>
                       {lot.nom} ({lot.isLive ? 'Live' : 'Test'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="font-semibold">Team :</label>
+              <Select
+                value={selectedTeam?.bubbleId || ''}
+                onValueChange={v => {
+                  const team = teams.find(t => t.bubbleId === v);
+                  setSelectedTeam(team || null);
+                }}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Choisir une team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map(team => (
+                    <SelectItem value={team.bubbleId} key={team.bubbleId}>
+                      {team.nom} ({team.isLive ? 'Live' : 'Test'})
                     </SelectItem>
                   ))}
                 </SelectContent>

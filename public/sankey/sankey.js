@@ -1527,6 +1527,10 @@ function updateSankey(dimension) {
             if (transfo.scenario && transfo.scenario.target) {
               params += `<div>Cible : <span class='font-mono text-xs'>${transfo.scenario.target}</span></div>`;
             }
+            // Ajouter les informations de la tech si elle existe
+            if (transfo.tech) {
+              params += `<div>Outil : <span class='font-mono text-xs'>${transfo.tech.name} (x${transfo.tech.quantity})</span></div>`;
+            }
             tooltipContent = `<strong>${label}</strong>${params ? '<br/>' + params : ''}`;
           } else {
             tooltipContent = '<strong>Ajouter une transformation</strong>';
@@ -3093,63 +3097,20 @@ function getPathForNewTransformation(node) {
 
 // Fonction pour afficher la popup "transfo tech"
 function showTransfoTechPopup(nodeId, transformation) {
-  // Création du backdrop (transparent comme les autres popups)
-  const backdrop = document.createElement('div');
-  backdrop.className = 'fixed inset-0 flex items-center justify-center z-50';
-  backdrop.style.background = 'none';
+  // Utiliser la nouvelle popup des techs
+  if (window.showTechPopup) {
+    // Créer un ref comme dans transformation-popup.js
+    const ref = {
+      nodeId: nodeId,
+      transformation: transformation,
+    };
 
-  // Création de la modal avec ombre prononcée comme les autres popups
-  const modal = document.createElement('div');
-  modal.className = 'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
-  modal.style.boxShadow =
-    '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+    // Déterminer le mode : 'edit' si il y a déjà une tech, 'add' sinon
+    const hasExistingTech = transformation?.tech;
+    const mode = hasExistingTech ? 'edit' : 'add';
 
-  modal.innerHTML = `
-    <h3 class="text-lg font-semibold mb-4">Transfo Tech</h3>
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Outil</label>
-        <select id="tool-select" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-          <option value="" disabled selected>Sélectionner un outil</option>
-          <option value="outil1">Outil de nettoyage</option>
-          <option value="outil2">Outil de tri</option>
-          <option value="outil3">Outil de compression</option>
-          <option value="outil4">Outil de validation</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
-        <input id="quantity-input" type="number" value="1" min="1" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-      </div>
-    </div>
-    <div class="mt-6 flex justify-end space-x-3">
-      <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
-      <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
-    </div>
-  `;
-
-  backdrop.appendChild(modal);
-  document.body.appendChild(backdrop);
-
-  // Gestionnaires d'événements
-  const cancelBtn = modal.querySelector('#cancel-btn');
-  const saveBtn = modal.querySelector('#save-btn');
-
-  const closePopup = () => {
-    backdrop.remove();
-  };
-
-  cancelBtn.onclick = closePopup;
-  saveBtn.onclick = () => {
-    // Ici vous pourrez ajouter la logique de sauvegarde
-    console.log('Sauvegarde transfo tech pour:', { nodeId, transformation });
-    closePopup();
-  };
-
-  // Fermer en cliquant sur le backdrop (comme les autres popups)
-  backdrop.onclick = e => {
-    if (e.target === backdrop) {
-      closePopup();
-    }
-  };
+    window.showTechPopup(ref, mode);
+  } else {
+    console.error('TechPopup non disponible');
+  }
 }
