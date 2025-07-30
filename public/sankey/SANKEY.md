@@ -633,30 +633,17 @@ Transfo_tech {
   id: string,
   titre: string,
   debit: number, // kg/heure (débit net)
-  version: string, // pour le versioning
+  version: number, // pour le versioning
   couts_fixes: number, // €/heure (maintenance, etc.)
   consommation_electrique: number, // kWh/heure
-  profils_rh: [
-    {
-      profil_id: string, // Référence vers BaseData.profils_rh
-      temps_requis: number // heures pour 1h d'utilisation de la transfo_tech
-    }
-  ]
-}
-```
-
-### Données de Base (BaseData)
-
-```javascript
-BaseData {
-  profils_rh: [
-    {
-      id: string,
-      nom: string,
-      cout_horaire: number, // €/heure
-    }
-  ],
-  prix_kwh: number, // €/kWh pour cette team
+  profils_rh: {
+    profile_name: {
+      bubble_id: string, // Référence vers BaseData.profils_rh
+      rate: number, // coût horaire du profil en €
+      timeh: number // heures pour 1h d'utilisation de la transfo_tech
+    },
+    ...
+  }
 }
 ```
 
