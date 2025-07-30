@@ -79,6 +79,53 @@ body {
   padding-top: 8px;
 }
 
+/* Classes pour le tooltip table */
+.tooltip-table {
+  width: calc(100% + 16px);
+  margin-top: 8px;
+  border-collapse: collapse;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+.tooltip-row {
+  padding: 4px 12px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tooltip-row:last-child {
+  border-bottom: none;
+}
+
+.tooltip-row.total {
+  font-weight: bold;
+  border-top: 2px solid #ddd;
+  border-bottom: none;
+}
+
+.tooltip-row.profile {
+  border-left: 3px solid #e5e7eb;
+}
+
+.tooltip-label {
+  color: #333;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.tooltip-value {
+  color: #666;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  text-align: right;
+  word-break: break-word;
+  flex: 1;
+  margin-left: 8px;
+}
+
 text.lot-title {
   /* Pour SVG, le z-index ne fonctionne que si le texte est après les autres éléments dans le DOM.
        Mais on peut améliorer la lisibilité et forcer le texte à être devant visuellement. */

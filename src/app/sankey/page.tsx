@@ -59,9 +59,6 @@ export default function SankeyPage() {
   // Construire l'URL de l'iframe avec tous les paramètres (sans dimension)
   const iframeSrc = `/sankey/index.html?scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&scenarioId=${selectedScenario?.bubbleId || ''}&teamId=${selectedTeam?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
 
-  // Log pour debug
-  console.log('URL iframe:', iframeSrc, 'scenarioIdx:', scenarioIdx);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <AppNavbar />

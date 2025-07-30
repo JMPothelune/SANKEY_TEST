@@ -124,7 +124,7 @@ function loadTeamData() {
   console.log('loadTeamData appelée avec teamId:', teamId);
   if (teamId) {
     console.log('Chargement des données de la team...');
-    fetch('/api/bubble', {
+    return fetch('/api/bubble', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -137,10 +137,15 @@ function loadTeamData() {
       .then(data => {
         console.log('Données de la team reçues:', data);
         window.teamData = data;
+        return data;
       })
-      .catch(error => console.error('Erreur chargement team:', error));
+      .catch(error => {
+        console.error('Erreur chargement team:', error);
+        throw error;
+      });
   } else {
     console.log('Pas de teamId trouvé');
+    return Promise.resolve(null);
   }
 }
 
@@ -626,6 +631,14 @@ function getIconSVG(name, className = '') {
 }
 
 function updateSankey(dimension) {
+  // Attendre que les données de la team soient chargées si on a un teamId
+  const teamId = getUrlParams().teamId;
+  if (teamId && !window.teamData) {
+    console.log('Données de la team non disponibles, attente...');
+    setTimeout(() => updateSankey(dimension), 100);
+    return;
+  }
+
   // Nettoyer le SVG
   svg.selectAll('*').remove();
 
@@ -635,19 +648,8 @@ function updateSankey(dimension) {
     !window.sankeyScenario.nodes ||
     !window.sankeyScenario.links
   ) {
-    console.error(
-      'updateSankey: sankeyScenario non disponible',
-      window.sankeyScenario
-    );
-    // Afficher un message d'erreur dans le conteneur
-    svg
-      .append('text')
-      .attr('x', width / 2)
-      .attr('y', height / 2)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '16px')
-      .style('fill', '#666')
-      .text('Chargement du scénario...');
+    console.log('Sankey non prêt, attente...');
+    setTimeout(() => updateSankey(dimension), 100);
     return;
   }
 
@@ -1543,26 +1545,26 @@ function updateSankey(dimension) {
               transfo._displayNames[0].length > 0
             ) {
               // Utiliser les noms d'affichage français
-              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Clés :</span> <span class='font-mono text-xs'>${transfo._displayNames[0].join(', ')}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Clés :</span> <span class="tooltip-value">${transfo._displayNames[0].join(', ')}</span></td></tr>`;
             } else if (
               transfo.keys &&
               transfo.keys.length &&
               transfo.keys[0].length
             ) {
               // Fallback sur les keys si pas de displayNames
-              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Clés :</span> <span class='font-mono text-xs'>${transfo.keys[0].join(', ')}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Clés :</span> <span class="tooltip-value">${transfo.keys[0].join(', ')}</span></td></tr>`;
             }
             if (transfo.scenario && transfo.scenario.target) {
-              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Cible :</span> <span class='font-mono text-xs'>${transfo.scenario.target}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Cible :</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
             }
             // Ajouter le poids du lot (toujours affiché)
             const poids = d.lot.total; // kg
             const poidsFormate = poids.toFixed(2);
-            tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Poids d'entrée :</span> <span class='font-mono text-xs'>${poidsFormate} kg</span></td></tr>`;
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Poids d'entrée :</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
 
             // Ajouter les informations de la tech si elle existe
             if (transfo.tech) {
-              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Outil :</span> <span class='font-mono text-xs'>${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Outil :</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
 
               // Calculer le temps utile
               const volume = d.lot.total; // kg
@@ -1585,7 +1587,7 @@ function updateSankey(dimension) {
                 tempsFormate = '< 1min';
               }
 
-              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Temps utile :</span> <span class='font-mono text-xs'>${tempsFormate}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Temps utile :</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
 
               // Ajouter les profils nécessaires depuis la team
               const teamId = getUrlParams().teamId;
@@ -1652,7 +1654,7 @@ function updateSankey(dimension) {
                               const prixFormate = prix.toFixed(2);
                               totalPrix += prix; // Ajouter au total
 
-                              tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>${profilName} :</span> <span class='font-mono text-xs'>${profilTempsFormate} (${prixFormate}€)</span></td></tr>`;
+                              tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span> <span class="tooltip-value">${profilTempsFormate} (${prixFormate}€)</span></td></tr>`;
                             }
                           }
                         );
@@ -1680,15 +1682,15 @@ function updateSankey(dimension) {
                           prixElecFormate: prixElecFormate,
                         });
 
-                        tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;"><span>Conso élec :</span> <span class='font-mono text-xs'>${consoKwh.toFixed(4)} kWh (${prixElecFormate}€)</span></td></tr>`;
+                        tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Conso élec :</span> <span class="tooltip-value">${consoKwh.toFixed(4)} kWh (${prixElecFormate}€)</span></td></tr>`;
                       }
 
                       // Ajouter le total
                       const totalFormate = totalPrix.toFixed(2);
-                      tableRows += `<tr><td style="padding: 4px 12px; font-weight: bold; border-top: 2px solid #ddd; display: flex; justify-content: space-between;"><span>Total :</span> <span class='font-mono text-xs'>${totalFormate}€</span></td></tr>`;
+                      tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">Total :</span> <span class="tooltip-value">${totalFormate}€</span></td></tr>`;
 
                       // Mettre à jour le tooltip avec le contenu final
-                      const finalTooltipContent = `<strong>${label}</strong>${tableRows ? '<table style="width: calc(100% + 16px); margin-top: 8px; border-collapse: collapse; margin-left: -8px; margin-right: -8px;">' + tableRows + '</table>' : ''}`;
+                      const finalTooltipContent = `<strong>${label}</strong>${tableRows ? '<table class="tooltip-table">' + tableRows + '</table>' : ''}`;
                       tooltip.html(finalTooltipContent);
 
                       // Forcer la mise à jour du tooltip
@@ -1710,7 +1712,7 @@ function updateSankey(dimension) {
             }
 
             // Générer le tooltip initial (sera mis à jour par la promesse si nécessaire)
-            tooltipContent = `<strong>${label}</strong>${tableRows ? '<table style="width: calc(100% + 16px); margin-top: 8px; border-collapse: collapse; margin-left: -8px; margin-right: -8px;">' + tableRows + '</table>' : ''}`;
+            tooltipContent = `<strong>${label}</strong>${tableRows ? '<table class="tooltip-table">' + tableRows + '</table>' : ''}`;
           } else {
             tooltipContent = '<strong>Ajouter une transformation</strong>';
           }
@@ -2470,7 +2472,14 @@ window.onTransformationMoveDown = (nodeId, transformation) => {
 // Initialisation automatique quand le DOM est prêt
 document.addEventListener('DOMContentLoaded', function () {
   initializeFromUrl();
-  loadTeamData(); // Charger les données de la team
+  // Attendre que les données de la team soient chargées avant de continuer
+  loadTeamData()
+    .then(() => {
+      console.log('Données de la team chargées, lancement du Sankey');
+    })
+    .catch(error => {
+      console.error('Erreur lors du chargement de la team:', error);
+    });
 });
 
 // Écouter les changements d'URL pour recharger le Sankey
