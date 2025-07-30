@@ -13,6 +13,7 @@
 [] Pouvoir sauvegarder des lots intermédiaires dans le Sankey
 [] Checker taille d'écran du Sankey
 [] isEditable
+[] Pouvoir ajouter des transfos_techs
 [x] Gérer les titres des noeuds
 [x] Remettre les clés dans le tooltip
 [x] Garder le scénario wip quand on change de lots / dimension -> passer dimension dans l'iframe.

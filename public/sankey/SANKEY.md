@@ -737,33 +737,92 @@ function calculateTransformationCosts(transformation, transfoTech, baseData) {
 
 ## Exemple Concret
 
-### Données de Base
+## Liste de transfo_techs
+
+Par API Bubble :
 
 ```javascript
+
 {
-  profils_rh: [
-    { id: "op1", nom: "Opérateur", cout_horaire: 25 },
-    { id: "sup1", nom: "Superviseur", cout_horaire: 45 },
-    { id: "tech1", nom: "Technicien", cout_horaire: 35 }
-  ],
-  prix_kwh: 0.15
+  "title": "Testchtera",
+  "bubble_id": "1730809932159x273229509786599420",
+  "profils": {
+    "Chef d'atelier": {
+      "rate": 20,
+      "bubble_id": "1752674004466x758392426243031000"
+    },
+    "Opérateur de ligne": {
+      "rate": 14,
+      "bubble_id": "1752674021593x353734521788825600"
+    },
+    "Tourneur/fraiseur": {
+      "rate": 100,
+      "bubble_id": "1752674049729x862972045792641000"
+    }
+  },
+  "techs": {
+    "Une machine super intéressante": {
+      "rate": 0.5,
+      "bubble_id": "1731421834562x920918021539102700",
+      "step": "collecting"
+    },
+    "Table de tri": {
+      "rate": 12,
+      "bubble_id": "1753277499159x841848085058682900",
+      "step": "sorting"
+    },
+    "Tapis roulant de tri": {
+      "rate": 100,
+      "bubble_id": "1753277557054x291758371680550900",
+      "step": "sorting"
+    }
+  }
 }
+
 ```
 
 ### Transfo_tech
 
+Reçue par API depuis Bubble :
+
 ```javascript
+
 {
-  id: "ciseaux_electriques",
-  debit: 100, // kg/heure
-  couts_fixes: 5, // €/heure
-  consommation_electrique: 2, // kWh/heure
-  profils_rh: [
-    { profil_id: "op1", temps_requis: 0.8 }, // 48min d'opérateur pour 1h
-    { profil_id: "sup1", temps_requis: 0.1 }, // 6min de superviseur pour 1h
-    { profil_id: "tech1", temps_requis: 0.3 } // 18min de technicien pour 1h
-  ]
+  "title": "Testchtera",
+  "bubble_id": "1730809932159x273229509786599420",
+  "profils": {
+    "Chef d'atelier": {
+      "rate": 20,
+      "bubble_id": "1752674004466x758392426243031000"
+    },
+    "Opérateur de ligne": {
+      "rate": 14,
+      "bubble_id": "1752674021593x353734521788825600"
+    },
+    "Tourneur/fraiseur": {
+      "rate": 100,
+      "bubble_id": "1752674049729x862972045792641000"
+    }
+  },
+  "techs": {
+    "Une machine super intéressante": {
+      "rate": 0.5,
+      "bubble_id": "1731421834562x920918021539102700",
+      "step": "collecting"
+    },
+    "Table de tri": {
+      "rate": 12,
+      "bubble_id": "1753277499159x841848085058682900",
+      "step": "sorting"
+    },
+    "Tapis roulant de tri": {
+      "rate": 100,
+      "bubble_id": "1753277557054x291758371680550900",
+      "step": "sorting"
+    }
+  }
 }
+
 ```
 
 ### Transformation

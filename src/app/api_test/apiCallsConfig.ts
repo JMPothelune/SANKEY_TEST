@@ -187,4 +187,18 @@ export const bubbleApiCalls = [
       { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
     ],
   },
+  {
+    name: 'Get 1 tech',
+    endpoint: 'tech?id={id}',
+    method: 'POST',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
+    ],
+  },
 ];

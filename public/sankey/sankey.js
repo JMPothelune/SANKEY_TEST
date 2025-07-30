@@ -1591,6 +1591,7 @@ function updateSankey(dimension) {
             outgoingLinks.indexOf(link) === outgoingLinks.length - 1;
           dropdownMenu.innerHTML = `
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit"><i class="ph ph-pencil-simple text-base align-middle mr-2"></i>Modifier</button>
+            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="tools"><i class="ph ph-gear text-base align-middle mr-2"></i>Outils</button>
             <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}><i class="ph ph-arrow-up text-base align-middle mr-2"></i>Monter</button>
             <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}><i class="ph ph-arrow-down text-base align-middle mr-2"></i>Descendre</button>
             <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete"><i class="ph ph-trash text-base align-middle mr-2"></i>Effacer</button>
@@ -1746,6 +1747,14 @@ function updateSankey(dimension) {
               if (typeof window.onTransformationMoveDown === 'function') {
                 window.onTransformationMoveDown(d.id, link.transformation);
               }
+            };
+          // Handler pour Outils
+          dropdownMenu.querySelector('[data-action="tools"]').onclick =
+            function (e) {
+              e.stopPropagation();
+              closeDropdown();
+              // Ouvrir la popup "transfo tech"
+              showTransfoTechPopup(d.id, link.transformation);
             };
           // Fermer si on clique ailleurs
           setTimeout(() => {
@@ -3080,4 +3089,67 @@ function getPathForNewTransformation(node) {
 
   // Fallback : racine
   return ['transformations'];
+}
+
+// Fonction pour afficher la popup "transfo tech"
+function showTransfoTechPopup(nodeId, transformation) {
+  // Création du backdrop (transparent comme les autres popups)
+  const backdrop = document.createElement('div');
+  backdrop.className = 'fixed inset-0 flex items-center justify-center z-50';
+  backdrop.style.background = 'none';
+
+  // Création de la modal avec ombre prononcée comme les autres popups
+  const modal = document.createElement('div');
+  modal.className = 'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
+  modal.style.boxShadow =
+    '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+
+  modal.innerHTML = `
+    <h3 class="text-lg font-semibold mb-4">Transfo Tech</h3>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Outil</label>
+        <select id="tool-select" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+          <option value="" disabled selected>Sélectionner un outil</option>
+          <option value="outil1">Outil de nettoyage</option>
+          <option value="outil2">Outil de tri</option>
+          <option value="outil3">Outil de compression</option>
+          <option value="outil4">Outil de validation</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+        <input id="quantity-input" type="number" value="1" min="1" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+      </div>
+    </div>
+    <div class="mt-6 flex justify-end space-x-3">
+      <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
+      <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
+    </div>
+  `;
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+
+  // Gestionnaires d'événements
+  const cancelBtn = modal.querySelector('#cancel-btn');
+  const saveBtn = modal.querySelector('#save-btn');
+
+  const closePopup = () => {
+    backdrop.remove();
+  };
+
+  cancelBtn.onclick = closePopup;
+  saveBtn.onclick = () => {
+    // Ici vous pourrez ajouter la logique de sauvegarde
+    console.log('Sauvegarde transfo tech pour:', { nodeId, transformation });
+    closePopup();
+  };
+
+  // Fermer en cliquant sur le backdrop (comme les autres popups)
+  backdrop.onclick = e => {
+    if (e.target === backdrop) {
+      closePopup();
+    }
+  };
 }
