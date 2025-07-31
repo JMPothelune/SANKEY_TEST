@@ -2262,6 +2262,12 @@ function updateSankey(dimension) {
       .style('fill', '#666')
       .style('pointer-events', 'none');
   });
+
+  // Calculer et afficher les coûts totaux
+  if (window.teamData) {
+    const costsData = calculateCosts(nodes, links);
+    displayCostsTable(costsData);
+  }
 }
 
 // Gestion du changement de dimension
@@ -3496,3 +3502,194 @@ function createDropdown(button, options, positionOffset = 0) {
 
   return toggleDropdown;
 }
+
+// Fonction globale pour calculer les coûts totaux
+function calculateCosts(nodes, links) {
+  let totalCost = 0;
+  let totalEnergyCost = 0;
+  let totalLaborCost = 0;
+  let totalEnergyConsumption = 0;
+  let totalTime = 0;
+  let nodeCosts = [];
+
+  // Parcourir tous les nœuds pour trouver les transformations avec tech
+  nodes.forEach(node => {
+    if (
+      node.transformations_appliquees &&
+      node.transformations_appliquees.length > 0
+    ) {
+      // Prendre la dernière transformation appliquée (celle qui a créé ce nœud)
+      const lastTransformation =
+        node.transformations_appliquees[
+          node.transformations_appliquees.length - 1
+        ];
+
+      if (
+        lastTransformation &&
+        lastTransformation.tech &&
+        lastTransformation.tech.details
+      ) {
+        // Créer une transformation avec le volume du lot
+        const transformationWithVolume = {
+          ...lastTransformation,
+          lot_input_volume: node.lot.total,
+        };
+
+        // Calculer les coûts pour cette transformation
+        const costs = calculateTransformationCosts(
+          transformationWithVolume,
+          lastTransformation.tech.details,
+          window.teamData
+        );
+
+        if (costs) {
+          totalCost += costs.cout_total;
+          totalEnergyCost += costs.cout_energie;
+          totalLaborCost += costs.couts_rh;
+          totalEnergyConsumption += costs.consommation_totale;
+          totalTime += costs.temps_utile;
+
+          // Stocker les détails pour l'affichage
+          nodeCosts.push({
+            nodeName: node.name,
+            transformation: lastTransformation,
+            costs: costs,
+          });
+        }
+      }
+    }
+  });
+
+  return {
+    totalCost,
+    totalEnergyCost,
+    totalLaborCost,
+    totalEnergyConsumption,
+    totalTime,
+    nodeCosts,
+  };
+}
+
+// Fonction pour afficher le tableau des coûts
+function displayCostsTable(costsData) {
+  // Supprimer l'ancien tableau s'il existe
+  const existingTable = document.getElementById('costs-table');
+  if (existingTable) {
+    existingTable.remove();
+  }
+
+  // Créer le nouveau tableau
+  const tableContainer = document.createElement('div');
+  tableContainer.id = 'costs-table';
+  tableContainer.className =
+    'mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm';
+  tableContainer.style.marginTop = '20px';
+
+  // Formater le temps total
+  const totalHours = Math.floor(costsData.totalTime);
+  const totalMinutes = Math.round((costsData.totalTime - totalHours) * 60);
+  let totalTimeFormatted = '';
+  if (totalHours > 0) {
+    totalTimeFormatted += `${totalHours}h`;
+  }
+  if (totalMinutes > 0) {
+    totalTimeFormatted += `${totalMinutes}min`;
+  }
+  if (totalHours === 0 && totalMinutes === 0) {
+    totalTimeFormatted = '< 1min';
+  }
+
+  // Calculer les détails des profils RH
+  let profilsDetails = '';
+  if (costsData.nodeCosts.length > 0) {
+    // Collecter tous les profils utilisés
+    const profilsMap = new Map();
+
+    costsData.nodeCosts.forEach(nodeCost => {
+      if (nodeCost.transformation.tech.details.profils) {
+        Object.entries(nodeCost.transformation.tech.details.profils).forEach(
+          ([profilName, profilData]) => {
+            if (!profilsMap.has(profilName)) {
+              profilsMap.set(profilName, { tempsTotal: 0, coutTotal: 0 });
+            }
+            const profilTempsUtile =
+              nodeCost.costs.temps_utile * profilData.timeh;
+            const teamProfilData = window.teamData.profils[profilName];
+            if (teamProfilData) {
+              const prix = teamProfilData.pricerate * profilTempsUtile;
+              profilsMap.get(profilName).tempsTotal += profilTempsUtile;
+              profilsMap.get(profilName).coutTotal += prix;
+            }
+          }
+        );
+      }
+    });
+
+    // Générer le HTML pour les profils
+    if (profilsMap.size > 0) {
+      profilsDetails =
+        '<div class="bg-green-50 p-3 rounded-lg mt-4"><div class="text-sm text-green-600 font-medium mb-2">Détail par profil RH</div>';
+      profilsMap.forEach((details, profilName) => {
+        const profilHeures = Math.floor(details.tempsTotal);
+        const profilMinutes = Math.round(
+          (details.tempsTotal - profilHeures) * 60
+        );
+        let profilTempsFormate = '';
+        if (profilHeures > 0) {
+          profilTempsFormate += `${profilHeures}h`;
+        }
+        if (profilMinutes > 0) {
+          profilTempsFormate += `${profilMinutes}min`;
+        }
+        if (profilHeures === 0 && profilMinutes === 0) {
+          profilTempsFormate = '< 1min';
+        }
+
+        profilsDetails += `<div class="flex justify-between items-center py-1"><span class="text-sm text-green-700">${profilName}</span><span class="text-sm font-medium text-green-800">${profilTempsFormate} (${details.coutTotal.toFixed(2)}€)</span></div>`;
+      });
+      profilsDetails += '</div>';
+    }
+  }
+
+  const tableHTML = `
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Coûts totaux du scénario</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div class="bg-blue-50 p-3 rounded-lg">
+        <div class="text-sm text-blue-600 font-medium">Coût total</div>
+        <div class="text-xl font-bold text-blue-800">${costsData.totalCost.toFixed(2)}€</div>
+      </div>
+      <div class="bg-purple-50 p-3 rounded-lg">
+        <div class="text-sm text-purple-600 font-medium">Temps total</div>
+        <div class="text-xl font-bold text-purple-800">${totalTimeFormatted}</div>
+      </div>
+      <div class="bg-yellow-50 p-3 rounded-lg">
+        <div class="text-sm text-yellow-600 font-medium">Coût énergie</div>
+        <div class="text-xl font-bold text-yellow-800">${costsData.totalEnergyCost.toFixed(2)}€</div>
+      </div>
+      <div class="bg-gray-50 p-3 rounded-lg">
+        <div class="text-sm text-gray-600 font-medium">Conso élec</div>
+        <div class="text-xl font-bold text-gray-800">${costsData.totalEnergyConsumption.toFixed(4)} kWh</div>
+      </div>
+    </div>
+    <div class="bg-green-50 p-3 rounded-lg">
+      <div class="text-sm text-green-600 font-medium">Coût RH</div>
+      <div class="text-xl font-bold text-green-800">${costsData.totalLaborCost.toFixed(2)}€</div>
+    </div>
+    ${profilsDetails}
+  `;
+
+  tableContainer.innerHTML = tableHTML;
+
+  // Insérer le tableau après le bouton Enregistrer
+  const saveBtnContainer = document.getElementById('save-btn-container');
+  if (saveBtnContainer) {
+    saveBtnContainer.parentNode.insertBefore(
+      tableContainer,
+      saveBtnContainer.nextSibling
+    );
+  }
+}
+
+// Exposer les fonctions globalement
+window.calculateCosts = calculateCosts;
+window.displayCostsTable = displayCostsTable;
