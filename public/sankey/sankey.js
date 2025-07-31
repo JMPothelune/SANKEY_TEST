@@ -149,6 +149,58 @@ function loadTeamData() {
   }
 }
 
+// Fonction réutilisable pour calculer les coûts d'une transformation
+function calculateTransformationCosts(transformation, techDetails, teamData) {
+  if (!transformation.tech || !techDetails || !teamData) {
+    return null;
+  }
+
+  const volume = transformation.lot_input_volume || 0;
+  const rate = transformation.tech.rate; // kg/h par machine
+  const quantity = transformation.tech.quantity; // nombre de machines
+  const totalRate = rate * quantity; // kg/h total
+  const tempsUtile = volume / totalRate; // heures
+
+  let totalPrix = 0;
+  let couts_rh = 0;
+  let consommation_totale = 0;
+
+  // Coûts RH
+  if (techDetails.profils && teamData.profils) {
+    Object.entries(techDetails.profils).forEach(([profilName, profilData]) => {
+      const profilTempsUtile = tempsUtile * profilData.timeh;
+      const teamProfilData = teamData.profils[profilName];
+      if (teamProfilData) {
+        const prix = teamProfilData.pricerate * profilTempsUtile;
+        couts_rh += prix;
+        totalPrix += prix;
+      }
+    });
+  }
+
+  // Consommation électrique
+  if (techDetails.conso && teamData.elec) {
+    const consoWh = techDetails.conso * tempsUtile * quantity;
+    const consoKwh = consoWh / 1000;
+    const prixElec = consoKwh * teamData.elec;
+    consommation_totale = consoKwh;
+    totalPrix += prixElec;
+  }
+
+  return {
+    temps_utile: tempsUtile,
+    cout_total: totalPrix,
+    cout_unitaire: volume > 0 ? totalPrix / volume : 0,
+    consommation_totale,
+    couts_rh,
+    cout_energie: totalPrix - couts_rh,
+    version_transfo_tech: techDetails.version || '1.0',
+  };
+}
+
+// Exposer la fonction globalement
+window.calculateTransformationCosts = calculateTransformationCosts;
+
 // Components pour stackbars et tooltips selon la dimension
 const stackbarComponents = {
   formats: {
@@ -1566,57 +1618,57 @@ function updateSankey(dimension) {
             if (transfo.tech) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Outil :</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
 
-              // Calculer le temps utile
-              const volume = d.lot.total; // kg
-              const rate = transfo.tech.rate; // kg/h par machine
-              const quantity = transfo.tech.quantity; // nombre de machines
-              const totalRate = rate * quantity; // kg/h total
-              const tempsUtile = volume / totalRate; // heures
+              // Utiliser la fonction de calcul des coûts
+              const transformationWithVolume = {
+                ...transfo,
+                lot_input_volume: d.lot.total, // Ajouter le volume du lot
+              };
 
-              // Formater le temps en heures et minutes
-              const heures = Math.floor(tempsUtile);
-              const minutes = Math.round((tempsUtile - heures) * 60);
-              let tempsFormate = '';
-              if (heures > 0) {
-                tempsFormate += `${heures}h`;
-              }
-              if (minutes > 0) {
-                tempsFormate += `${minutes}min`;
-              }
-              if (heures === 0 && minutes === 0) {
-                tempsFormate = '< 1min';
-              }
-
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Temps utile :</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
-
-              // Ajouter les profils nécessaires depuis la team
-              const teamId = getUrlParams().teamId;
-              console.log('TeamId:', teamId);
-              console.log('Window.teamData:', window.teamData);
-
-              let totalPrix = 0; // Pour calculer le total
-
-              if (teamId && window.teamData && window.teamData.profils) {
-                console.log('Profils trouvés:', window.teamData.profils);
-                // Récupérer les données de la tech pour avoir les vrais timeh
-                if (transfo.tech.bubble_id) {
-                  fetch('/api/bubble', {
+              // Récupérer les données de la tech pour avoir les vrais timeh
+              if (transfo.tech.bubble_id) {
+                fetch('/api/bubble', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    endpoint: 'tech',
+                    params: {
+                      id: transfo.tech.bubble_id,
+                      isLive: getUrlParams().isLive,
+                    },
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      endpoint: 'tech',
-                      params: {
-                        id: transfo.tech.bubble_id,
-                        isLive: getUrlParams().isLive,
-                      },
-                      method: 'POST',
-                    }),
-                  })
-                    .then(response => response.json())
-                    .then(techData => {
-                      console.log('Données de la tech reçues:', techData);
+                  }),
+                })
+                  .then(response => response.json())
+                  .then(techData => {
+                    console.log('Données de la tech reçues:', techData);
 
-                      // Utiliser les profils de la tech avec les vrais timeh
+                    // Utiliser la fonction de calcul des coûts
+                    const couts = calculateTransformationCosts(
+                      transformationWithVolume,
+                      techData,
+                      window.teamData
+                    );
+
+                    if (couts) {
+                      // Formater le temps utile
+                      const heures = Math.floor(couts.temps_utile);
+                      const minutes = Math.round(
+                        (couts.temps_utile - heures) * 60
+                      );
+                      let tempsFormate = '';
+                      if (heures > 0) {
+                        tempsFormate += `${heures}h`;
+                      }
+                      if (minutes > 0) {
+                        tempsFormate += `${minutes}min`;
+                      }
+                      if (heures === 0 && minutes === 0) {
+                        tempsFormate = '< 1min';
+                      }
+
+                      tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Temps utile :</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
+
+                      // Ajouter les profils RH
                       if (
                         techData.profils &&
                         window.teamData &&
@@ -1624,10 +1676,8 @@ function updateSankey(dimension) {
                       ) {
                         Object.entries(techData.profils).forEach(
                           ([profilName, profilData]) => {
-                            // Calculer le temps utile pour ce profil avec le vrai timeh
-                            // timeh est en heures par unité de temps utile de la machine
                             const profilTempsUtile =
-                              tempsUtile * profilData.timeh;
+                              couts.temps_utile * profilData.timeh;
 
                             // Formater le temps du profil
                             const profilHeures = Math.floor(profilTempsUtile);
@@ -1652,8 +1702,6 @@ function updateSankey(dimension) {
                               const prix =
                                 teamProfilData.pricerate * profilTempsUtile;
                               const prixFormate = prix.toFixed(2);
-                              totalPrix += prix; // Ajouter au total
-
                               tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span> <span class="tooltip-value">${profilTempsFormate} (${prixFormate}€)</span></td></tr>`;
                             }
                           }
@@ -1661,53 +1709,29 @@ function updateSankey(dimension) {
                       }
 
                       // Ajouter la consommation électrique
-                      if (techData.conso && window.teamData.elec) {
-                        console.log('Debug conso:', {
-                          conso: techData.conso,
-                          tempsUtile: tempsUtile,
-                          quantity: quantity,
-                          teamElec: window.teamData.elec,
-                        });
-
-                        const consoWh = techData.conso * tempsUtile * quantity; // W × h × qté = Wh
-                        const consoKwh = consoWh / 1000; // Convertir en kWh
-                        const prixElec = consoKwh * window.teamData.elec; // kWh × prix/kWh
-                        const prixElecFormate = prixElec.toFixed(2);
-                        totalPrix += prixElec; // Ajouter au total
-
-                        console.log('Calcul conso final:', {
-                          consoWh: consoWh,
-                          consoKwh: consoKwh,
-                          prixElec: prixElec,
-                          prixElecFormate: prixElecFormate,
-                        });
-
-                        tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Conso élec :</span> <span class="tooltip-value">${consoKwh.toFixed(4)} kWh (${prixElecFormate}€)</span></td></tr>`;
+                      if (couts.consommation_totale > 0) {
+                        tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Conso élec :</span> <span class="tooltip-value">${couts.consommation_totale.toFixed(4)} kWh (${couts.cout_energie.toFixed(2)}€)</span></td></tr>`;
                       }
 
                       // Ajouter le total
-                      const totalFormate = totalPrix.toFixed(2);
-                      tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">Total :</span> <span class="tooltip-value">${totalFormate}€</span></td></tr>`;
+                      tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">Total :</span> <span class="tooltip-value">${couts.cout_total.toFixed(2)}€</span></td></tr>`;
+                    }
 
-                      // Mettre à jour le tooltip avec le contenu final
-                      const finalTooltipContent = `<strong>${label}</strong>${tableRows ? '<table class="tooltip-table">' + tableRows + '</table>' : ''}`;
-                      tooltip.html(finalTooltipContent);
+                    // Mettre à jour le tooltip avec le contenu final
+                    const finalTooltipContent = `<strong>${label}</strong>${tableRows ? '<table class="tooltip-table">' + tableRows + '</table>' : ''}`;
+                    tooltip.html(finalTooltipContent);
 
-                      // Forcer la mise à jour du tooltip
-                      setTimeout(() => {
-                        tooltip.style('opacity', 1);
-                      }, 100);
-                    })
-                    .catch(error =>
-                      console.error('Erreur chargement tech:', error)
-                    );
-                }
-              } else if (teamId) {
-                // Si pas de données de team, afficher un message
-                console.log('Pas de données de team disponibles');
-                tableRows += `<tr><td style="padding: 4px 12px; border-bottom: 1px solid #eee;">Profils : <span class='font-mono text-xs'>Chargement...</span></td></tr>`;
+                    // Forcer la mise à jour du tooltip
+                    setTimeout(() => {
+                      tooltip.style('opacity', 1);
+                    }, 100);
+                  })
+                  .catch(error =>
+                    console.error('Erreur chargement tech:', error)
+                  );
               } else {
-                console.log('Pas de teamId');
+                // Si pas de bubble_id, afficher un message
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Détails :</span> <span class="tooltip-value">Données non disponibles</span></td></tr>`;
               }
             }
 

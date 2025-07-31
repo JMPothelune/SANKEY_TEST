@@ -32,6 +32,10 @@ class TechPopup {
     try {
       const teamData = await this.loadTeamTechs(this.teamId);
       this.techList = teamData.techs || {};
+
+      // Vérifier et mettre à jour les versions des techs dans le scénario
+      await this.checkAndUpdateTechVersions();
+
       this.createPopupWithTechs();
     } catch (error) {
       console.error('Erreur lors du chargement des techs:', error);
@@ -50,6 +54,28 @@ class TechPopup {
         endpoint: 'team',
         params: {
           id: teamId,
+          isLive,
+        },
+        method: 'POST',
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+    return await response.json();
+  }
+
+  // Nouvelle fonction pour charger les détails d'une tech
+  async loadTechDetails(techId) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isLive = urlParams.get('isLive') === 'true';
+
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: 'tech',
+        params: {
+          id: techId,
           isLive,
         },
         method: 'POST',
@@ -92,29 +118,66 @@ class TechPopup {
     const buttonText = this.mode === 'add' ? 'Ajouter' : 'Enregistrer';
 
     this.modal.innerHTML = `
-      <h3 class="text-lg font-semibold mb-4">${title}</h3>
+      <div class="relative">
+        <button id="close-btn" class="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <h3 class="text-lg font-semibold mb-4 pr-8">${title}</h3>
+      </div>
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Outil</label>
-          <select id="tech-select" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-            <option value="" disabled ${!existingTech ? 'selected' : ''}>Sélectionner un outil</option>
-            ${techOptions}
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
-          <input id="quantity-input" type="number" value="${existingTech ? existingTech.quantity || 1 : 1}" min="1" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Outil</label>
+            <select id="tech-select" class="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+              <option value="" disabled ${!existingTech ? 'selected' : ''}>Sélectionner un outil</option>
+              ${techOptions}
+            </select>
+          </div>
+          <div class="w-24">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+            <input id="quantity-input" type="number" value="${existingTech ? existingTech.quantity || 1 : 1}" min="1" class="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+          </div>
         </div>
       </div>
-      <div class="mt-6 flex justify-end space-x-3">
-        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
-        <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
+      <div id="tech-details" class="mt-4 hidden">
+        <h4 class="text-sm font-medium text-gray-700 mb-2">Caractéristiques de l'outil</h4>
+        <div class="bg-gray-50 rounded-lg p-3">
+          <table class="w-full text-sm">
+            <tbody id="tech-details-table">
+              <!-- Les données seront injectées ici -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-between items-center">
+        ${
+          this.mode === 'edit'
+            ? `
+        <button id="delete-btn" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors" title="Supprimer l'outil">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+        `
+            : '<div></div>'
+        }
+        <div class="flex space-x-3">
+          <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
+          <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
+        </div>
       </div>
     `;
 
     this.backdrop.appendChild(this.modal);
     document.body.appendChild(this.backdrop);
     this.attachEventListeners();
+
+    // Si on est en mode edit et qu'il y a une tech existante, afficher ses détails
+    if (this.mode === 'edit' && existingTech && existingTech.bubble_id) {
+      this.loadAndDisplayTechDetails(existingTech.bubble_id);
+    }
   }
 
   createPopupWithError(message) {
@@ -174,6 +237,8 @@ class TechPopup {
   attachEventListeners() {
     const cancelBtn = this.modal.querySelector('#cancel-btn');
     const saveBtn = this.modal.querySelector('#save-btn');
+    const closeBtn = this.modal.querySelector('#close-btn');
+    const deleteBtn = this.modal.querySelector('#delete-btn');
     const techSelect = this.modal.querySelector('#tech-select');
     const quantityInput = this.modal.querySelector('#quantity-input');
 
@@ -193,10 +258,27 @@ class TechPopup {
     updateSaveButtonState();
 
     // Écouter les changements de tech et quantité
-    techSelect.addEventListener('change', updateSaveButtonState);
+    techSelect.addEventListener('change', async e => {
+      updateSaveButtonState();
+
+      // Charger et afficher les détails de la tech sélectionnée
+      const selectedTechId = e.target.value;
+      if (selectedTechId) {
+        await this.loadAndDisplayTechDetails(selectedTechId);
+      } else {
+        this.hideTechDetails();
+      }
+    });
     quantityInput.addEventListener('input', updateSaveButtonState);
 
+    // Boutons de fermeture
     cancelBtn.onclick = () => this.close();
+    closeBtn.onclick = () => this.close();
+
+    // Bouton de suppression (seulement en mode edit)
+    if (deleteBtn) {
+      deleteBtn.onclick = () => this.showDeleteConfirmation();
+    }
 
     saveBtn.onclick = async () => {
       const selectedTechId = techSelect.value;
@@ -230,6 +312,19 @@ class TechPopup {
         rate: techData.rate,
         step: techData.step,
       };
+
+      // Récupérer les données détaillées de la tech via l'API
+      try {
+        const techDetails = await this.loadTechDetails(selectedTechId);
+        techToSave.details = techDetails; // Ajouter les détails de la tech
+        console.log('Données détaillées de la tech récupérées:', techDetails);
+      } catch (error) {
+        console.error(
+          'Erreur lors du chargement des détails de la tech:',
+          error
+        );
+        // Continuer sans les détails si l'API échoue
+      }
 
       // Sauvegarder dans le scénario
       this.saveTechToScenario(techToSave);
@@ -309,6 +404,312 @@ class TechPopup {
       );
     } else {
       console.error('updateTransformation non disponible');
+    }
+  }
+
+  showDeleteConfirmation() {
+    // Créer une popup de confirmation
+    const confirmationBackdrop = document.createElement('div');
+    confirmationBackdrop.className =
+      'fixed inset-0 z-[9999] bg-black bg-opacity-50 flex items-center justify-center';
+
+    const confirmationModal = document.createElement('div');
+    confirmationModal.className =
+      'bg-white rounded-lg shadow-2xl w-full max-w-sm mx-4 p-6';
+
+    confirmationModal.innerHTML = `
+      <div class="text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Supprimer l'outil</h3>
+        <p class="text-sm text-gray-500 mb-6">Êtes-vous sûr de vouloir supprimer cet outil du scénario ?</p>
+        <div class="flex justify-center space-x-3">
+          <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
+          <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Supprimer</button>
+        </div>
+      </div>
+    `;
+
+    confirmationBackdrop.appendChild(confirmationModal);
+    document.body.appendChild(confirmationBackdrop);
+
+    // Event listeners pour la confirmation
+    const cancelDeleteBtn =
+      confirmationModal.querySelector('#cancel-delete-btn');
+    const confirmDeleteBtn = confirmationModal.querySelector(
+      '#confirm-delete-btn'
+    );
+
+    cancelDeleteBtn.onclick = () => {
+      confirmationBackdrop.remove();
+    };
+
+    confirmDeleteBtn.onclick = () => {
+      this.deleteTechFromScenario();
+      confirmationBackdrop.remove();
+      this.close();
+    };
+
+    // Fermer en cliquant sur le backdrop
+    confirmationBackdrop.onclick = e => {
+      if (e.target === confirmationBackdrop) {
+        confirmationBackdrop.remove();
+      }
+    };
+  }
+
+  async loadAndDisplayTechDetails(techId) {
+    try {
+      const techDetails = await this.loadTechDetails(techId);
+      this.displayTechDetails(techDetails);
+    } catch (error) {
+      console.error('Erreur lors du chargement des détails de la tech:', error);
+      this.hideTechDetails();
+    }
+  }
+
+  displayTechDetails(techDetails) {
+    const techDetailsContainer = this.modal.querySelector('#tech-details');
+    const techDetailsTable = this.modal.querySelector('#tech-details-table');
+
+    if (!techDetailsContainer || !techDetailsTable) return;
+
+    let tableRows = '';
+
+    // Débit (rate)
+    if (techDetails.rate !== undefined) {
+      tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">Débit</td>
+        <td class="py-2 text-gray-600">${techDetails.rate} kg/h</td>
+      </tr>`;
+    }
+
+    // Consommation électrique
+    if (techDetails.conso !== undefined) {
+      tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">Consommation électrique</td>
+        <td class="py-2 text-gray-600">${techDetails.conso} W</td>
+      </tr>`;
+    }
+
+    // Profils RH
+    if (techDetails.profils && Object.keys(techDetails.profils).length > 0) {
+      tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">Profils RH</td>
+        <td class="py-2 text-gray-600">
+          <ul class="list-disc list-inside space-y-1">`;
+
+      Object.entries(techDetails.profils).forEach(
+        ([profilName, profilData]) => {
+          tableRows += `<li>${profilName}: ${profilData.timeh} h/unité</li>`;
+        }
+      );
+
+      tableRows += `</ul>
+        </td>
+      </tr>`;
+    }
+
+    // Étape (step)
+    if (techDetails.step) {
+      tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">Étape</td>
+        <td class="py-2 text-gray-600">${techDetails.step}</td>
+      </tr>`;
+    }
+
+    // Version
+    if (techDetails.version) {
+      tableRows += `<tr class="border-b border-gray-200">
+        <td class="py-2 font-medium text-gray-700">Version</td>
+        <td class="py-2 text-gray-600">${techDetails.version}</td>
+      </tr>`;
+    }
+
+    techDetailsTable.innerHTML = tableRows;
+    techDetailsContainer.classList.remove('hidden');
+  }
+
+  hideTechDetails() {
+    const techDetailsContainer = this.modal.querySelector('#tech-details');
+    if (techDetailsContainer) {
+      techDetailsContainer.classList.add('hidden');
+    }
+  }
+
+  async checkAndUpdateTechVersions() {
+    const scenarioIdx = window.currentScenarioIdx;
+    const scenario = window.scenarios[scenarioIdx]?.scenario;
+
+    if (!scenario) {
+      console.log(
+        'Pas de scénario disponible pour la vérification des versions'
+      );
+      return;
+    }
+
+    console.log('Vérification des versions des techs...');
+    let hasUpdates = false;
+
+    // Fonction récursive pour parcourir le scénario
+    const checkTransformations = transformations => {
+      if (!Array.isArray(transformations)) return;
+
+      transformations.forEach((transfo, index) => {
+        if (transfo.tech && transfo.tech.bubble_id) {
+          // Récupérer les détails de la tech depuis l'API
+          this.loadTechDetails(transfo.tech.bubble_id)
+            .then(techDetails => {
+              if (techDetails && techDetails.version) {
+                const currentVersion = transfo.tech.version || '1.0';
+                const apiVersion = techDetails.version;
+
+                if (currentVersion !== apiVersion) {
+                  console.log(
+                    `Mise à jour de la tech ${transfo.tech.name}: ${currentVersion} → ${apiVersion}`
+                  );
+
+                  // Mettre à jour les détails de la tech
+                  this.updateTechDetails(transfo, techDetails);
+                  hasUpdates = true;
+                }
+              }
+            })
+            .catch(error => {
+              console.error(
+                `Erreur lors de la vérification de la tech ${transfo.tech.name}:`,
+                error
+              );
+            });
+        }
+
+        // Vérifier les sous-scénarios récursivement
+        if (transfo.scenario && transfo.scenario.transformations) {
+          checkTransformations(transfo.scenario.transformations);
+        }
+        if (
+          transfo.scenario &&
+          transfo.scenario.coproduct_scenario &&
+          transfo.scenario.coproduct_scenario.transformations
+        ) {
+          checkTransformations(
+            transfo.scenario.coproduct_scenario.transformations
+          );
+        }
+      });
+    };
+
+    // Vérifier les transformations principales
+    if (scenario.transformations) {
+      checkTransformations(scenario.transformations);
+    }
+    if (
+      scenario.coproduct_scenario &&
+      scenario.coproduct_scenario.transformations
+    ) {
+      checkTransformations(scenario.coproduct_scenario.transformations);
+    }
+
+    // Si des mises à jour ont été effectuées, relancer le Sankey
+    if (hasUpdates) {
+      setTimeout(() => {
+        const lot = window.lotType;
+        const dimension = window.currentDimension;
+        if (typeof runSankey === 'function') {
+          runSankey({
+            lot,
+            scenario,
+            containerId: 'sankey-container',
+            dimension,
+          });
+        }
+        console.log('Sankey relancé après mise à jour des versions');
+      }, 1000); // Attendre un peu pour que toutes les vérifications soient terminées
+    }
+  }
+
+  updateTechDetails(transformation, techDetails) {
+    // Mettre à jour les détails de la tech dans la transformation
+    if (transformation.tech) {
+      transformation.tech = {
+        ...transformation.tech,
+        details: techDetails,
+        version: techDetails.version || '1.0',
+        rate: techDetails.rate,
+        conso: techDetails.conso,
+        step: techDetails.step,
+        profils: techDetails.profils,
+      };
+
+      console.log(
+        `Tech ${transformation.tech.name} mise à jour vers la version ${techDetails.version}`
+      );
+    }
+  }
+
+  deleteTechFromScenario() {
+    // Supprimer la tech du scénario
+    const scenarioIdx = window.currentScenarioIdx;
+    const scenario = window.scenarios[scenarioIdx]?.scenario;
+
+    if (!scenario) {
+      console.error('Scénario non trouvé');
+      return;
+    }
+
+    // Utiliser la transformation du ref
+    const lastTransfo = this.currentRef?.transformation || null;
+
+    if (!lastTransfo) {
+      console.error('Pas de transformation disponible');
+      return;
+    }
+
+    // Vérifier que la transformation a les métadonnées nécessaires
+    if (!lastTransfo._path || typeof lastTransfo._index !== 'number') {
+      console.error(
+        'Transformation sans métadonnées _path/_index:',
+        lastTransfo
+      );
+      return;
+    }
+
+    // Créer la nouvelle transformation sans la tech
+    const updatedTransformation = {
+      ...lastTransfo,
+      tech: undefined, // Supprimer la tech
+    };
+
+    // Utiliser updateTransformation pour mettre à jour
+    if (typeof window.updateTransformation === 'function') {
+      window.updateTransformation(
+        scenario,
+        lastTransfo._path,
+        lastTransfo._index,
+        updatedTransformation
+      );
+    } else {
+      console.error('updateTransformation non disponible');
+    }
+
+    // Relancer le Sankey
+    const lot = window.lotType;
+    const dimension = window.currentDimension;
+    if (typeof runSankey === 'function') {
+      runSankey({
+        lot,
+        scenario,
+        containerId: 'sankey-container',
+        dimension,
+      });
+    }
+
+    // Activer le bouton Enregistrer
+    if (typeof setScenarioModifie === 'function') {
+      setScenarioModifie(true);
     }
   }
 
