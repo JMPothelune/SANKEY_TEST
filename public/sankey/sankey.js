@@ -676,10 +676,54 @@ function getIconSVG(name, className = '') {
     'pencil-simple': 'ph-pencil-simple',
     'arrow-up': 'ph-arrow-up',
     'arrow-down': 'ph-arrow-down',
+    'sign-out': 'ph-sign-out',
+    // Icônes pour les steps
+    't-shirt': 'ph-t-shirt',
+    scissors: 'ph-scissors',
+    'corners-in': 'ph-corners-in',
+    atom: 'ph-atom',
+    flask: 'ph-flask',
+    gradient: 'ph-gradient',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';
   return `<i class="ph ${iconClass} ${className}"></i>`;
+}
+
+// --- Fonction pour récupérer l'icône d'une step ---
+function getStepIcon(stepId) {
+  const stepIconMap = {
+    collecting: 't-shirt',
+    sorting: 'arrows-split',
+    'de-zipping': 'corners-in',
+    cutting: 'scissors',
+    depolymerization: 'atom',
+    polymerization: 'flask',
+    spinning: 'gradient',
+  };
+  return stepIconMap[stepId] || 'arrows-split'; // fallback sur arrows-split
+}
+
+// --- Fonction utilitaire pour récupérer la step d'une transformation ---
+function getTransformationStep(transformation) {
+  if (!transformation) return 'sorting';
+
+  const type = Array.isArray(transformation.type)
+    ? transformation.type[0]
+    : transformation.type;
+
+  // 1. Si la transformation a une step définie, l'utiliser
+  if (transformation.step) {
+    return transformation.step;
+  }
+
+  // 2. Sinon, chercher dans transformationTypes
+  if (window.transformationTypes && window.transformationTypes[type]) {
+    return window.transformationTypes[type].step || 'sorting';
+  }
+
+  // 3. Fallback par défaut
+  return 'sorting';
 }
 
 function updateSankey(dimension) {
@@ -965,31 +1009,77 @@ function updateSankey(dimension) {
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
       fo.node().appendChild(div);
-      div.addEventListener('mouseover', function (event) {
-        tooltip.transition().duration(200).style('opacity', 0.9);
-        tooltip
-          .html('<strong>Ajouter une transformation</strong>')
-          .style('left', event.pageX + 10 + 'px')
-          .style('top', event.pageY - 28 + 'px');
-      });
-      div.addEventListener('mouseout', function () {
-        tooltip.transition().duration(500).style('opacity', 0);
-      });
+      // Dropdown menu state
+      let dropdownMenu = null;
+      let dropdownOpen = false;
+      let closeDropdown = () => {
+        if (dropdownMenu) {
+          dropdownMenu.remove();
+          dropdownMenu = null;
+          dropdownOpen = false;
+        }
+        document.removeEventListener('mousedown', onClickOutside);
+      };
+      let onClickOutside = e => {
+        if (
+          dropdownMenu &&
+          !dropdownMenu.contains(e.target) &&
+          e.target !== div
+        ) {
+          closeDropdown();
+        }
+      };
+
       div.addEventListener('click', function (event) {
         event.stopPropagation();
 
-        // Masquer le tooltip immédiatement quand on clique
-        hideTooltip();
+        // Toggle dropdown
+        if (dropdownOpen) {
+          closeDropdown();
+          return;
+        }
 
-        const path = getPathForNewTransformation(d);
+        // Créer le menu dropdown
+        dropdownMenu = document.createElement('div');
+        dropdownMenu.className =
+          'absolute z-50 mt-1 right-0 bg-white rounded-xl shadow-xl py-1 flex flex-col gap-0 border border-gray-200';
+        dropdownMenu.style.width = '170px';
+        dropdownMenu.style.position = 'absolute';
+        dropdownMenu.style.padding = '0';
+        dropdownMenu.style.overflow = 'hidden';
+        const rect = div.getBoundingClientRect();
+        dropdownMenu.style.top = rect.bottom + window.scrollY + 'px';
+        dropdownMenu.style.left = rect.right - 170 + 'px';
 
-        const ref = {
-          nodeId: d.id,
-          dimension: dimension,
-          path: path,
-        };
-        if (window.afficherPopupTransfo)
-          window.afficherPopupTransfo(ref, 'add');
+        // Options du dropdown
+        dropdownMenu.innerHTML = `
+          <button class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+            ${getIconSVG('plus', 'w-4 h-4')}
+            <span>Ajouter transfo</span>
+          </button>
+          <button class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 cursor-not-allowed" disabled>
+            ${getIconSVG('sign-out', 'w-4 h-4')}
+            <span>Lier</span>
+          </button>
+        `;
+
+        // Event listeners pour les options
+        const addButton = dropdownMenu.querySelector('button:first-child');
+        addButton.addEventListener('click', () => {
+          closeDropdown();
+          const path = getPathForNewTransformation(d);
+          const ref = {
+            nodeId: d.id,
+            dimension: dimension,
+            path: path,
+          };
+          if (window.afficherPopupTransfo)
+            window.afficherPopupTransfo(ref, 'add');
+        });
+
+        document.body.appendChild(dropdownMenu);
+        dropdownOpen = true;
+        document.addEventListener('mousedown', onClickOutside);
       });
 
       return; // On ne fait rien d'autre
@@ -1543,10 +1633,23 @@ function updateSankey(dimension) {
           .attr('height', 28);
         const div = document.createElement('div');
         const isFork = !!link.transformation; // La transformation est sur le lien sortant
-        div.className =
-          'w-7 h-7 p-[3px] flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 border border-gray-400 cursor-pointer';
+
+        // Déterminer l'icône selon la step de la transformation
+        let iconName = 'plus';
+        if (isFork && link.transformation) {
+          const stepId = getTransformationStep(link.transformation);
+          iconName = getStepIcon(stepId);
+        }
+
+        // Déterminer la couleur de fond selon si la transformation a une tech
+        let bgColor = 'bg-gray-300 hover:bg-gray-400 border-gray-400';
+        if (isFork && link.transformation && link.transformation.tech) {
+          bgColor = 'bg-green-300 hover:bg-green-400 border-green-400';
+        }
+
+        div.className = `w-7 h-7 p-[3px] flex items-center justify-center rounded ${bgColor} border cursor-pointer`;
         div.innerHTML = getIconSVG(
-          isFork ? 'arrows-split' : 'plus',
+          iconName,
           'w-7 h-7 text-[1.3rem] flex items-center justify-center'
         );
         fo.node().appendChild(div);
@@ -1609,6 +1712,15 @@ function updateSankey(dimension) {
             if (transfo.scenario && transfo.scenario.target) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Cible :</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
             }
+            // Ajouter la step de la transformation
+            const stepId = getTransformationStep(transfo);
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Étape :</span> <span class="tooltip-value">${stepId}</span></td></tr>`;
+
+            // Ajouter la rate (débit) de la transformation
+            if (transfo.yield !== undefined) {
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Rendement :</span> <span class="tooltip-value">${transfo.yield}%</span></td></tr>`;
+            }
+
             // Ajouter le poids du lot (toujours affiché)
             const poids = d.lot.total; // kg
             const poidsFormate = poids.toFixed(2);
@@ -1618,119 +1730,92 @@ function updateSankey(dimension) {
             if (transfo.tech) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Outil :</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
 
-              // Utiliser la fonction de calcul des coûts
-              const transformationWithVolume = {
-                ...transfo,
-                lot_input_volume: d.lot.total, // Ajouter le volume du lot
-              };
+              // Ajouter la rate de la tech si elle existe
+              if (transfo.tech.rate !== undefined) {
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Débit :</span> <span class="tooltip-value">${transfo.tech.rate} kg/h</span></td></tr>`;
+              }
 
-              // Récupérer les données de la tech pour avoir les vrais timeh
-              if (transfo.tech.bubble_id) {
-                fetch('/api/bubble', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    endpoint: 'tech',
-                    params: {
-                      id: transfo.tech.bubble_id,
-                      isLive: getUrlParams().isLive,
-                    },
-                    method: 'POST',
-                  }),
-                })
-                  .then(response => response.json())
-                  .then(techData => {
-                    console.log('Données de la tech reçues:', techData);
+              // Utiliser les données de la tech enregistrées dans le scénario
+              if (transfo.tech.details) {
+                // Utiliser la fonction de calcul des coûts avec les données stockées
+                const transformationWithVolume = {
+                  ...transfo,
+                  lot_input_volume: d.lot.total, // Ajouter le volume du lot
+                };
 
-                    // Utiliser la fonction de calcul des coûts
-                    const couts = calculateTransformationCosts(
-                      transformationWithVolume,
-                      techData,
-                      window.teamData
-                    );
+                const couts = calculateTransformationCosts(
+                  transformationWithVolume,
+                  transfo.tech.details,
+                  window.teamData
+                );
 
-                    if (couts) {
-                      // Formater le temps utile
-                      const heures = Math.floor(couts.temps_utile);
-                      const minutes = Math.round(
-                        (couts.temps_utile - heures) * 60
-                      );
-                      let tempsFormate = '';
-                      if (heures > 0) {
-                        tempsFormate += `${heures}h`;
-                      }
-                      if (minutes > 0) {
-                        tempsFormate += `${minutes}min`;
-                      }
-                      if (heures === 0 && minutes === 0) {
-                        tempsFormate = '< 1min';
-                      }
+                if (couts) {
+                  // Formater le temps utile
+                  const heures = Math.floor(couts.temps_utile);
+                  const minutes = Math.round((couts.temps_utile - heures) * 60);
+                  let tempsFormate = '';
+                  if (heures > 0) {
+                    tempsFormate += `${heures}h`;
+                  }
+                  if (minutes > 0) {
+                    tempsFormate += `${minutes}min`;
+                  }
+                  if (heures === 0 && minutes === 0) {
+                    tempsFormate = '< 1min';
+                  }
 
-                      tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Temps utile :</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
+                  tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Temps utile :</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
 
-                      // Ajouter les profils RH
-                      if (
-                        techData.profils &&
-                        window.teamData &&
-                        window.teamData.profils
-                      ) {
-                        Object.entries(techData.profils).forEach(
-                          ([profilName, profilData]) => {
-                            const profilTempsUtile =
-                              couts.temps_utile * profilData.timeh;
+                  // Ajouter les profils RH
+                  if (
+                    transfo.tech.details.profils &&
+                    window.teamData &&
+                    window.teamData.profils
+                  ) {
+                    Object.entries(transfo.tech.details.profils).forEach(
+                      ([profilName, profilData]) => {
+                        const profilTempsUtile =
+                          couts.temps_utile * profilData.timeh;
 
-                            // Formater le temps du profil
-                            const profilHeures = Math.floor(profilTempsUtile);
-                            const profilMinutes = Math.round(
-                              (profilTempsUtile - profilHeures) * 60
-                            );
-                            let profilTempsFormate = '';
-                            if (profilHeures > 0) {
-                              profilTempsFormate += `${profilHeures}h`;
-                            }
-                            if (profilMinutes > 0) {
-                              profilTempsFormate += `${profilMinutes}min`;
-                            }
-                            if (profilHeures === 0 && profilMinutes === 0) {
-                              profilTempsFormate = '< 1min';
-                            }
-
-                            // Calculer le prix avec le pricerate de la team
-                            const teamProfilData =
-                              window.teamData.profils[profilName];
-                            if (teamProfilData) {
-                              const prix =
-                                teamProfilData.pricerate * profilTempsUtile;
-                              const prixFormate = prix.toFixed(2);
-                              tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span> <span class="tooltip-value">${profilTempsFormate} (${prixFormate}€)</span></td></tr>`;
-                            }
-                          }
+                        // Formater le temps du profil
+                        const profilHeures = Math.floor(profilTempsUtile);
+                        const profilMinutes = Math.round(
+                          (profilTempsUtile - profilHeures) * 60
                         );
+                        let profilTempsFormate = '';
+                        if (profilHeures > 0) {
+                          profilTempsFormate += `${profilHeures}h`;
+                        }
+                        if (profilMinutes > 0) {
+                          profilTempsFormate += `${profilMinutes}min`;
+                        }
+                        if (profilHeures === 0 && profilMinutes === 0) {
+                          profilTempsFormate = '< 1min';
+                        }
+
+                        // Calculer le prix avec le pricerate de la team
+                        const teamProfilData =
+                          window.teamData.profils[profilName];
+                        if (teamProfilData) {
+                          const prix =
+                            teamProfilData.pricerate * profilTempsUtile;
+                          const prixFormate = prix.toFixed(2);
+                          tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span> <span class="tooltip-value">${profilTempsFormate} (${prixFormate}€)</span></td></tr>`;
+                        }
                       }
+                    );
+                  }
 
-                      // Ajouter la consommation électrique
-                      if (couts.consommation_totale > 0) {
-                        tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Conso élec :</span> <span class="tooltip-value">${couts.consommation_totale.toFixed(4)} kWh (${couts.cout_energie.toFixed(2)}€)</span></td></tr>`;
-                      }
+                  // Ajouter la consommation électrique
+                  if (couts.consommation_totale > 0) {
+                    tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Conso élec :</span> <span class="tooltip-value">${couts.consommation_totale.toFixed(4)} kWh (${couts.cout_energie.toFixed(2)}€)</span></td></tr>`;
+                  }
 
-                      // Ajouter le total
-                      tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">Total :</span> <span class="tooltip-value">${couts.cout_total.toFixed(2)}€</span></td></tr>`;
-                    }
-
-                    // Mettre à jour le tooltip avec le contenu final
-                    const finalTooltipContent = `<strong>${label}</strong>${tableRows ? '<table class="tooltip-table">' + tableRows + '</table>' : ''}`;
-                    tooltip.html(finalTooltipContent);
-
-                    // Forcer la mise à jour du tooltip
-                    setTimeout(() => {
-                      tooltip.style('opacity', 1);
-                    }, 100);
-                  })
-                  .catch(error =>
-                    console.error('Erreur chargement tech:', error)
-                  );
+                  // Ajouter le total
+                  tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">Total :</span> <span class="tooltip-value">${couts.cout_total.toFixed(2)}€</span></td></tr>`;
+                }
               } else {
-                // Si pas de bubble_id, afficher un message
+                // Si pas de détails stockés, afficher un message
                 tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Détails :</span> <span class="tooltip-value">Données non disponibles</span></td></tr>`;
               }
             }
@@ -1993,33 +2078,32 @@ function updateSankey(dimension) {
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
       fo.node().appendChild(div);
-      div.addEventListener('mouseover', function (event) {
-        tooltip.transition().duration(200).style('opacity', 0.9);
-        tooltip
-          .html('<strong>Ajouter une transformation</strong>')
-          .style('left', event.pageX + 10 + 'px')
-          .style('top', event.pageY - 28 + 'px');
-      });
-      div.addEventListener('mouseout', function () {
-        tooltip.transition().duration(500).style('opacity', 0);
-      });
-      div.addEventListener('click', function (event) {
-        event.stopPropagation();
 
-        // Masquer le tooltip immédiatement quand on clique
-        hideTooltip();
+      // Utiliser la fonction utilitaire pour créer le dropdown
+      const dropdownOptions = [
+        {
+          icon: 'plus',
+          label: 'Ajouter transfo',
+          onClick: () => {
+            const path = getPathForNewTransformation(d);
+            const ref = {
+              nodeId: d.id,
+              dimension: dimension,
+              path: path,
+            };
+            if (window.afficherPopupTransfo)
+              window.afficherPopupTransfo(ref, 'add');
+          },
+        },
+        {
+          icon: 'sign-out',
+          label: 'Lier',
+          disabled: true,
+        },
+      ];
 
-        // Construction du path CORRIGÉE
-        const path = getPathForNewTransformation(d);
-
-        const ref = {
-          nodeId: d.id,
-          dimension: dimension,
-          path: path,
-        };
-        if (window.afficherPopupTransfo)
-          window.afficherPopupTransfo(ref, 'add');
-      });
+      // Utiliser le même positionnement que les icônes de transformation
+      div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
     });
 
     // 3. Icône + sur les nœuds feuilles sans target (aucun lien sortant)
@@ -2040,33 +2124,32 @@ function updateSankey(dimension) {
         'w-7 h-7 text-[1.3rem] flex items-center justify-center'
       );
       fo.node().appendChild(div);
-      div.addEventListener('mouseover', function (event) {
-        tooltip.transition().duration(200).style('opacity', 0.9);
-        tooltip
-          .html('<strong>Ajouter une transformation</strong>')
-          .style('left', event.pageX + 10 + 'px')
-          .style('top', event.pageY - 28 + 'px');
-      });
-      div.addEventListener('mouseout', function () {
-        tooltip.transition().duration(500).style('opacity', 0);
-      });
-      div.addEventListener('click', function (event) {
-        event.stopPropagation();
 
-        // Masquer le tooltip immédiatement quand on clique
-        hideTooltip();
+      // Utiliser la fonction utilitaire pour créer le dropdown
+      const dropdownOptions = [
+        {
+          icon: 'plus',
+          label: 'Ajouter transfo',
+          onClick: () => {
+            const path = getPathForNewTransformation(d);
+            const ref = {
+              nodeId: d.id,
+              dimension: dimension,
+              path: path,
+            };
+            if (window.afficherPopupTransfo)
+              window.afficherPopupTransfo(ref, 'add');
+          },
+        },
+        {
+          icon: 'sign-out',
+          label: 'Lier',
+          disabled: true,
+        },
+      ];
 
-        // Construction du path CORRIGÉE
-        const path = getPathForNewTransformation(d);
-
-        const ref = {
-          nodeId: d.id,
-          dimension: dimension,
-          path: path,
-        };
-        if (window.afficherPopupTransfo)
-          window.afficherPopupTransfo(ref, 'add');
-      });
+      // Utiliser le même positionnement que les icônes de transformation
+      div.addEventListener('click', createDropdown(div, dropdownOptions, 1));
     }
 
     // 4. Icône check sur les nœuds valorisés ou agglomérés (isTarget)
@@ -3326,4 +3409,90 @@ function showTransfoTechPopup(nodeId, transformation) {
   } else {
     console.error('TechPopup non disponible');
   }
+}
+
+// --- Fonction utilitaire pour créer un dropdown standardisé ---
+function createDropdown(button, options, positionOffset = 0) {
+  let dropdownMenu = null;
+  let dropdownOpen = false;
+
+  const closeDropdown = () => {
+    if (dropdownMenu) {
+      dropdownMenu.remove();
+      dropdownMenu = null;
+      dropdownOpen = false;
+    }
+    document.removeEventListener('mousedown', onClickOutside);
+  };
+
+  const onClickOutside = e => {
+    if (
+      dropdownMenu &&
+      !dropdownMenu.contains(e.target) &&
+      e.target !== button
+    ) {
+      closeDropdown();
+    }
+  };
+
+  const toggleDropdown = event => {
+    event.stopPropagation();
+
+    // Toggle dropdown
+    if (dropdownOpen) {
+      closeDropdown();
+      return;
+    }
+
+    // Créer le menu dropdown
+    dropdownMenu = document.createElement('div');
+    dropdownMenu.className =
+      'absolute z-50 mt-1 right-0 bg-white rounded-xl shadow-xl py-1 flex flex-col gap-0 border border-gray-200';
+    dropdownMenu.style.width = '170px';
+    dropdownMenu.style.position = 'absolute';
+    dropdownMenu.style.padding = '0';
+    dropdownMenu.style.overflow = 'hidden';
+    const rect = button.getBoundingClientRect();
+    dropdownMenu.style.top = rect.bottom + window.scrollY + 'px';
+
+    // Utiliser la même logique de positionnement que les icônes de transformation
+    if (positionOffset !== 0) {
+      // Pour les boutons +, utiliser la même logique que les icônes de transformation
+      dropdownMenu.style.left = rect.right - 80 - 28 + 'px'; // stackbarWidth = 80
+    } else {
+      // Positionnement par défaut
+      dropdownMenu.style.left = rect.right - 170 + 'px';
+    }
+
+    // Générer les options du dropdown
+    dropdownMenu.innerHTML = options
+      .map(
+        option => `
+      <button class="flex items-center gap-2 px-3 py-2 text-sm ${option.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 transition-colors'}" ${option.disabled ? 'disabled' : ''}>
+        ${getIconSVG(option.icon, 'w-4 h-4')}
+        <span>${option.label}</span>
+      </button>
+    `
+      )
+      .join('');
+
+    // Event listeners pour les options
+    options.forEach((option, index) => {
+      if (!option.disabled && option.onClick) {
+        const optionButton = dropdownMenu.querySelector(
+          `button:nth-child(${index + 1})`
+        );
+        optionButton.addEventListener('click', () => {
+          closeDropdown();
+          option.onClick();
+        });
+      }
+    });
+
+    document.body.appendChild(dropdownMenu);
+    dropdownOpen = true;
+    document.addEventListener('mousedown', onClickOutside);
+  };
+
+  return toggleDropdown;
 }

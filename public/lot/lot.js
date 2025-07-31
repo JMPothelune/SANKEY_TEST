@@ -35,6 +35,14 @@ function getIconSVG(name, className = '') {
     'caret-right': 'ph-caret-right',
     'arrow-clockwise': 'ph-arrow-clockwise',
     'map-pin-simple-area': 'ph-map-pin-simple-area',
+    // Icônes pour les steps
+    't-shirt': 'ph-t-shirt',
+    scissors: 'ph-scissors',
+    'corners-in': 'ph-corners-in',
+    atom: 'ph-atom',
+    flask: 'ph-flask',
+    gradient: 'ph-gradient',
+    'arrows-split': 'ph-arrows-split',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';

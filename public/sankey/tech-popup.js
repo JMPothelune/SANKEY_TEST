@@ -43,6 +43,28 @@ class TechPopup {
     }
   }
 
+  // Fonction utilitaire pour récupérer la step d'une transformation
+  getTransformationStep(transformation) {
+    if (!transformation) return 'sorting';
+
+    const type = Array.isArray(transformation.type)
+      ? transformation.type[0]
+      : transformation.type;
+
+    // 1. Si la transformation a une step définie, l'utiliser
+    if (transformation.step) {
+      return transformation.step;
+    }
+
+    // 2. Sinon, chercher dans transformationTypes
+    if (window.transformationTypes && window.transformationTypes[type]) {
+      return window.transformationTypes[type].step || 'sorting';
+    }
+
+    // 3. Fallback par défaut
+    return 'sorting';
+  }
+
   async loadTeamTechs(teamId) {
     const urlParams = new URLSearchParams(window.location.search);
     const isLive = urlParams.get('isLive') === 'true';
@@ -61,7 +83,26 @@ class TechPopup {
     });
 
     if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
-    return await response.json();
+    const teamData = await response.json();
+
+    // Récupérer la step de la transformation pour filtrer les technologies
+    const targetStep = this.getTransformationStep(
+      this.currentRef?.transformation
+    );
+
+    // Filtrer les technologies selon la step
+    if (teamData.techs && Array.isArray(teamData.techs)) {
+      teamData.techs = teamData.techs.filter(tech => {
+        // Si la tech a une step définie, vérifier qu'elle correspond
+        if (tech.step) {
+          return tech.step === targetStep;
+        }
+        // Sinon, accepter toutes les techs (comportement par défaut)
+        return true;
+      });
+    }
+
+    return teamData;
   }
 
   // Nouvelle fonction pour charger les détails d'une tech
@@ -114,6 +155,13 @@ class TechPopup {
       )
       .join('');
 
+    // Récupérer la step de la transformation pour l'affichage
+    let stepInfo = '';
+    if (this.currentRef?.transformation) {
+      const stepId = this.getTransformationStep(this.currentRef.transformation);
+      stepInfo = `<span class="text-sm text-gray-500 font-normal">(${stepId})</span>`;
+    }
+
     const title = this.mode === 'add' ? 'Ajouter un outil' : "Modifier l'outil";
     const buttonText = this.mode === 'add' ? 'Ajouter' : 'Enregistrer';
 
@@ -124,7 +172,7 @@ class TechPopup {
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
-        <h3 class="text-lg font-semibold mb-4 pr-8">${title}</h3>
+        <h3 class="text-lg font-semibold mb-4 pr-8">${title} ${stepInfo}</h3>
       </div>
       <div class="space-y-4">
         <div class="flex gap-4">
@@ -176,7 +224,13 @@ class TechPopup {
 
     // Si on est en mode edit et qu'il y a une tech existante, afficher ses détails
     if (this.mode === 'edit' && existingTech && existingTech.bubble_id) {
-      this.loadAndDisplayTechDetails(existingTech.bubble_id);
+      // Utiliser les données stockées au lieu de faire un appel API
+      if (existingTech.details) {
+        this.displayTechDetails(existingTech.details);
+      } else {
+        // Fallback : faire l'appel API seulement si pas de détails stockés
+        this.loadAndDisplayTechDetails(existingTech.bubble_id);
+      }
     }
   }
 
@@ -304,19 +358,10 @@ class TechPopup {
         return;
       }
 
-      // Créer l'objet tech à sauvegarder
-      const techToSave = {
-        name: selectedTechName,
-        bubble_id: selectedTechId,
-        quantity: quantity,
-        rate: techData.rate,
-        step: techData.step,
-      };
-
       // Récupérer les données détaillées de la tech via l'API
+      let techDetails = null;
       try {
-        const techDetails = await this.loadTechDetails(selectedTechId);
-        techToSave.details = techDetails; // Ajouter les détails de la tech
+        techDetails = await this.loadTechDetails(selectedTechId);
         console.log('Données détaillées de la tech récupérées:', techDetails);
       } catch (error) {
         console.error(
@@ -325,6 +370,21 @@ class TechPopup {
         );
         // Continuer sans les détails si l'API échoue
       }
+
+      // Récupérer la step de la transformation
+      const stepId = this.getTransformationStep(
+        this.currentRef?.transformation
+      );
+
+      // Créer l'objet tech à sauvegarder
+      const techToSave = {
+        name: selectedTechName,
+        bubble_id: selectedTechId,
+        quantity: quantity,
+        rate: techDetails?.rate || techData.rate, // Utiliser le rate de l'API, sinon fallback sur la team
+        step: stepId, // Utiliser la step de la transformation
+        details: techDetails, // Ajouter les détails de la tech
+      };
 
       // Sauvegarder dans le scénario
       this.saveTechToScenario(techToSave);

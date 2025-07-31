@@ -618,31 +618,31 @@ L'iframe Sankey doit accepter les paramètres suivants (via URL ou postMessage) 
 
 ---
 
-# Système de Calcul des Coûts avec Transfo_techs
+# Système de Gestion des Techs avec Calcul des Coûts
 
 ## Objectif
 
-Intégrer un système de calcul des coûts basé sur les technologies de transformation (transfo_techs) pour évaluer le coût total d'un scénario de valorisation.
+Intégrer un système complet de gestion des technologies de transformation avec calcul automatique des coûts, versioning intelligent et interface utilisateur optimisée.
 
 ## Architecture des Données
 
-### Structure des Transfo_techs
+### Structure des Techs
 
 ```javascript
-Transfo_tech {
-  id: string,
-  titre: string,
-  debit: number, // kg/heure (débit net)
-  version: number, // pour le versioning
-  couts_fixes: number, // €/heure (maintenance, etc.)
-  consommation_electrique: number, // kWh/heure
-  profils_rh: {
-    profile_name: {
-      bubble_id: string, // Référence vers BaseData.profils_rh
-      pricerate: number, // coût horaire du profil en €
-      timeh: number // heures pour 1h d'utilisation de la transfo_tech
-    },
-    ...
+Tech {
+  name: string,
+  bubble_id: string,
+  quantity: number,
+  rate: number, // kg/h par machine
+  step: string, // collecting, sorting, etc.
+  details: {
+    version: string,
+    conso: number, // W
+    profils: {
+      profil_name: {
+        timeh: number // heures pour 1h d'utilisation de la tech
+      }
+    }
   }
 }
 ```
@@ -652,75 +652,207 @@ Transfo_tech {
 ```javascript
 Transformation {
   // ... données existantes
-  transfo_tech_id: string,
-  nombre_machines: number, // ex: 2 ciseaux = 2x plus rapide
-  couts_calcules: {
-    temps_utile: number, // heures
-    cout_total: number, // €
-    cout_unitaire: number, // €/kg
-    consommation_totale: number, // kWh
-    couts_fixes: number, // €
-    couts_rh: number, // €
-    version_transfo_tech: string // pour détecter les changements
+  tech: {
+    name: string,
+    bubble_id: string,
+    quantity: number,
+    rate: number,
+    step: string,
+    details: TechDetails, // Données complètes de la tech
+    version: string
   }
 }
 ```
+
+## Fonctionnalités Implémentées
+
+### 1. **Popup Tech Optimisée**
+
+- **Interface en une ligne** : Sélecteur d'outil et quantité côte à côte
+- **Bouton X** : Fermeture en haut à droite
+- **Bouton poubelle** : Suppression avec validation (mode edit uniquement)
+- **Tableau de données** : Affichage des caractéristiques de la tech sélectionnée
+
+### 2. **Système de Versioning Intelligent**
+
+- **Vérification automatique** : Au chargement de la popup tech
+- **Mise à jour silencieuse** : Des techs obsolètes dans le scénario
+- **Parcours récursif** : Vérification de tous les sous-scénarios
+- **Relance automatique** : Du Sankey après mise à jour
+
+### 3. **Calcul des Coûts Centralisé**
+
+- **Fonction réutilisable** : `calculateTransformationCosts()`
+- **Utilisation des données stockées** : Plus d'appels API dans les tooltips
+- **Calculs optimisés** : Temps utile, coûts RH, consommation électrique
+- **Affichage cohérent** : Dans les tooltips et la popup tech
+
+### 4. **Gestion des Données**
+
+- **Appel API `/tech?id`** : Lors de l'ajout d'une tech
+- **Stockage des détails** : Dans `tech.details` pour éviter les appels répétés
+- **Synchronisation** : Entre API et scénario via versioning
+- **Gestion d'erreurs** : Graceful fallback si API indisponible
 
 ## Logique de Calcul
 
 ### Calcul du Temps Utile
 
 ```javascript
-temps_utile = volume_lot_input / (debit_transfo_tech × nombre_machines)
+temps_utile = volume_lot_input / (rate_tech × quantity_machines)
 ```
 
 ### Calcul des Coûts
 
 ```javascript
-function calculateTransformationCosts(transformation, transfoTech, baseData) {
-  if (!transfoTech) {
-    return null; // Pas de calcul si pas de transfo_tech
+function calculateTransformationCosts(transformation, techDetails, teamData) {
+  if (!transformation.tech || !techDetails || !teamData) {
+    return null;
   }
 
-  const volume = transformation.lot_input_volume;
-  const temps_utile =
-    volume / (transfoTech.debit * transformation.nombre_machines);
+  const volume = transformation.lot_input_volume || 0;
+  const rate = transformation.tech.rate;
+  const quantity = transformation.tech.quantity;
+  const totalRate = rate * quantity;
+  const tempsUtile = volume / totalRate;
 
-  // Coûts fixes
-  const couts_fixes = transfoTech.couts_fixes * temps_utile;
-
-  // Coûts RH (calcul complexe)
+  let totalPrix = 0;
   let couts_rh = 0;
-  transfoTech.profils_rh.forEach(profil => {
-    const profil_data = baseData.profils_rh.find(
-      p => p.id === profil.profil_id
-    );
-    if (profil_data) {
-      // Pour 1h de transfo_tech, on a besoin de X heures de ce profil
-      const temps_profil = profil.temps_requis * temps_utile;
-      couts_rh += temps_profil * profil_data.cout_horaire;
-    }
-  });
+  let consommation_totale = 0;
+
+  // Coûts RH
+  if (techDetails.profils && teamData.profils) {
+    Object.entries(techDetails.profils).forEach(([profilName, profilData]) => {
+      const profilTempsUtile = tempsUtile * profilData.timeh;
+      const teamProfilData = teamData.profils[profilName];
+      if (teamProfilData) {
+        const prix = teamProfilData.pricerate * profilTempsUtile;
+        couts_rh += prix;
+        totalPrix += prix;
+      }
+    });
+  }
 
   // Consommation électrique
-  const consommation_totale = transfoTech.consommation_electrique * temps_utile;
-  const cout_energie = consommation_totale * baseData.prix_kwh;
-
-  const cout_total = couts_fixes + couts_rh + cout_energie;
-  const cout_unitaire = volume > 0 ? cout_total / volume : 0;
+  if (techDetails.conso && teamData.elec) {
+    const consoWh = techDetails.conso * tempsUtile * quantity;
+    const consoKwh = consoWh / 1000;
+    const prixElec = consoKwh * teamData.elec;
+    consommation_totale = consoKwh;
+    totalPrix += prixElec;
+  }
 
   return {
-    temps_utile,
-    cout_total,
-    cout_unitaire,
+    temps_utile: tempsUtile,
+    cout_total: totalPrix,
+    cout_unitaire: volume > 0 ? totalPrix / volume : 0,
     consommation_totale,
-    couts_fixes,
     couts_rh,
-    cout_energie,
-    version_transfo_tech: transfoTech.version,
+    cout_energie: totalPrix - couts_rh,
+    version_transfo_tech: techDetails.version || '1.0',
   };
 }
 ```
+
+## Interface Utilisateur
+
+### Popup Tech
+
+- **Sélection d'outil** : Dropdown avec toutes les techs de la team
+- **Quantité** : Input numérique avec spinner
+- **Tableau de données** : Caractéristiques de la tech sélectionnée
+- **Boutons d'action** : Annuler, Enregistrer, Supprimer (mode edit)
+
+### Tooltip Fork
+
+- **Affichage des coûts** : Utilise les données stockées dans le scénario
+- **Calculs en temps réel** : Basés sur le volume du lot
+- **Détails complets** : Temps utile, profils RH, consommation électrique
+- **Pas d'appel API** : Performance optimisée
+
+## API et Intégration
+
+### Endpoints Utilisés
+
+- **`/api/bubble`** avec endpoint `team` : Chargement des techs disponibles
+- **`/api/bubble`** avec endpoint `tech` : Récupération des détails d'une tech
+
+### Flux de Données
+
+1. **Chargement initial** : Récupération des techs de la team
+2. **Sélection d'une tech** : Appel API pour récupérer les détails
+3. **Sauvegarde** : Stockage des détails dans le scénario
+4. **Affichage** : Utilisation des données stockées (plus d'API)
+
+## Versioning et Synchronisation
+
+### Vérification des Versions
+
+```javascript
+async checkAndUpdateTechVersions() {
+  // Parcours récursif du scénario
+  // Comparaison des versions
+  // Mise à jour automatique si nécessaire
+}
+```
+
+### Mise à Jour des Techs
+
+```javascript
+updateTechDetails(transformation, techDetails) {
+  // Synchronisation des données
+  // Mise à jour de la version
+  // Conservation des métadonnées
+}
+```
+
+## Optimisations Réalisées
+
+### Performance
+
+- **Suppression des appels API** dans les tooltips
+- **Utilisation des données stockées** pour les calculs
+- **Versioning intelligent** pour éviter les appels inutiles
+
+### Interface
+
+- **Layout optimisé** : Inputs sur une ligne
+- **Boutons contextuels** : Poubelle seulement en mode edit
+- **Validation visuelle** : États des boutons selon les données
+
+### Robustesse
+
+- **Gestion d'erreurs** : Fallback gracieux si API indisponible
+- **Validation des données** : Vérification avant calculs
+- **Logs détaillés** : Pour le debugging
+
+## Utilisation
+
+### Ajout d'une Tech
+
+1. Cliquer sur l'icône "+" d'un nœud
+2. Sélectionner "Outils" dans le dropdown
+3. Choisir une tech et sa quantité
+4. Vérifier les caractéristiques affichées
+5. Sauvegarder
+
+### Modification d'une Tech
+
+1. Cliquer sur l'icône fork d'un lien
+2. Sélectionner "Outils" dans le dropdown
+3. Modifier la tech ou la quantité
+4. Utiliser le bouton poubelle pour supprimer si nécessaire
+
+### Affichage des Coûts
+
+- **Tooltip fork** : Affichage détaillé des coûts
+- **Calculs automatiques** : Basés sur le volume du lot
+- **Données synchronisées** : Avec les dernières versions des techs
+  version_transfo_tech: transfoTech.version,
+  };
+  }
+
+````
 
 ## Exemple Concret
 
@@ -767,7 +899,7 @@ Par API Bubble :
   }
 }
 
-```
+````
 
 ### Transfo_tech
 
