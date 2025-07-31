@@ -8,6 +8,8 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.11/dist/umd/i18next.min.js"></script>
+    <script src="i18n-config.js"></script>
     <link
       rel="stylesheet"
       type="text/css"
@@ -18,7 +20,9 @@
     <!-- Header avec dropdown des dimensions -->
     <div class="bg-white px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <label class="text-sm font-medium text-gray-700">Dimension :</label>
+        <label class="text-sm font-medium text-gray-700" data-i18n="dimension"
+          >Dimension :</label
+        >
         <div class="relative">
           <select
             id="dimension-select"
@@ -67,12 +71,47 @@
             transition: opacity 0.2s;
           "
         >
-          Enregistrer
+          <span data-i18n="save">Enregistrer</span>
         </button>
       </div>
     </div>
     <script>
       console.log('[HTML] script chargé');
+
+      // Initialiser i18next
+      const params = getUrlParams();
+
+      i18next
+        .init({
+          ...window.i18nConfig,
+          lng: params.lang,
+          fallbackLng: 'fr_fr',
+          debug: true,
+        })
+        .then(() => {
+          updateTranslations();
+
+          // Marquer i18next comme prêt pour les autres scripts
+          window.i18nextReady = true;
+        })
+        .catch(error => {
+          console.error('[HTML] Error initializing i18next:', error);
+        });
+
+      // Fonction pour mettre à jour les traductions
+      function updateTranslations() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          el.textContent = i18next.t(key);
+        });
+
+        // Déclencher un événement pour notifier les autres scripts
+        window.dispatchEvent(
+          new CustomEvent('languageChanged', {
+            detail: { language: i18next.language },
+          })
+        );
+      }
 
       // Variables globales
       let currentDimension = 'formats';
@@ -181,6 +220,7 @@
       function getUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         return {
+          lang: urlParams.get('lang') || 'fr_fr',
           dimension: 'formats', // Dimension par défaut, plus de paramètre dans l'URL
           scenarioId: urlParams.get('scenarioId') || '',
           lotId: urlParams.get('lotId') || '',
@@ -269,8 +309,6 @@
       }
 
       document.addEventListener('DOMContentLoaded', function () {
-        console.log('[HTML] DOMContentLoaded');
-
         const params = getUrlParams();
 
         // Initialiser le dropdown des dimensions
@@ -313,12 +351,7 @@
 
         // Afficher le bouton Enregistrer seulement si isEditable
         var saveBtnContainer = document.getElementById('save-btn-container');
-        console.log('[HTML] Debug bouton Enregistrer:', {
-          isEditable: params.isEditable,
-          isEditableType: typeof params.isEditable,
-          isEditableFalse: params.isEditable === false,
-          saveBtnContainer: !!saveBtnContainer,
-        });
+
         if (saveBtnContainer) {
           // Forcer l'affichage du bouton pour debug
           saveBtnContainer.style.display = 'flex';

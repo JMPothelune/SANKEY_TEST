@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { lots } from '@/data/lots';
 import { scenarios } from '@/data/scenarios';
 import { teams } from '@/data/teams';
+import { availableLanguages, type LanguageCode } from '@/data/lang';
 import {
   Select,
   SelectTrigger,
@@ -33,13 +34,22 @@ export default function SankeyPage() {
     teams[0]
   );
   const [isEditable, setIsEditable] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] =
+    useState<LanguageCode>('fr_fr');
   const [iframeKey, setIframeKey] = useState(0);
   const [iframeHeight, setIframeHeight] = useState<number>(800);
 
   // Forcer le rechargement de l'iframe quand les paramètres changent
   useEffect(() => {
     setIframeKey(prev => prev + 1);
-  }, [scenarioIdx, selectedLot, selectedScenario, selectedTeam, isEditable]);
+  }, [
+    scenarioIdx,
+    selectedLot,
+    selectedScenario,
+    selectedTeam,
+    isEditable,
+    selectedLanguage,
+  ]);
 
   // Gérer le redimensionnement de l'iframe
   useEffect(() => {
@@ -57,7 +67,7 @@ export default function SankeyPage() {
   }, []);
 
   // Construire l'URL de l'iframe avec tous les paramètres (sans dimension)
-  const iframeSrc = `/sankey/index.html?scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&scenarioId=${selectedScenario?.bubbleId || ''}&teamId=${selectedTeam?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
+  const iframeSrc = `/sankey/index.html?lang=${selectedLanguage}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&scenarioId=${selectedScenario?.bubbleId || ''}&teamId=${selectedTeam?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -145,6 +155,30 @@ export default function SankeyPage() {
                 onChange={e => setIsEditable(e.target.checked)}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="font-semibold">Langue :</label>
+              <Select
+                value={selectedLanguage}
+                onValueChange={(value: LanguageCode) =>
+                  setSelectedLanguage(value)
+                }
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Sélectionner une langue" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLanguages.map(lang => (
+                    <SelectItem value={lang.code} key={lang.code}>
+                      <span className="flex items-center gap-2">
+                        <span>{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

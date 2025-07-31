@@ -6,6 +6,26 @@ let height =
   margin.top -
   margin.bottom;
 
+// Attendre qu'i18next soit prêt
+function waitForI18next() {
+  if (window.i18nextReady && window.i18next) {
+    console.log('[Sankey] i18next is ready, proceeding...');
+    return;
+  }
+  console.log('[Sankey] Waiting for i18next...');
+  setTimeout(waitForI18next, 100);
+}
+
+// Écouter les changements de langue
+window.addEventListener('languageChanged', event => {
+  console.log('[Sankey] Language changed to:', event.detail.language);
+  // Ici on pourrait mettre à jour les contenus dynamiques si nécessaire
+  // Pour l'instant, les dropdowns sont recréés à chaque fois
+});
+
+// Attendre qu'i18next soit prêt avant de continuer
+waitForI18next();
+
 // Variables globales pour stocker les valeurs courantes
 window.currentDimension = 'formats';
 window.currentScenarioIdx = 0;
@@ -1055,11 +1075,11 @@ function updateSankey(dimension) {
         dropdownMenu.innerHTML = `
           <button class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
             ${getIconSVG('plus', 'w-4 h-4')}
-            <span>Ajouter transfo</span>
+            <span>${i18next.t('addTransfo')}</span>
           </button>
           <button class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 cursor-not-allowed" disabled>
             ${getIconSVG('sign-out', 'w-4 h-4')}
-            <span>Lier</span>
+            <span>${i18next.t('link')}</span>
           </button>
         `;
 
@@ -1884,11 +1904,11 @@ function updateSankey(dimension) {
           const isLast =
             outgoingLinks.indexOf(link) === outgoingLinks.length - 1;
           dropdownMenu.innerHTML = `
-            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit"><i class="ph ph-pencil-simple text-base align-middle mr-2"></i>Modifier</button>
-            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="tools"><i class="ph ph-gear text-base align-middle mr-2"></i>Outils</button>
-            <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}><i class="ph ph-arrow-up text-base align-middle mr-2"></i>Monter</button>
-            <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}><i class="ph ph-arrow-down text-base align-middle mr-2"></i>Descendre</button>
-            <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete"><i class="ph ph-trash text-base align-middle mr-2"></i>Effacer</button>
+            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit"><i class="ph ph-pencil-simple text-base align-middle mr-2"></i>${i18next.t('edit')}</button>
+            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="tools"><i class="ph ph-gear text-base align-middle mr-2"></i>${i18next.t('tools')}</button>
+            <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}><i class="ph ph-arrow-up text-base align-middle mr-2"></i>${i18next.t('moveUp')}</button>
+            <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}><i class="ph ph-arrow-down text-base align-middle mr-2"></i>${i18next.t('moveDown')}</button>
+            <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete"><i class="ph ph-trash text-base align-middle mr-2"></i>${i18next.t('delete')}</button>
           `;
           // Appliquer le style inline sur chaque bouton
           dropdownMenu.querySelectorAll('.dropdown-btn').forEach(btn => {
