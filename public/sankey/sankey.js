@@ -2103,7 +2103,7 @@ function updateSankey(dimension) {
       const dropdownOptions = [
         {
           icon: 'plus',
-          label: 'Ajouter transfo',
+          label: i18next.t('addTransfo'),
           onClick: () => {
             const path = getPathForNewTransformation(d);
             const ref = {
@@ -2117,7 +2117,7 @@ function updateSankey(dimension) {
         },
         {
           icon: 'sign-out',
-          label: 'Lier',
+          label: i18next.t('link'),
           disabled: true,
         },
       ];
@@ -2149,7 +2149,7 @@ function updateSankey(dimension) {
       const dropdownOptions = [
         {
           icon: 'plus',
-          label: 'Ajouter transfo',
+          label: i18next.t('addTransfo'),
           onClick: () => {
             const path = getPathForNewTransformation(d);
             const ref = {
@@ -2163,7 +2163,7 @@ function updateSankey(dimension) {
         },
         {
           icon: 'sign-out',
-          label: 'Lier',
+          label: i18next.t('link'),
           disabled: true,
         },
       ];
@@ -3647,8 +3647,7 @@ function displayCostsTable(costsData) {
 
     // Générer le HTML pour les profils
     if (profilsMap.size > 0) {
-      profilsDetails =
-        '<div class="bg-green-50 p-3 rounded-lg mt-4"><div class="text-sm text-green-600 font-medium mb-2">Détail par profil RH</div>';
+      profilsDetails = `<div class="bg-green-50 p-3 rounded-lg mt-4"><div class="text-sm text-green-600 font-medium mb-2">${i18next.t('laborCostDetails')}</div>`;
       profilsMap.forEach((details, profilName) => {
         const profilHeures = Math.floor(details.tempsTotal);
         const profilMinutes = Math.round(
@@ -3672,27 +3671,27 @@ function displayCostsTable(costsData) {
   }
 
   const tableHTML = `
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">Coûts totaux du scénario</h3>
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">${i18next.t('totalCostsTitle')}</h3>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
       <div class="bg-blue-50 p-3 rounded-lg">
-        <div class="text-sm text-blue-600 font-medium">Coût total</div>
+        <div class="text-sm text-blue-600 font-medium">${i18next.t('totalCost')}</div>
         <div class="text-xl font-bold text-blue-800">${costsData.totalCost.toFixed(2)}€</div>
       </div>
       <div class="bg-purple-50 p-3 rounded-lg">
-        <div class="text-sm text-purple-600 font-medium">Temps total</div>
+        <div class="text-sm text-purple-600 font-medium">${i18next.t('totalTime')}</div>
         <div class="text-xl font-bold text-purple-800">${totalTimeFormatted}</div>
       </div>
       <div class="bg-yellow-50 p-3 rounded-lg">
-        <div class="text-sm text-yellow-600 font-medium">Coût énergie</div>
+        <div class="text-sm text-yellow-600 font-medium">${i18next.t('energyCost')}</div>
         <div class="text-xl font-bold text-yellow-800">${costsData.totalEnergyCost.toFixed(2)}€</div>
       </div>
       <div class="bg-gray-50 p-3 rounded-lg">
-        <div class="text-sm text-gray-600 font-medium">Conso élec</div>
+        <div class="text-sm text-gray-600 font-medium">${i18next.t('electricityConsumption')}</div>
         <div class="text-xl font-bold text-gray-800">${costsData.totalEnergyConsumption.toFixed(4)} kWh</div>
       </div>
     </div>
     <div class="bg-green-50 p-3 rounded-lg">
-      <div class="text-sm text-green-600 font-medium">Coût RH</div>
+      <div class="text-sm text-green-600 font-medium">${i18next.t('laborCost')}</div>
       <div class="text-xl font-bold text-green-800">${costsData.totalLaborCost.toFixed(2)}€</div>
     </div>
     ${profilsDetails}

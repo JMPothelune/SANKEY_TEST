@@ -71,8 +71,7 @@ class TransformationPopup {
     // Génération dynamique des options du select
     let options = '';
     if (!lastType) {
-      options +=
-        '<option value="" disabled selected>Sélectionner une transformation</option>';
+      options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
     }
     options += (
       window.transformationUtils
@@ -89,7 +88,7 @@ class TransformationPopup {
     const currentLabel =
       lastType && window.transformationUtils
         ? window.transformationUtils.getTransformationLabel(lastType)
-        : 'Aucune transformation';
+        : i18next.t('noTransformation');
     const currentDesc =
       lastType && window.transformationUtils
         ? window.transformationUtils.getTransformationDescription(lastType)
@@ -112,7 +111,7 @@ class TransformationPopup {
     const keyInputHTML = keyList
       ? `
       <div class="relative mt-2">
-        <input id="key-input" type="text" autocomplete="off" placeholder="Paramètres" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+        <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
         <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto hidden">${keyOptions}</div>
       </div>
     `
@@ -121,9 +120,10 @@ class TransformationPopup {
     // Adapter le titre et le texte du bouton selon le mode
     const title =
       this.mode === 'add'
-        ? 'Ajouter une transformation'
-        : 'Modifier la transformation';
-    const buttonText = this.mode === 'add' ? 'Créer' : 'Enregistrer';
+        ? i18next.t('addTransformation')
+        : i18next.t('editTransformation');
+    const buttonText =
+      this.mode === 'add' ? i18next.t('create') : i18next.t('save');
 
     this.modal.innerHTML = `
       <h3 class="text-lg font-semibold mb-2">${title}</h3>
@@ -141,7 +141,7 @@ class TransformationPopup {
       }
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Type de transformation</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
           <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
             ${options}
           </select>
@@ -151,7 +151,7 @@ class TransformationPopup {
         </div>
       </div>
       <div class="mt-6 flex justify-end space-x-3">
-        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
+        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
         <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
       </div>
     `;
@@ -223,7 +223,7 @@ class TransformationPopup {
     const keyInputHTML = keyList
       ? `
       <div class="relative mt-2">
-        <input id="key-input" type="text" autocomplete="off" placeholder="Paramètres" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+        <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
         <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto hidden">${keyOptions}</div>
       </div>
     `
@@ -233,7 +233,7 @@ class TransformationPopup {
     const currentLabel =
       lastType && window.transformationUtils
         ? window.transformationUtils.getTransformationLabel(lastType)
-        : 'Aucune transformation';
+        : i18next.t('noTransformation');
     const currentDesc =
       lastType && window.transformationUtils
         ? window.transformationUtils.getTransformationDescription(lastType)
@@ -242,8 +242,7 @@ class TransformationPopup {
     // Génération dynamique des options du select (AJOUTÉ)
     let options = '';
     if (!lastType) {
-      options +=
-        '<option value="" disabled selected>Sélectionner une transformation</option>';
+      options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
     }
     options += (
       window.transformationUtils
@@ -259,9 +258,10 @@ class TransformationPopup {
     // Adapter le titre et le texte du bouton selon le mode
     const title =
       this.mode === 'add'
-        ? 'Ajouter une transformation'
-        : 'Modifier la transformation';
-    const buttonText = this.mode === 'add' ? 'Créer' : 'Enregistrer';
+        ? i18next.t('addTransformation')
+        : i18next.t('editTransformation');
+    const buttonText =
+      this.mode === 'add' ? i18next.t('create') : i18next.t('save');
 
     this.modal.innerHTML = `
       <h3 class="text-lg font-semibold mb-2">${title}</h3>
@@ -279,7 +279,7 @@ class TransformationPopup {
       }
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Type de transformation</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
           <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
             ${options}
           </select>
@@ -289,7 +289,7 @@ class TransformationPopup {
         </div>
       </div>
       <div class="mt-6 flex justify-end space-x-3">
-        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
+        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
         <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
       </div>
     `;
@@ -743,7 +743,8 @@ async function chargerDonneesBaseAPI(dimension) {
         method: 'GET',
       }),
     });
-    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+    if (!response.ok)
+      throw new Error(i18next.t('apiError', { status: response.status }));
     return await response.json();
   } catch (error) {
     console.error('Erreur lors du chargement des données Bubble:', error);

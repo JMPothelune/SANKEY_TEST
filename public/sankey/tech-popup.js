@@ -23,8 +23,8 @@ class TechPopup {
     this.teamId = urlParams.get('teamId');
 
     if (!this.teamId) {
-      console.error('Pas de teamId trouvé dans les paramètres URL');
-      this.createPopupWithError('Aucune team sélectionnée');
+      console.error(i18next.t('noTeamId'));
+      this.createPopupWithError(i18next.t('noTeamSelected'));
       return;
     }
 
@@ -38,8 +38,8 @@ class TechPopup {
 
       this.createPopupWithTechs();
     } catch (error) {
-      console.error('Erreur lors du chargement des techs:', error);
-      this.createPopupWithError('Erreur lors du chargement des outils');
+      console.error(i18next.t('errorLoadingTechs'), error);
+      this.createPopupWithError(i18next.t('errorLoadingTools'));
     }
   }
 
@@ -82,7 +82,8 @@ class TechPopup {
       }),
     });
 
-    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+    if (!response.ok)
+      throw new Error(i18next.t('apiError', { status: response.status }));
     const teamData = await response.json();
 
     // Récupérer la step de la transformation pour filtrer les technologies
@@ -123,7 +124,8 @@ class TechPopup {
       }),
     });
 
-    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+    if (!response.ok)
+      throw new Error(i18next.t('apiError', { status: response.status }));
     return await response.json();
   }
 
@@ -162,8 +164,10 @@ class TechPopup {
       stepInfo = `<span class="text-sm text-gray-500 font-normal">(${stepId})</span>`;
     }
 
-    const title = this.mode === 'add' ? 'Ajouter un outil' : "Modifier l'outil";
-    const buttonText = this.mode === 'add' ? 'Ajouter' : 'Enregistrer';
+    const title =
+      this.mode === 'add' ? i18next.t('addTool') : i18next.t('editTool');
+    const buttonText =
+      this.mode === 'add' ? i18next.t('add') : i18next.t('save');
 
     this.modal.innerHTML = `
       <div class="relative">
@@ -177,20 +181,20 @@ class TechPopup {
       <div class="space-y-4">
         <div class="flex gap-4">
           <div class="flex-1">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Outil</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('tool')}</label>
             <select id="tech-select" class="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-              <option value="" disabled ${!existingTech ? 'selected' : ''}>Sélectionner un outil</option>
+              <option value="" disabled ${!existingTech ? 'selected' : ''}>${i18next.t('selectTool')}</option>
               ${techOptions}
             </select>
           </div>
           <div class="w-24">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('quantity')}</label>
             <input id="quantity-input" type="number" value="${existingTech ? existingTech.quantity || 1 : 1}" min="1" class="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
           </div>
         </div>
       </div>
       <div id="tech-details" class="mt-4 hidden">
-        <h4 class="text-sm font-medium text-gray-700 mb-2">Caractéristiques de l'outil</h4>
+        <h4 class="text-sm font-medium text-gray-700 mb-2">${i18next.t('toolCharacteristics')}</h4>
         <div class="bg-gray-50 rounded-lg p-3">
           <table class="w-full text-sm">
             <tbody id="tech-details-table">
@@ -203,7 +207,7 @@ class TechPopup {
         ${
           this.mode === 'edit'
             ? `
-        <button id="delete-btn" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors" title="Supprimer l'outil">
+        <button id="delete-btn" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors" title="${i18next.t('deleteTool')}">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
@@ -212,7 +216,7 @@ class TechPopup {
             : '<div></div>'
         }
         <div class="flex space-x-3">
-          <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
+          <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
           <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
         </div>
       </div>
@@ -252,10 +256,10 @@ class TechPopup {
     this.modal.style.transform = 'translateX(-50%)';
 
     this.modal.innerHTML = `
-      <h3 class="text-lg font-semibold mb-4 text-red-600">Erreur</h3>
+      <h3 class="text-lg font-semibold mb-4 text-red-600">${i18next.t('error')}</h3>
       <p class="text-gray-700 mb-4">${message}</p>
       <div class="mt-6 flex justify-end">
-        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Fermer</button>
+        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('close')}</button>
       </div>
     `;
 
@@ -339,12 +343,12 @@ class TechPopup {
       const quantity = parseInt(quantityInput.value);
 
       if (!selectedTechId) {
-        alert('Veuillez sélectionner un outil');
+        alert(i18next.t('pleaseSelectTool'));
         return;
       }
 
       if (!quantity || quantity < 1) {
-        alert('La quantité doit être supérieure à 0');
+        alert(i18next.t('quantityMustBeGreaterThanZero'));
         return;
       }
 
@@ -354,7 +358,7 @@ class TechPopup {
       const techData = this.techList[selectedTechName];
 
       if (!techData) {
-        alert("Erreur: données de l'outil non trouvées");
+        alert(i18next.t('errorToolDataNotFound'));
         return;
       }
 
@@ -364,10 +368,7 @@ class TechPopup {
         techDetails = await this.loadTechDetails(selectedTechId);
         console.log('Données détaillées de la tech récupérées:', techDetails);
       } catch (error) {
-        console.error(
-          'Erreur lors du chargement des détails de la tech:',
-          error
-        );
+        console.error(i18next.t('errorLoadingTechDetails'), error);
         // Continuer sans les détails si l'API échoue
       }
 
@@ -484,11 +485,11 @@ class TechPopup {
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
         </div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Supprimer l'outil</h3>
-        <p class="text-sm text-gray-500 mb-6">Êtes-vous sûr de vouloir supprimer cet outil du scénario ?</p>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">${i18next.t('deleteTool')}</h3>
+        <p class="text-sm text-gray-500 mb-6">${i18next.t('confirmDeleteTool')}</p>
         <div class="flex justify-center space-x-3">
-          <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Annuler</button>
-          <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Supprimer</button>
+          <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
+          <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">${i18next.t('delete')}</button>
         </div>
       </div>
     `;
@@ -526,7 +527,7 @@ class TechPopup {
       const techDetails = await this.loadTechDetails(techId);
       this.displayTechDetails(techDetails);
     } catch (error) {
-      console.error('Erreur lors du chargement des détails de la tech:', error);
+      console.error(i18next.t('errorLoadingTechDetails'), error);
       this.hideTechDetails();
     }
   }
@@ -542,7 +543,7 @@ class TechPopup {
     // Débit (rate)
     if (techDetails.rate !== undefined) {
       tableRows += `<tr class="border-b border-gray-200">
-        <td class="py-2 font-medium text-gray-700">Débit</td>
+        <td class="py-2 font-medium text-gray-700">${i18next.t('rate')}</td>
         <td class="py-2 text-gray-600">${techDetails.rate} kg/h</td>
       </tr>`;
     }
@@ -550,7 +551,7 @@ class TechPopup {
     // Consommation électrique
     if (techDetails.conso !== undefined) {
       tableRows += `<tr class="border-b border-gray-200">
-        <td class="py-2 font-medium text-gray-700">Consommation électrique</td>
+        <td class="py-2 font-medium text-gray-700">${i18next.t('electricalConsumption')}</td>
         <td class="py-2 text-gray-600">${techDetails.conso} W</td>
       </tr>`;
     }
@@ -558,13 +559,13 @@ class TechPopup {
     // Profils RH
     if (techDetails.profils && Object.keys(techDetails.profils).length > 0) {
       tableRows += `<tr class="border-b border-gray-200">
-        <td class="py-2 font-medium text-gray-700">Profils RH</td>
+        <td class="py-2 font-medium text-gray-700">${i18next.t('laborProfiles')}</td>
         <td class="py-2 text-gray-600">
           <ul class="list-disc list-inside space-y-1">`;
 
       Object.entries(techDetails.profils).forEach(
         ([profilName, profilData]) => {
-          tableRows += `<li>${profilName}: ${profilData.timeh} h/unité</li>`;
+          tableRows += `<li>${profilName}: ${profilData.timeh} ${i18next.t('hoursPerUnit')}</li>`;
         }
       );
 
@@ -576,7 +577,7 @@ class TechPopup {
     // Étape (step)
     if (techDetails.step) {
       tableRows += `<tr class="border-b border-gray-200">
-        <td class="py-2 font-medium text-gray-700">Étape</td>
+        <td class="py-2 font-medium text-gray-700">${i18next.t('step')}</td>
         <td class="py-2 text-gray-600">${techDetails.step}</td>
       </tr>`;
     }
@@ -584,7 +585,7 @@ class TechPopup {
     // Version
     if (techDetails.version) {
       tableRows += `<tr class="border-b border-gray-200">
-        <td class="py-2 font-medium text-gray-700">Version</td>
+        <td class="py-2 font-medium text-gray-700">${i18next.t('version')}</td>
         <td class="py-2 text-gray-600">${techDetails.version}</td>
       </tr>`;
     }
@@ -605,13 +606,11 @@ class TechPopup {
     const scenario = window.scenarios[scenarioIdx]?.scenario;
 
     if (!scenario) {
-      console.log(
-        'Pas de scénario disponible pour la vérification des versions'
-      );
+      console.log(i18next.t('noScenarioAvailableForVersionCheck'));
       return;
     }
 
-    console.log('Vérification des versions des techs...');
+    console.log(i18next.t('checkingTechVersions'));
     let hasUpdates = false;
 
     // Fonction récursive pour parcourir le scénario
@@ -629,7 +628,11 @@ class TechPopup {
 
                 if (currentVersion !== apiVersion) {
                   console.log(
-                    `Mise à jour de la tech ${transfo.tech.name}: ${currentVersion} → ${apiVersion}`
+                    i18next.t('techVersionUpdated', {
+                      techName: transfo.tech.name,
+                      currentVersion: currentVersion,
+                      apiVersion: apiVersion,
+                    })
                   );
 
                   // Mettre à jour les détails de la tech
@@ -640,7 +643,9 @@ class TechPopup {
             })
             .catch(error => {
               console.error(
-                `Erreur lors de la vérification de la tech ${transfo.tech.name}:`,
+                i18next.t('errorCheckingTechVersion', {
+                  techName: transfo.tech.name,
+                }),
                 error
               );
             });
@@ -686,7 +691,7 @@ class TechPopup {
             dimension,
           });
         }
-        console.log('Sankey relancé après mise à jour des versions');
+        console.log(i18next.t('sankeyRelaunchedAfterVersionUpdate'));
       }, 1000); // Attendre un peu pour que toutes les vérifications soient terminées
     }
   }
@@ -705,7 +710,10 @@ class TechPopup {
       };
 
       console.log(
-        `Tech ${transformation.tech.name} mise à jour vers la version ${techDetails.version}`
+        i18next.t('techUpdated', {
+          techName: transformation.tech.name,
+          version: techDetails.version,
+        })
       );
     }
   }
