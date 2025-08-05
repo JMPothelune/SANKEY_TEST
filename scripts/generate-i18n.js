@@ -11,5 +11,5 @@ window.i18nConfig = {
 };
 `;
 
-fs.writeFileSync('public/sankey/i18n-config.js', i18nConfig);
-console.log("✅ Traductions générées pour l'iframe");
+fs.writeFileSync('public/i18n-config.js', i18nConfig);
+console.log('✅ Traductions générées');

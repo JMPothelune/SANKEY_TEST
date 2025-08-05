@@ -13,6 +13,8 @@
     />
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.11/dist/umd/i18next.min.js"></script>
+    <script src="../i18n-config.js"></script>
 
     <style>
       /* Style pour supporter la width configurable */
@@ -83,25 +85,64 @@
             transition: opacity 0.2s;
           "
         >
-          Enregistrer
+          ${i18next.t('save')}
         </button>
       </div>
     </div>
     <script>
-      // Fonction utilitaire pour charger un JSON
-      function fetchJSON(path) {
-        return fetch(path).then(r => r.json());
-      }
+      console.log('[Lot] script chargé');
 
-      // Fonction pour récupérer les paramètres de l'URL
+      // Fonction utilitaire pour lire les paramètres d'URL
       function getUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
-        return {
-          id: urlParams.get('id'),
+        const params = {
+          lang: urlParams.get('lang') || 'fr_fr',
+          id: urlParams.get('id') || '',
           isLive: urlParams.get('isLive') === 'true',
           width: urlParams.get('width') || '100%',
           isEditable: urlParams.get('isEditable') !== 'false', // true par défaut
         };
+        // If the lang parameter is not found in the URL, try to read it from the full URL
+        if (!urlParams.get('lang')) {
+          const url = new URL(window.location.href);
+          const langParam = url.searchParams.get('lang');
+          if (langParam) {
+            params.lang = langParam;
+          }
+        }
+        return params;
+      }
+
+      // Initialiser i18next
+      const params = getUrlParams();
+      console.log('[Lot] Language from URL:', params.lang);
+      i18next
+        .init({
+          ...window.i18nConfig,
+          lng: params.lang,
+          fallbackLng: 'fr_fr',
+          debug: true,
+        })
+        .then(() => {
+          console.log(
+            '[Lot] i18next initialized with language:',
+            i18next.language
+          );
+          window.i18nextReady = true;
+
+          // Mettre à jour le bouton Enregistrer avec la traduction
+          const saveBtn = document.getElementById('save-lot-btn');
+          if (saveBtn) {
+            saveBtn.textContent = i18next.t('save');
+          }
+        })
+        .catch(error => {
+          console.error('[Lot] Error initializing i18next:', error);
+        });
+
+      // Fonction utilitaire pour charger un JSON
+      function fetchJSON(path) {
+        return fetch(path).then(r => r.json());
       }
 
       // Appliquer la width configurable
@@ -281,7 +322,7 @@
           saveBtn.addEventListener('click', async function () {
             if (window.lotCourant && window._lotModifie) {
               saveBtn.disabled = true;
-              saveBtn.textContent = 'Enregistrement...';
+              saveBtn.textContent = i18next.t('saving');
               saveBtn.style.opacity = '0.5';
               try {
                 const urlParams = getUrlParams();
@@ -300,15 +341,15 @@
                 });
                 if (!response.ok)
                   throw new Error('Erreur API: ' + response.status);
-                saveBtn.textContent = 'Enregistré !';
+                saveBtn.textContent = i18next.t('saved');
                 setLotModifie(false);
                 setTimeout(() => {
-                  saveBtn.textContent = 'Enregistrer';
+                  saveBtn.textContent = i18next.t('save');
                 }, 1500);
               } catch (e) {
-                saveBtn.textContent = 'Erreur';
+                saveBtn.textContent = i18next.t('error');
                 setTimeout(() => {
-                  saveBtn.textContent = 'Enregistrer';
+                  saveBtn.textContent = i18next.t('save');
                 }, 2000);
                 alert(
                   'Erreur lors de la sauvegarde du lot : ' + (e.message || e)

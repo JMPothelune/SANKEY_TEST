@@ -238,7 +238,7 @@ const stackbarComponents = {
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   types: {
@@ -296,7 +296,7 @@ const stackbarComponents = {
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   matieres: {
@@ -580,7 +580,7 @@ const stackbarComponents = {
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   qualite: {
@@ -599,7 +599,7 @@ const stackbarComponents = {
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   proprete: {
@@ -677,7 +677,7 @@ const stackbarComponents = {
       return values;
     },
     getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   // Ajoute ici d'autres dimensions si besoin
@@ -848,145 +848,6 @@ function updateSankey(dimension) {
           .style('stroke-width', '1px')
           .style('opacity', 1);
       }
-
-      // Affichage des segments stackbar avec couleur du JSON
-      sortedEntries.forEach(([key, value]) => {
-        // Récupérer la valeur depuis la nouvelle structure
-        const pourcentage =
-          typeof value === 'object' && value !== null
-            ? value.pourcentage
-            : value;
-        const heightSeg = sum > 0 ? (pourcentage / sum) * nodeHeight : 0;
-        let color = '#bbb';
-        // Utiliser la couleur de la nouvelle structure si disponible
-        if (typeof value === 'object' && value !== null && value.color) {
-          color = value.color;
-        } else if (
-          dimension === 'formats' &&
-          d.lot.formats &&
-          d.lot.formats[key] &&
-          d.lot.formats[key].color
-        ) {
-          color = d.lot.formats[key].color;
-        } else if (dimension === 'types' && d.lot.formats) {
-          Object.values(d.lot.formats).forEach(formatObj => {
-            if (
-              formatObj.types &&
-              formatObj.types[key] &&
-              formatObj.types[key].color
-            ) {
-              color = formatObj.types[key].color;
-            }
-          });
-        } else if (dimension === 'matieres' && d.lot.formats) {
-          Object.values(d.lot.formats).forEach(formatObj => {
-            if (formatObj.types) {
-              Object.values(formatObj.types).forEach(typeObj => {
-                if (
-                  typeObj.matieres &&
-                  typeObj.matieres[key] &&
-                  typeObj.matieres[key].color
-                ) {
-                  color = typeObj.matieres[key].color;
-                }
-              });
-            }
-          });
-        } else if (dimension === 'fibres' && d.lot.formats) {
-          Object.values(d.lot.formats).forEach(formatObj => {
-            if (formatObj.types) {
-              Object.values(formatObj.types).forEach(typeObj => {
-                if (typeObj.matieres) {
-                  Object.values(typeObj.matieres).forEach(matiereObj => {
-                    if (
-                      matiereObj.fibres &&
-                      matiereObj.fibres[key] &&
-                      matiereObj.fibres[key].color
-                    ) {
-                      color = matiereObj.fibres[key].color;
-                    }
-                  });
-                }
-              });
-            }
-          });
-        } else if (dimension === 'couleurs' && d.lot.formats) {
-          Object.values(d.lot.formats).forEach(formatObj => {
-            if (formatObj.types) {
-              Object.values(formatObj.types).forEach(typeObj => {
-                if (
-                  typeObj.couleurs &&
-                  typeObj.couleurs[key] &&
-                  typeObj.couleurs[key].color
-                ) {
-                  color = typeObj.couleurs[key].color;
-                }
-              });
-            }
-          });
-        } else if (
-          dimension === 'qualites' &&
-          d.lot.qualites &&
-          d.lot.qualites[key] &&
-          d.lot.qualites[key].color
-        ) {
-          color = d.lot.qualites[key].color;
-        } else if (
-          dimension === 'propretes' &&
-          d.lot.propretes &&
-          d.lot.propretes[key] &&
-          d.lot.propretes[key].color
-        ) {
-          color = d.lot.propretes[key].color;
-        } else if (dimension === 'perturbateurs' && d.lot.formats) {
-          Object.values(d.lot.formats).forEach(formatObj => {
-            if (formatObj.types) {
-              Object.values(formatObj.types).forEach(typeObj => {
-                if (
-                  typeObj.perturbateurs &&
-                  typeObj.perturbateurs[key] &&
-                  typeObj.perturbateurs[key].color
-                ) {
-                  color = typeObj.perturbateurs[key].color;
-                }
-              });
-            }
-          });
-        }
-        const fillColorStr = color + (color.length === 7 ? '99' : ''); // Opacité 60% si hex, sinon rgba déjà
-        const strokeColorStr = color;
-        const isUnknown =
-          key.toLowerCase() === 'inconnu' || key.toLowerCase() === 'autre';
-        nodeGroup
-          .append('rect')
-          .attr('x', 0)
-          .attr('y', yOffset)
-          .attr('height', heightSeg)
-          .attr('width', stackbarWidth)
-          .attr('rx', 4)
-          .attr('ry', 4)
-          .attr('class', 'stackbar-segment')
-          .attr('data-key', key)
-          .attr('data-dimension', dimension)
-          .style('fill', isUnknown ? 'url(#dashed-bg)' : fillColorStr)
-          .style('stroke', isUnknown ? '#999' : strokeColorStr)
-          .style('stroke-width', '1px')
-          .style('opacity', 1)
-          .on('mouseover', function (event) {
-            let tooltipContent = component
-              ? component.getTooltipContent(d.lot, key, value, d.lot.total)
-              : '';
-            tooltip.transition().duration(200).style('opacity', 0.9);
-            tooltip
-              .html(tooltipContent)
-              .style('left', event.pageX + 10 + 'px')
-              .style('top', event.pageY - 28 + 'px');
-          })
-          .on('mouseout', function () {
-            tooltip.transition().duration(500).style('opacity', 0);
-          });
-        yOffset += heightSeg;
-      });
 
       // Bloc à droite de la stackbar
       nodeGroup
@@ -1410,13 +1271,33 @@ function updateSankey(dimension) {
             ? component.getTooltipContent(d.lot, key, tooltipValue, d.lot.total)
             : '';
           tooltip.transition().duration(200).style('opacity', 0.9);
+          // ===== TOOLTIP DES ÉLÉMENTS DE STACKBAR (NON-TRANSFO) - VRAI =====
+          // Forcer la largeur à 180px directement
+          tooltip.classed('narrow', true);
+          tooltip.style('width', '180px !important');
           const svgRect = svg.node().ownerSVGElement.getBoundingClientRect();
           const rect = this.getBoundingClientRect();
           const offsetX = rect.left - svgRect.left;
           const offsetY = rect.top - svgRect.top;
           tooltip
             .html(tooltipContent)
-            .style('left', svgRect.left + offsetX + 'px')
+            .style(
+              'left',
+              (() => {
+                const windowWidth = window.innerWidth;
+
+                // Détecter si c'est un nœud de droite (bout du Sankey)
+                const isRightNode = d.x1 >= windowWidth - 100; // Marge de 100px
+
+                if (isRightNode) {
+                  // Pour les nœuds de droite, déporter de -80px
+                  return svgRect.left + offsetX - 100 + 'px';
+                } else {
+                  // Pour les nœuds normaux, positionnement normal
+                  return svgRect.left + offsetX + 'px';
+                }
+              })()
+            )
             .style('top', svgRect.top + offsetY + 'px');
           // Highlight links
           svg
@@ -1620,17 +1501,73 @@ function updateSankey(dimension) {
           }
 
           tooltip.transition().duration(200).style('opacity', 0.9);
+          // ===== TOOLTIP DE LA BARRE GRISE (NON-TRANSFO) =====
+          // Retirer toutes les classes et appliquer narrow pour la largeur de 180px
+          tooltip.classed('narrow', true);
+          // Récupérer les données de la stackbar pour la dimension active
+          const currentDimension = window.currentDimension;
+          const stackbarComponent = stackbarComponents[currentDimension];
+          const stackbarValues = stackbarComponent
+            ? stackbarComponent.getStackValues(d.lot)
+            : {};
+          const sortedEntries = Object.entries(stackbarValues)
+            .filter(([key]) => !key.startsWith('_'))
+            .sort((a, b) => {
+              const valueA =
+                typeof a[1] === 'object' && a[1] !== null
+                  ? a[1].pourcentage
+                  : a[1];
+              const valueB =
+                typeof b[1] === 'object' && b[1] !== null
+                  ? b[1].pourcentage
+                  : b[1];
+              return valueB - valueA;
+            });
+
+          // Générer les lignes de répartition
+          let distributionRows = '';
+          sortedEntries.forEach(([key, value]) => {
+            const pourcentage =
+              typeof value === 'object' && value !== null
+                ? value.pourcentage
+                : value;
+            distributionRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${key}</span> <span class="tooltip-value">${pourcentage.toFixed(1)}%</span></td></tr>`;
+          });
+
           tooltip
             .html(
               `
-                        <strong>${tooltipTitle}</strong><br/>
-                        Poids du lot : ${Math.round(d.lot.total)} kg<br/>
-                        <span style='font-size:12px;color:#666;'>Somme des % stackbar : ${sumPct.toFixed(1)}%</span>
+                        <strong>${tooltipTitle}</strong>
+                        <table class="tooltip-table">
+                          <tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${Math.round(d.lot.total)} kg</span></td></tr>
+                          ${distributionRows ? `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('distribution')}</span></td></tr>${distributionRows}<tr><td class="tooltip-row"></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${sumPct.toFixed(1)}%</span></td></tr>` : `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${sumPct.toFixed(1)}%</span></td></tr>`}
+                        </table>
                         ${missingInfo}
                         ${targetInfo}
                     `
             )
-            .style('left', event.pageX + 10 + 'px')
+            .style(
+              'left',
+              (() => {
+                const tooltipWidth = 180; // Largeur fixe du tooltip narrow
+                const windowWidth = window.innerWidth;
+
+                // Utiliser la position du nœud plutôt que la souris
+                const nodeLeft = d.x0;
+                const stackbarWidth = 60; // Largeur de la stackbar
+
+                // Détecter si c'est un nœud de droite (bout du Sankey)
+                const isRightNode = d.x1 >= windowWidth - 100; // Marge de 100px
+
+                if (isRightNode) {
+                  // Pour les nœuds de droite, positionner à gauche du tooltip
+                  return nodeLeft + stackbarWidth + 50 - 180 + 'px';
+                } else {
+                  // Pour les nœuds normaux, aligner après la stackbar
+                  return nodeLeft + stackbarWidth + 20 + 'px';
+                }
+              })()
+            )
             .style('top', event.pageY - 28 + 'px');
         }
       })
@@ -1696,7 +1633,10 @@ function updateSankey(dimension) {
         };
 
         div.addEventListener('mouseover', function (event) {
+          // ===== TOOLTIP DES ICÔNES DE TRANSFORMATION (TRANSFO) =====
           tooltip.transition().duration(200).style('opacity', 0.9);
+          // Retirer toutes les classes pour avoir la largeur par défaut (280px)
+          tooltip.classed('narrow', false);
           let tooltipContent = '';
           if (isFork && link.transformation) {
             // Utilise la transformation du lien sortant
@@ -1720,39 +1660,39 @@ function updateSankey(dimension) {
               transfo._displayNames[0].length > 0
             ) {
               // Utiliser les noms d'affichage français
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Clés :</span> <span class="tooltip-value">${transfo._displayNames[0].join(', ')}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo._displayNames[0].join(', ')}</span></td></tr>`;
             } else if (
               transfo.keys &&
               transfo.keys.length &&
               transfo.keys[0].length
             ) {
               // Fallback sur les keys si pas de displayNames
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Clés :</span> <span class="tooltip-value">${transfo.keys[0].join(', ')}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo.keys[0].join(', ')}</span></td></tr>`;
             }
             if (transfo.scenario && transfo.scenario.target) {
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Cible :</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
             }
             // Ajouter la step de la transformation
             const stepId = getTransformationStep(transfo);
-            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Étape :</span> <span class="tooltip-value">${stepId}</span></td></tr>`;
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('step')}</span> <span class="tooltip-value">${stepId}</span></td></tr>`;
 
             // Ajouter la rate (débit) de la transformation
             if (transfo.yield !== undefined) {
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Rendement :</span> <span class="tooltip-value">${transfo.yield}%</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('yield')}</span> <span class="tooltip-value">${transfo.yield}%</span></td></tr>`;
             }
 
             // Ajouter le poids du lot (toujours affiché)
             const poids = d.lot.total; // kg
             const poidsFormate = poids.toFixed(2);
-            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Poids d'entrée :</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
 
             // Ajouter les informations de la tech si elle existe
             if (transfo.tech) {
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Outil :</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('tool')}</span> <span class="tooltip-value">${transfo.tech.name} (x${transfo.tech.quantity})</span></td></tr>`;
 
               // Ajouter la rate de la tech si elle existe
               if (transfo.tech.rate !== undefined) {
-                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Débit :</span> <span class="tooltip-value">${transfo.tech.rate} kg/h</span></td></tr>`;
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('rate')}</span> <span class="tooltip-value">${transfo.tech.rate} kg/h</span></td></tr>`;
               }
 
               // Utiliser les données de la tech enregistrées dans le scénario
@@ -1784,7 +1724,7 @@ function updateSankey(dimension) {
                     tempsFormate = '< 1min';
                   }
 
-                  tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Temps utile :</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
+                  tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('usefulTime')}</span> <span class="tooltip-value">${tempsFormate}</span></td></tr>`;
 
                   // Ajouter les profils RH
                   if (
@@ -1828,15 +1768,15 @@ function updateSankey(dimension) {
 
                   // Ajouter la consommation électrique
                   if (couts.consommation_totale > 0) {
-                    tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Conso élec :</span> <span class="tooltip-value">${couts.consommation_totale.toFixed(4)} kWh (${couts.cout_energie.toFixed(2)}€)</span></td></tr>`;
+                    tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('consumption')}</span> <span class="tooltip-value">${couts.consommation_totale.toFixed(4)} kWh (${couts.cout_energie.toFixed(2)}€)</span></td></tr>`;
                   }
 
                   // Ajouter le total
-                  tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">Total :</span> <span class="tooltip-value">${couts.cout_total.toFixed(2)}€</span></td></tr>`;
+                  tableRows += `<tr><td class="tooltip-row total"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${couts.cout_total.toFixed(2)}€</span></td></tr>`;
                 }
               } else {
                 // Si pas de détails stockés, afficher un message
-                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Détails :</span> <span class="tooltip-value">Données non disponibles</span></td></tr>`;
+                tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">Détails :</span> <span class="tooltip-value">${i18next.t('detailsNotAvailable')}</span></td></tr>`;
               }
             }
 
@@ -1847,7 +1787,21 @@ function updateSankey(dimension) {
           }
           tooltip
             .html(tooltipContent)
-            .style('left', event.pageX + 10 + 'px')
+            .style(
+              'left',
+              (() => {
+                const tooltipWidth = 180; // Largeur fixe du tooltip narrow
+                const windowWidth = window.innerWidth;
+                const mouseX = event.pageX;
+
+                // Si le tooltip va déborder à droite, le positionner à gauche
+                if (mouseX + 10 + tooltipWidth > windowWidth) {
+                  return mouseX - tooltipWidth + 10 + 'px';
+                } else {
+                  return mouseX + 10 + 'px';
+                }
+              })()
+            )
             .style('top', event.pageY - 28 + 'px');
         });
         div.addEventListener('mouseout', function () {
@@ -2190,7 +2144,10 @@ function updateSankey(dimension) {
       );
       fo.node().appendChild(div);
       div.addEventListener('mouseover', function (event) {
+        // ===== TOOLTIP DES NŒUDS TARGET (NON-TRANSFO) =====
         tooltip.transition().duration(200).style('opacity', 0.9);
+        // Retirer toutes les classes et appliquer narrow pour la largeur de 180px
+        tooltip.classed('narrow', true);
         // Tooltip riche comme avant
         let distributionHtml = '';
         const component = stackbarComponents[dimension];
@@ -2220,7 +2177,21 @@ function updateSankey(dimension) {
                         ${distributionHtml}
                     `
           )
-          .style('left', event.pageX + 10 + 'px')
+          .style(
+            'left',
+            (() => {
+              const tooltipWidth = 180; // Largeur fixe du tooltip narrow
+              const windowWidth = window.innerWidth;
+              const mouseX = event.pageX;
+
+              // Si le tooltip va déborder à droite, le positionner à gauche
+              if (mouseX + 10 + tooltipWidth > windowWidth) {
+                return mouseX - tooltipWidth + 10 + 'px';
+              } else {
+                return mouseX + 10 + 'px';
+              }
+            })()
+          )
           .style('top', event.pageY - 28 + 'px');
       });
       div.addEventListener('mouseout', function () {

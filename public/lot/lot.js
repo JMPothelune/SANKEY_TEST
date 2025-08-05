@@ -1,6 +1,65 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 console.log('lot.js chargé !');
 
+// --- Fonction pour attendre que i18next soit prêt ---
+function waitForI18next() {
+  return new Promise(resolve => {
+    if (window.i18nextReady) {
+      resolve();
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.i18nextReady) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 10);
+    }
+  });
+}
+
+// --- Fonction utilitaire pour lire les paramètres d'URL ---
+function getUrlParams() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const params = {
+    lang: urlParams.get('lang') || 'fr_fr',
+    id: urlParams.get('id') || '',
+    isLive: urlParams.get('isLive') === 'true',
+    isEditable: urlParams.get('isEditable') !== 'false',
+  };
+  // If the lang parameter is not found in the URL, try to read it from the full URL
+  if (!urlParams.get('lang')) {
+    const url = new URL(window.location.href);
+    const langParam = url.searchParams.get('lang');
+    if (langParam) {
+      params.lang = langParam;
+    }
+  }
+  return params;
+}
+
+// --- Fonction pour mettre à jour les paramètres d'URL ---
+function updateUrlParams(params) {
+  const url = new URL(window.location.href);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      url.searchParams.set(key, value.toString());
+    }
+  });
+  window.history.replaceState({}, '', url.toString());
+}
+
+// --- Initialisation depuis les paramètres URL ---
+function initializeFromUrl() {
+  const params = getUrlParams();
+  console.log('[Lot] Paramètres URL:', params);
+
+  // Stocker les paramètres globalement
+  window.isLive = params.isLive;
+  window.isEditable = params.isEditable;
+
+  return params;
+}
+
 // --- Configuration des options de frequency ---
 const FREQUENCY_OPTIONS = {
   récurrent: {
@@ -571,8 +630,16 @@ function initLotUI(container, lotInitial) {
   afficherStackbars(lotCourant, cheminSelection);
 }
 
-function lancerLotUI(container, lotInitial) {
+async function lancerLotUI(container, lotInitial) {
   console.log('Entrée dans lancerLotUI', container, lotInitial);
+
+  // Attendre que i18next soit prêt
+  await waitForI18next();
+  console.log("[Lot] i18next est prêt, lancement de l'UI...");
+
+  // Initialiser depuis les paramètres URL
+  const params = initializeFromUrl();
+
   initLotUI(container, lotInitial);
 }
 
@@ -1316,6 +1383,14 @@ async function chargerDonneesBaseAPI(dimension) {
 async function afficherModalAjout(niveau, dimension) {
   if (!dimension) return;
 
+  // Attendre que i18next soit prêt
+  await waitForI18next();
+  console.log('[Lot] i18next prêt pour la popup, langue:', i18next.language);
+  console.log(
+    '[Lot] Test traduction addItem:',
+    i18next.t('addItem', { dimension })
+  );
+
   // Charger les données depuis l'API
   const donneesBase = await chargerDonneesBaseAPI(dimension);
 
@@ -1355,8 +1430,8 @@ async function afficherModalAjout(niveau, dimension) {
   const header = document.createElement('div');
   header.className = 'flex items-center justify-between p-4 border-b';
   header.innerHTML = `
-    <h3 class="text-lg font-semibold text-gray-900">Ajouter un ${dimension}</h3>
-    <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" aria-label="Fermer">
+    <h3 class="text-lg font-semibold text-gray-900">${i18next.t('addItem', { dimension })}</h3>
+          <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" aria-label="${i18next.t('close')}">
       ${getIconSVG('x', 'w-5 h-5')}
     </button>
   `;
@@ -1367,10 +1442,10 @@ async function afficherModalAjout(niveau, dimension) {
   content.innerHTML = `
     <div class="space-y-4">
       <div>
-        <label for="element" class="block text-sm font-medium text-gray-700 mb-1">Élément</label>
+        <label for="element" class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('element')}</label>
         <div class="relative">
           <select id="element" class="block w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer">
-            <option value="" class="text-gray-500">Sélectionnez un élément</option>
+            <option value="" class="text-gray-500">${i18next.t('selectElement')}</option>
             ${elementsDisponibles
               .map(
                 elem => `
@@ -1387,7 +1462,7 @@ async function afficherModalAjout(niveau, dimension) {
         </div>
       </div>
       <div id="pourcentage-container">
-        <label for="pourcentage" class="block text-sm font-medium text-gray-700 mb-1">Pourcentage</label>
+        <label for="pourcentage" class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('percentage')}</label>
         <div class="relative">
           <input type="number" id="pourcentage" class="block w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" min="0" max="100" step="0.1">
           <div class="absolute inset-y-0 right-0 flex items-center pr-2">
@@ -1402,8 +1477,8 @@ async function afficherModalAjout(niveau, dimension) {
   const footer = document.createElement('div');
   footer.className = 'flex items-center justify-end gap-3 p-4 border-t';
   footer.innerHTML = `
-    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Annuler</button>
-    <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Ajouter</button>
+    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">${i18next.t('cancel')}</button>
+    <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">${i18next.t('add')}</button>
   `;
 
   // Assembler la modal
@@ -1501,9 +1576,7 @@ async function afficherModalAjout(niveau, dimension) {
         fermerModal();
         afficherStackbars(lotCourant, cheminSelection);
       } else {
-        console.error(
-          "Impossible de récupérer l'élément complet depuis Bubble"
-        );
+        console.error(i18next.t('errorRetrievingElement'));
         // Fallback : utiliser les données de base
         ajouterElementEtRepartir(
           niveau,
