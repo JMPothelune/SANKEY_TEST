@@ -1,6 +1,7 @@
 # Plan d'intégration du Sankey avec Bubble.io
 
 ## Objectifs
+
 - Gérer les comptes utilisateurs dans Bubble.
 - Enregistrer les lots de départ et les scénarios dans Bubble.
 - Visualiser dynamiquement le Sankey avec les données Bubble.
@@ -18,12 +19,14 @@
 Développer un plugin Bubble (en JavaScript) qui embarque le Sankey et expose des actions Bubble pour charger/sauvegarder les scénarios.
 
 **Avantages**
+
 - Intégration native dans Bubble (UI, workflows, sécurité Bubble).
 - Communication directe avec la base de données Bubble (actions, triggers).
 - Facile à utiliser pour un utilisateur Bubble (pas d'iframe, pas de bidouille).
 - Sécurité gérée par Bubble (auth, droits, etc.).
 
 **Inconvénients**
+
 - Développement du plugin plus complexe (Bubble impose son propre système de plugins).
 - Moins de liberté sur l'environnement d'exécution (dépendances, outils de debug).
 - Risque de couplage fort avec Bubble (plus difficile à extraire si besoin d'indépendance).
@@ -34,6 +37,7 @@ Bonne si tu restes dans l'écosystème Bubble, mais moins flexible pour des évo
 #### Développement et Test du Plugin
 
 **Structure du Développement**
+
 ```
 project/
 ├── sankey/              # Ton code Sankey (développé dans Cursor)
@@ -64,29 +68,31 @@ project/
    - Fais des ajustements si nécessaire
 
 **Exemple de Code**
+
 ```javascript
 // bubble-plugin/plugin.js
 Bubble.registerPlugin({
   name: 'SankeyVisualization',
-  initialize: function() {
+  initialize: function () {
     // Initialisation du plugin
   },
-  
+
   // Méthode appelée par Bubble pour charger les données
-  loadData: function(lot, scenario) {
+  loadData: function (lot, scenario) {
     // Appel au Sankey
     this.sankeyInstance.updateData(lot, scenario);
   },
-  
+
   // Méthode appelée quand l'utilisateur ajoute une transformation
-  addTransformation: function(transformation) {
+  addTransformation: function (transformation) {
     // Appel au Sankey
     this.sankeyInstance.addTransformation(transformation);
-  }
+  },
 });
 ```
 
 **Inconvénients de cette Approche**
+
 1. **Pas de test local du plugin**
    - Tu dois déployer dans Bubble pour tester
    - Les cycles de test sont plus longs
@@ -96,6 +102,7 @@ Bubble.registerPlugin({
    - Plus complexe à gérer
 
 **Recommandations**
+
 1. **Pour le Sankey**
    - Garde le code modulaire
    - Documente bien l'API
@@ -119,12 +126,14 @@ Bubble.registerPlugin({
 Déployer le Sankey comme une app web indépendante (hébergée sur Netlify, Vercel, etc.) et l'intégrer dans Bubble via un composant HTML/iframe. Communication via `postMessage`.
 
 **Avantages**
+
 - Tu développes et maintiens le Sankey dans Cursor, sans contrainte Bubble.
 - Déploiement et versioning indépendants (Git, CI/CD).
 - Facile à tester et à faire évoluer sans toucher à Bubble.
 - Possibilité de réutiliser l'app Sankey ailleurs.
 
 **Inconvénients**
+
 - Communication Bubble <-> Sankey plus complexe (postMessage, gestion des événements).
 - Sécurité à bien gérer (CORS, validation des messages, authentification).
 - Nécessite de synchroniser les données entre Bubble et l'iframe (chargement initial, sauvegarde).
@@ -135,6 +144,7 @@ Excellente pour le Sankey (développement libre), mais nécessite de maintenir l
 #### Développement et Test de l'Iframe
 
 **Structure du Développement**
+
 ```
 project/
 ├── sankey/                    # Application Sankey (développée dans Cursor)
@@ -178,7 +188,7 @@ project/
 class BubbleCommunication {
   constructor() {
     this.origin = 'https://ton-app-bubble.bubbleapps.io';
-    
+
     window.addEventListener('message', this.handleMessage.bind(this));
   }
 
@@ -210,7 +220,7 @@ const bubbleComm = new BubbleCommunication();
 function onAddTransformation(transformation) {
   bubbleComm.sendToBubble('SCENARIO_UPDATED', {
     transformation,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 }
 ```
@@ -226,19 +236,22 @@ Bubble.registerWorkflow({
       element: 'iframe',
       properties: {
         src: 'https://ton-sankey.netlify.app',
-        id: 'sankey-iframe'
-      }
-    }
-  ]
+        id: 'sankey-iframe',
+      },
+    },
+  ],
 });
 
 // Envoi des données au Sankey
 function sendDataToSankey(lot, scenario) {
   const iframe = document.getElementById('sankey-iframe');
-  iframe.contentWindow.postMessage({
-    type: 'LOAD_DATA',
-    data: { lot, scenario }
-  }, 'https://ton-sankey.netlify.app');
+  iframe.contentWindow.postMessage(
+    {
+      type: 'LOAD_DATA',
+      data: { lot, scenario },
+    },
+    'https://ton-sankey.netlify.app'
+  );
 }
 ```
 
@@ -261,6 +274,7 @@ function sendDataToSankey(lot, scenario) {
 **Tests**
 
 1. **Tests Unitaires**
+
    ```javascript
    // tests/bubble-communication.test.js
    describe('BubbleCommunication', () => {
@@ -268,7 +282,7 @@ function sendDataToSankey(lot, scenario) {
        const comm = new BubbleCommunication();
        const event = {
          origin: 'https://malicious-site.com',
-         data: { type: 'LOAD_DATA', data: {} }
+         data: { type: 'LOAD_DATA', data: {} },
        };
        expect(comm.handleMessage(event)).toBeFalsy();
      });
@@ -283,6 +297,7 @@ function sendDataToSankey(lot, scenario) {
 **Monitoring et Debug**
 
 1. **Logs**
+
    ```javascript
    class BubbleCommunication {
      constructor() {
@@ -309,11 +324,13 @@ function sendDataToSankey(lot, scenario) {
 Le Sankey est une app indépendante qui communique avec Bubble via une API REST (Bubble expose des endpoints pour charger/sauvegarder les scénarios).
 
 **Avantages**
+
 - Indépendance totale du Sankey (développement, déploiement, tests).
 - Possibilité d'intégrer le Sankey dans d'autres apps (mobile, desktop, etc.).
 - Sécurité et scalabilité (authentification, gestion des droits via l'API).
 
 **Inconvénients**
+
 - Implémentation de l'API Bubble nécessaire (workflows API, gestion des tokens).
 - Plus de points de maintenance (API, frontend, Bubble).
 - Risque de latence ou de décalage si l'API n'est pas bien conçue.
@@ -324,6 +341,7 @@ Très bonne pour le Sankey, mais nécessite de maintenir l'API Bubble et la docu
 #### Développement et Test de l'API REST
 
 **Structure du Développement**
+
 ```
 project/
 ├── sankey/                    # Application Sankey (développée dans Cursor)
@@ -376,9 +394,9 @@ class BubbleAPIClient {
   async getLot(lotId) {
     const response = await fetch(`${this.baseUrl}/lots/${lotId}`, {
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
     });
 
     if (!response.ok) {
@@ -392,10 +410,10 @@ class BubbleAPIClient {
     const response = await fetch(`${this.baseUrl}/scenarios`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(scenario)
+      body: JSON.stringify(scenario),
     });
 
     if (!response.ok) {
@@ -418,7 +436,7 @@ Bubble.registerWorkflow({
       path: '/lots/:id',
       security: {
         type: 'api-key',
-        required: true
+        required: true,
       },
       handler: async (req, res) => {
         const lot = await Bubble.getLot(req.params.id);
@@ -426,9 +444,9 @@ Bubble.registerWorkflow({
           return res.status(404).json({ error: 'Lot non trouvé' });
         }
         return res.json(lot);
-      }
-    }
-  ]
+      },
+    },
+  ],
 });
 ```
 
@@ -442,7 +460,7 @@ Bubble.registerWorkflow({
 2. **Validation des Données**
    ```javascript
    // sankey/src/api/validation.js
-   const validateScenario = (scenario) => {
+   const validateScenario = scenario => {
      if (!scenario.transformations) {
        throw new Error('Scenario invalide: transformations manquantes');
      }
@@ -453,14 +471,15 @@ Bubble.registerWorkflow({
 **Tests**
 
 1. **Tests Unitaires**
+
    ```javascript
    // tests/api-client.test.js
    describe('BubbleAPIClient', () => {
      it('should handle API errors', async () => {
        const client = new BubbleAPIClient('test-key');
-       await expect(client.getLot('invalid-id'))
-         .rejects
-         .toThrow('Erreur API: 404');
+       await expect(client.getLot('invalid-id')).rejects.toThrow(
+         'Erreur API: 404'
+       );
      });
    });
    ```
@@ -473,6 +492,7 @@ Bubble.registerWorkflow({
 **Monitoring et Debug**
 
 1. **Logs**
+
    ```javascript
    class BubbleAPIClient {
      constructor(apiKey) {
@@ -524,15 +544,15 @@ Bubble.registerWorkflow({
 
 ## 2. Points-clés pour chaque option
 
-| Critère                        | Plugin Bubble         | Iframe indépendant      | API REST + Frontend     |
-|------------------------------- |----------------------|------------------------|-------------------------|
-| **Développement Sankey**       | Limité (Bubble)      | Libre (Cursor)         | Libre (Cursor)          |
-| **Maintenance Sankey**         | Bubble               | Indépendant            | Indépendant             |
-| **Chargement des données**     | Direct (actions)     | postMessage            | API REST                |
-| **Renvoi des interactions**    | Direct (actions)     | postMessage            | API REST                |
-| **Sécurité**                   | Bubble               | À gérer (CORS, tokens) | À gérer (auth, tokens)  |
-| **Scalabilité**                | Bubble               | Bonne                  | Excellente              |
-| **Réutilisabilité**            | Faible               | Bonne                  | Excellente              |
+| Critère                     | Plugin Bubble    | Iframe indépendant     | API REST + Frontend    |
+| --------------------------- | ---------------- | ---------------------- | ---------------------- |
+| **Développement Sankey**    | Limité (Bubble)  | Libre (Cursor)         | Libre (Cursor)         |
+| **Maintenance Sankey**      | Bubble           | Indépendant            | Indépendant            |
+| **Chargement des données**  | Direct (actions) | postMessage            | API REST               |
+| **Renvoi des interactions** | Direct (actions) | postMessage            | API REST               |
+| **Sécurité**                | Bubble           | À gérer (CORS, tokens) | À gérer (auth, tokens) |
+| **Scalabilité**             | Bubble           | Bonne                  | Excellente             |
+| **Réutilisabilité**         | Faible           | Bonne                  | Excellente             |
 
 ---
 
@@ -570,5 +590,3 @@ Bubble.registerWorkflow({
 - Garder le cœur du Sankey dans Cursor pour un développement rapide et sûr.
 
 ---
-
-**N'hésite pas à préciser l'option que tu veux approfondir pour un plan d'action concret !**

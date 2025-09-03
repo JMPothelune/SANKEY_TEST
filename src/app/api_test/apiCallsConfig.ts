@@ -114,7 +114,12 @@ export const bubbleApiCalls = [
         type: 'boolean',
         required: true,
       },
-      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
     ],
   },
   {
@@ -128,7 +133,12 @@ export const bubbleApiCalls = [
         type: 'boolean',
         required: true,
       },
-      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
     ],
   },
   {
@@ -142,8 +152,18 @@ export const bubbleApiCalls = [
         type: 'boolean',
         required: true,
       },
-      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
-      { name: 'json', label: 'JSON', type: 'string', required: true },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
+      {
+        name: 'json',
+        label: 'JSON',
+        type: 'string',
+        required: true,
+      },
     ],
   },
   {
@@ -157,7 +177,12 @@ export const bubbleApiCalls = [
         type: 'boolean',
         required: true,
       },
-      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
     ],
   },
   {
@@ -184,7 +209,12 @@ export const bubbleApiCalls = [
         type: 'boolean',
         required: true,
       },
-      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
     ],
   },
   {
@@ -198,7 +228,44 @@ export const bubbleApiCalls = [
         type: 'boolean',
         required: true,
       },
-      { name: 'id', label: 'Unique Bubble ID', type: 'string', required: true },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
+    ],
+  },
+  {
+    name: 'Get transfos',
+    endpoint: 'transfos',
+    method: 'GET',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+    ],
+  },
+  {
+    name: 'Get 1 transfo',
+    endpoint: 'transfo?id={id}',
+    method: 'POST',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+      {
+        name: 'id',
+        label: 'Unique Bubble ID',
+        type: 'string',
+        required: true,
+      },
     ],
   },
 ];

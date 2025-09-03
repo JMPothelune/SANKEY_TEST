@@ -2,21 +2,22 @@
 
 ### General
 
-[] Préparer i18n
-[] Passer la langue dans le paramètre url
+[x] Préparer i18n
+[x] Passer la langue dans le paramètre url
 
 ### Sankey
 
-[] Affichage tooltip à droite
-[] Standardiser les tooltips
+[x] Affichage tooltip à droite
+[x] Standardiser les tooltips
+[] Pouvoir faire des transfos dynamiques
 [] Search dans dropdown transfo
 [] Pouvoir sauvegarder des lots intermédiaires dans le Sankey
 [] Checker taille d'écran du Sankey
 [] Mettre à jour tech si pas la même version
 [] Ajouter les steps dans le scénario
-[] Coût dans le tooltip pour un noeud
-[] Coût global
-[] isEditable
+[x] Coût dans le tooltip pour un noeud
+[x] Coût global
+[] isEditable Sankey
 [x] Pouvoir ajouter des transfos_techs
 [x] Gérer les titres des noeuds
 [x] Remettre les clés dans le tooltip
