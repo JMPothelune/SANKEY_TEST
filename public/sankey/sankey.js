@@ -3502,13 +3502,39 @@ function createDropdown(button, options, positionOffset = 0) {
 }
 
 // Fonction globale pour calculer les coûts totaux
+/**
+ * Calcule les coûts totaux du scénario
+ * @param {Array} nodes - Nœuds du Sankey
+ * @param {Array} links - Liens du Sankey
+ * @returns {Object} {
+ *   totalCost: number,           // Coût total en €
+ *   totalEnergyCost: number,     // Coût énergie en €
+ *   totalLaborCost: number,      // Coût RH en €
+ *   totalEnergyConsumption: number, // Consommation en kWh
+ *   totalTime: number,           // Temps total RH en heures (⚠️ PAS temps machine)
+ *   nodeCosts: Array            // Détails par nœud
+ * }
+ */
 function calculateCosts(nodes, links) {
   let totalCost = 0;
   let totalEnergyCost = 0;
   let totalLaborCost = 0;
   let totalEnergyConsumption = 0;
-  let totalTime = 0;
+  let totalTimeRH = 0; // ← NOUVEAU : temps total des ressources humaines
   let nodeCosts = [];
+
+  // ← NOUVEAU : Validation des données de base
+  if (!window.teamData || !window.teamData.profils) {
+    console.warn('Aucune donnée de profils RH trouvée dans window.teamData');
+    return {
+      totalCost: 0,
+      totalEnergyCost: 0,
+      totalLaborCost: 0,
+      totalEnergyConsumption: 0,
+      totalTime: 0,
+      nodeCosts: [],
+    };
+  }
 
   // Parcourir tous les nœuds pour trouver les transformations avec tech
   nodes.forEach(node => {
@@ -3545,7 +3571,31 @@ function calculateCosts(nodes, links) {
           totalEnergyCost += costs.cout_energie;
           totalLaborCost += costs.couts_rh;
           totalEnergyConsumption += costs.consommation_totale;
-          totalTime += costs.temps_utile;
+
+          // ← NOUVEAU : Calculer le temps total RH pour cette transformation
+          let tempsRHTransfo = 0;
+          if (
+            lastTransformation.tech.details.profils &&
+            window.teamData.profils
+          ) {
+            // ← NOUVEAU : Vérifier que les profils de la tech existent dans la team
+            const profilsManquants = Object.keys(
+              lastTransformation.tech.details.profils
+            ).filter(profilName => !window.teamData.profils[profilName]);
+            if (profilsManquants.length > 0) {
+              console.warn(
+                `Profils RH manquants dans la team pour la transformation ${node.name}: ${profilsManquants.join(', ')}`
+              );
+            }
+
+            Object.entries(lastTransformation.tech.details.profils).forEach(
+              ([profilName, profilData]) => {
+                const profilTempsUtile = costs.temps_utile * profilData.timeh;
+                tempsRHTransfo += profilTempsUtile;
+              }
+            );
+          }
+          totalTimeRH += tempsRHTransfo;
 
           // Stocker les détails pour l'affichage
           nodeCosts.push({
@@ -3563,7 +3613,7 @@ function calculateCosts(nodes, links) {
     totalEnergyCost,
     totalLaborCost,
     totalEnergyConsumption,
-    totalTime,
+    totalTime: totalTimeRH, // ← MODIFIÉ : retourner le temps RH total
     nodeCosts,
   };
 }
@@ -3583,7 +3633,7 @@ function displayCostsTable(costsData) {
     'mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm';
   tableContainer.style.marginTop = '20px';
 
-  // Formater le temps total
+  // Formater le temps total RH (⚠️ PAS le temps d'utilisation des machines)
   const totalHours = Math.floor(costsData.totalTime);
   const totalMinutes = Math.round((costsData.totalTime - totalHours) * 60);
   let totalTimeFormatted = '';
@@ -3661,7 +3711,7 @@ function displayCostsTable(costsData) {
       </div>
       <div class="bg-yellow-50 p-3 rounded-lg">
         <div class="text-sm text-yellow-600 font-medium">${i18next.t('energyCost')}</div>
-        <div class="text-xl font-bold text-yellow-800">${costsData.totalEnergyCost.toFixed(2)}€</div>
+        <div class="text-xl font-bold text-yellow-800">${costsData.totalEnergyCost.toFixed(4)}€</div>
       </div>
       <div class="bg-gray-50 p-3 rounded-lg">
         <div class="text-sm text-gray-600 font-medium">${i18next.t('electricityConsumption')}</div>
