@@ -1369,6 +1369,36 @@ async function loadDynamicTransformations() {
       });
     });
 
+    // ← NOUVEAU : Charger les détails complets de chaque transformation
+    console.log('Chargement des détails complets des transformations...');
+    const detailedTransformations = [];
+
+    for (const [title, transfo] of Object.entries(data)) {
+      try {
+        const detailedTransfo = await getDetailedTransfo(
+          transfo.bubble_id,
+          params.isLive
+        );
+        if (detailedTransfo) {
+          // Mettre à jour le cache avec les détails complets
+          dynamicTransfosCache.set(transfo.bubble_id, {
+            ...detailedTransfo,
+            title: title,
+          });
+          detailedTransformations.push(detailedTransfo);
+          console.log(`Détails chargés pour ${title}:`, detailedTransfo);
+        }
+      } catch (error) {
+        console.warn(
+          `Erreur lors du chargement des détails pour ${title}:`,
+          error
+        );
+        // Garder la version basique en cache
+      }
+    }
+
+    console.log('Cache mis à jour avec les détails complets');
+
     dynamicTransfosLoaded = true;
     return Array.from(dynamicTransfosCache.values());
   } catch (error) {
@@ -1383,6 +1413,37 @@ async function loadDynamicTransformations() {
 // Fonction pour obtenir une transformation dynamique par son ID
 function getDynamicTransfo(bubbleId) {
   return dynamicTransfosCache.get(bubbleId);
+}
+
+// ← NOUVELLE FONCTION : Obtenir les détails complets d'une transformation
+async function getDetailedTransfo(bubbleId, isLive) {
+  try {
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        endpoint: 'transfo',
+        params: { id: bubbleId, isLive },
+        method: 'POST',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`Détails complets pour ${bubbleId}:`, data);
+    return data;
+  } catch (error) {
+    console.error(
+      `Erreur lors du chargement des détails pour ${bubbleId}:`,
+      error
+    );
+    return null;
+  }
 }
 
 const transformationUtils = {
@@ -1498,7 +1559,183 @@ const transformationUtils = {
       return null;
     }
   },
+
+  // Fonction synchrone pour obtenir les détails depuis le cache uniquement
+  getDynamicTransfoDetailsSync(bubbleId) {
+    if (dynamicTransfosCache.has(bubbleId)) {
+      return dynamicTransfosCache.get(bubbleId);
+    }
+    return null;
+  },
 };
+
+// Fonction pour exécuter les transformations dynamiques
+function executeDynamicTransfo(lot, transfoDetails) {
+  console.log('executeDynamicTransfo appelée avec:', { lot, transfoDetails });
+
+  // ← CORRECTION : Vérifier que transfoDetails et dimensions existent
+  if (!transfoDetails || !transfoDetails.dimensions) {
+    console.error('transfoDetails ou dimensions manquants:', transfoDetails);
+    // Fallback : transformation basique
+    const targetLot = JSON.parse(JSON.stringify(lot));
+    const coProductLot = JSON.parse(JSON.stringify(lot));
+    const yieldPercent = transfoDetails?.yield || 100;
+    targetLot.total = (lot.total * yieldPercent) / 100;
+    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
+    targetLot.title = transfoDetails?.title || 'Transformation dynamique';
+    coProductLot.title = `Co-produit ${transfoDetails?.title || 'dynamique'}`;
+    return { targetLot, coProductLot };
+  }
+
+  // Cloner le lot d'entrée
+  const targetLot = JSON.parse(JSON.stringify(lot));
+  const coProductLot = JSON.parse(JSON.stringify(lot));
+
+  // Identifier la dimension primaire (celle qui a des données)
+  const primaryDimension = Object.entries(transfoDetails.dimensions).find(
+    ([dimName, dimData]) =>
+      (dimData.input && Object.keys(dimData.input).length > 0) ||
+      (dimData.target && Object.keys(dimData.target).length > 0) ||
+      (dimData.coproduct && Object.keys(dimData.coproduct).length > 0)
+  );
+
+  if (!primaryDimension) {
+    console.warn(
+      'Aucune dimension primaire trouvée pour la transformation:',
+      transfoDetails.title
+    );
+    // Fallback : transformation basique
+    const yieldPercent = transfoDetails.yield || 100;
+    targetLot.total = (lot.total * yieldPercent) / 100;
+    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
+    targetLot.title = transfoDetails.title || 'Transformation dynamique';
+    coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
+    return { targetLot, coProductLot };
+  }
+
+  const [dimName, dimData] = primaryDimension;
+  console.log('Dimension primaire identifiée:', dimName, dimData);
+
+  // Appliquer la transformation selon la dimension
+  if (dimName === 'proprete') {
+    // ← LOGIQUE SPÉCIFIQUE POUR LAVAGE
+    return applyPropreteTransformation(
+      lot,
+      transfoDetails,
+      targetLot,
+      coProductLot
+    );
+  } else if (dimName === 'formats') {
+    // ← LOGIQUE POUR EFFILOCHAGE (à implémenter plus tard)
+    return applyFormatsTransformation(
+      lot,
+      transfoDetails,
+      targetLot,
+      coProductLot
+    );
+  } else {
+    // ← AUTRES DIMENSIONS (à implémenter plus tard)
+    console.warn('Dimension non encore implémentée:', dimName);
+    const yieldPercent = transfoDetails.yield || 100;
+    targetLot.total = (lot.total * yieldPercent) / 100;
+    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
+    targetLot.title = transfoDetails.title || 'Transformation dynamique';
+    coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
+    return { targetLot, coProductLot };
+  }
+}
+
+// ← NOUVELLE FONCTION : Transformation spécifique pour la propreté (LAVAGE)
+function applyPropreteTransformation(
+  lot,
+  transfoDetails,
+  targetLot,
+  coProductLot
+) {
+  console.log(
+    'applyPropreteTransformation appelée pour:',
+    transfoDetails.title
+  );
+
+  // ← CORRECTION : Vérifier que proprete existe
+  if (!transfoDetails.dimensions || !transfoDetails.dimensions.proprete) {
+    console.error(
+      'Dimensions ou proprete manquants dans transfoDetails:',
+      transfoDetails
+    );
+    // Fallback : transformation basique
+    const yieldPercent = transfoDetails.yield || 100;
+    targetLot.total = (lot.total * yieldPercent) / 100;
+    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
+    targetLot.title = transfoDetails.title || 'Lavage';
+    coProductLot.title = `Co-produit ${transfoDetails.title || 'Lavage'}`;
+    return { targetLot, coProductLot };
+  }
+
+  const propreteData = transfoDetails.dimensions.proprete;
+  const yieldPercent = transfoDetails.yield || 100;
+
+  // Pour le lavage (yield 100%), tout va dans le lot cible
+  targetLot.total = lot.total;
+  coProductLot.total = 0;
+
+  // Appliquer la transformation de propreté
+  if (propreteData.target && Object.keys(propreteData.target).length > 0) {
+    // Récupérer la clé cible (ex: "Propre")
+    const targetKey = Object.keys(propreteData.target)[0];
+    const targetBubbleId = propreteData.target[targetKey].bubble_id;
+
+    // Concaténer toutes les clés de propreté existantes en une seule
+    const existingPropreteKeys = Object.keys(lot.proprete || {});
+    let totalPropretePercent = 0;
+
+    // Calculer le pourcentage total de propreté existant
+    existingPropreteKeys.forEach(key => {
+      if (
+        lot.proprete[key] &&
+        typeof lot.proprete[key].pourcentage === 'number'
+      ) {
+        totalPropretePercent += lot.proprete[key].pourcentage;
+      }
+    });
+
+    // Créer la nouvelle distribution de propreté
+    targetLot.proprete = {};
+    targetLot.proprete[targetKey] = {
+      pourcentage: 100,
+      bubble_id: targetBubbleId,
+      color: lot.proprete[existingPropreteKeys[0]]?.color || '#000000', // Garder une couleur
+    };
+
+    // Le co-produit n'a pas de propreté (total = 0)
+    coProductLot.proprete = {};
+
+    console.log('Transformation de propreté appliquée:', {
+      original: existingPropreteKeys,
+      target: targetKey,
+      targetBubbleId,
+      targetLotProprete: targetLot.proprete,
+    });
+  }
+
+  // Ajouter les titres
+  targetLot.title = transfoDetails.title || 'Lavage';
+  coProductLot.title = `Co-produit ${transfoDetails.title || 'Lavage'}`;
+
+  return { targetLot, coProductLot };
+}
+
+// ← NOUVELLE FONCTION : Transformation pour les formats (EFFILOCHAGE - à implémenter plus tard)
+function applyFormatsTransformation(
+  lot,
+  transfoDetails,
+  targetLot,
+  coProductLot
+) {
+  // TODO: Implémenter la logique pour l'effilochage
+  console.warn('applyFormatsTransformation pas encore implémentée');
+  return { targetLot, coProductLot };
+}
 
 window.processes = {
   selectByFormat,
@@ -1512,7 +1749,12 @@ window.processes = {
   processLavage,
   processDelissage,
   processSeparation,
+  executeDynamicTransfo, // ← NOUVEAU
 };
 
 window.transformationUtils = transformationUtils;
 window.transformationTypes = transformationTypes;
+
+// ← NOUVEAU : Exposer le cache globalement pour le debug
+window.dynamicTransfosCache = dynamicTransfosCache;
+window.dynamicTransfosLoaded = dynamicTransfosLoaded;

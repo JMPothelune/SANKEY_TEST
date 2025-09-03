@@ -3163,6 +3163,68 @@ function applyScenario(
         result = window.processes['selectByProprete'](resteLot, keys);
       } else if (type === 'selectByPerturbateur') {
         result = window.processes['selectByPerturbateur'](resteLot, keys);
+      } else if (type.startsWith('dynamic_transfo_')) {
+        // ← NOUVEAU : Gestion des transformations dynamiques
+        try {
+          // Extraire l'ID de la transformation depuis le type
+          const bubbleId = type.replace('dynamic_transfo_', '');
+
+          // Récupérer les détails de la transformation depuis le cache (synchrone)
+          console.log('Recherche de la transformation dynamique:', bubbleId);
+          console.log('Cache des transformations:', window.transformationUtils);
+          console.log(
+            'Cache dynamicTransfosCache:',
+            window.dynamicTransfosCache
+          );
+
+          const transfoDetails =
+            window.transformationUtils.getDynamicTransfoDetailsSync(bubbleId);
+          console.log('Détails de la transformation trouvés:', transfoDetails);
+
+          if (!transfoDetails) {
+            console.error(
+              'Cache vide ou transformation non trouvée. Tentative de chargement...'
+            );
+            throw new Error(
+              `Transformation dynamique non trouvée: ${bubbleId}`
+            );
+          }
+
+          // Mettre à jour la version si nécessaire
+          if (transfoDetails.version > (transfo.dynamic_transfo_version || 0)) {
+            transfo.dynamic_transfo_version = transfoDetails.version;
+          }
+
+          // ← NOUVEAU : Ajouter le titre de la transformation
+          transfo.title = transfoDetails.title || 'Transformation dynamique';
+
+          // Appeler la fonction de transformation dynamique (synchrone)
+          result = window.processes['executeDynamicTransfo'](
+            resteLot,
+            transfoDetails
+          );
+        } catch (error) {
+          console.error(
+            "Erreur lors de l'exécution de la transformation dynamique:",
+            error
+          );
+          // Fallback : créer un lot vide en cas d'erreur
+          result = {
+            targetLot: {
+              ...resteLot,
+              total: 0,
+              formats: {},
+              types: {},
+              matieres: {},
+              fibres: {},
+              couleurs: {},
+              perturbateurs: {},
+              proprete: {},
+              qualite: {},
+            },
+            coProductLot: resteLot,
+          };
+        }
       } else if (window.processes && window.processes[type]) {
         const params = { yield: transfo.yield };
         const { targetLot, coProductLot } = window.processes[type](
@@ -3188,9 +3250,20 @@ function applyScenario(
       const nodeId = `${idGenObj.id++}`;
       // On pousse la référence réelle (pas de clone)
       const newTransformations = [...transformations_appliquees, transfo];
-      const nodeName = targetLot.target
-        ? `${type}: ${keys.join(' + ')} → ${targetLot.target}`
-        : `${type}: ${keys.join(' + ')}`;
+      // ← CORRECTION : Gérer le cas où keys est undefined pour les transformations dynamiques
+      let nodeName;
+      if (type.startsWith('dynamic_transfo_')) {
+        // Pour les transformations dynamiques, utiliser le titre de la transformation
+        const transfoTitle = transfo.title || 'Transformation dynamique';
+        nodeName = targetLot.target
+          ? `${transfoTitle} → ${targetLot.target}`
+          : transfoTitle;
+      } else {
+        // Pour les transformations statiques, utiliser keys comme avant
+        nodeName = targetLot.target
+          ? `${type}: ${keys.join(' + ')} → ${targetLot.target}`
+          : `${type}: ${keys.join(' + ')}`;
+      }
       targetLot.id = nodeId;
 
       // On crée d'abord le nœud

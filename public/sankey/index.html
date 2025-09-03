@@ -241,7 +241,7 @@
       }
 
       // Fonction pour lancer le Sankey avec une dimension spécifique
-      function launchSankeyFromUrl(lot, scenario, dimension = null) {
+      async function launchSankeyFromUrl(lot, scenario, dimension = null) {
         const params = getUrlParams();
         const selectedDimension = dimension || params.dimension;
 
@@ -251,6 +251,46 @@
           dimension: selectedDimension,
           availableScenarios: window.scenarios?.length || 0,
         });
+
+        // ← NOUVEAU : Charger les transformations dynamiques AVANT de lancer le Sankey
+        try {
+          console.log('[HTML] Chargement des transformations dynamiques...');
+
+          // Vérifier si window.transformationUtils existe (processes.js chargé)
+          if (
+            window.transformationUtils &&
+            typeof window.transformationUtils.getAvailableTransformations ===
+              'function'
+          ) {
+            await window.transformationUtils.getAvailableTransformations();
+            console.log(
+              '[HTML] Transformations dynamiques chargées avec succès'
+            );
+          } else {
+            console.warn(
+              '[HTML] transformationUtils non disponible, attente du chargement...'
+            );
+            // Attendre que processes.js soit chargé
+            let attempts = 0;
+            while (!window.transformationUtils && attempts < 50) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+              attempts++;
+            }
+            if (window.transformationUtils) {
+              await window.transformationUtils.getAvailableTransformations();
+              console.log(
+                '[HTML] Transformations dynamiques chargées après attente'
+              );
+            } else {
+              console.error('[HTML] Impossible de charger transformationUtils');
+            }
+          }
+        } catch (error) {
+          console.error(
+            '[HTML] Erreur lors du chargement des transformations dynamiques:',
+            error
+          );
+        }
 
         if (typeof runSankey === 'function' && lot && scenario) {
           runSankey({
@@ -337,7 +377,12 @@
                   window.lotType,
                   currentScenario.scenario,
                   newDimension
-                );
+                ).catch(error => {
+                  console.error(
+                    '[HTML] Erreur lors du relancement du Sankey:',
+                    error
+                  );
+                });
               }
             }
           });
@@ -455,7 +500,7 @@
                 );
 
                 loadScenarioFromAPI(scenarioId, params.isLive)
-                  .then(scenario => {
+                  .then(async scenario => {
                     console.log('[HTML] Scénario chargé, lancement du Sankey');
 
                     // Créer la structure window.scenarios attendue par le code
@@ -469,7 +514,7 @@
                     ];
                     window.currentScenarioIdx = 0;
 
-                    launchSankeyFromUrl(lot, scenario, currentDimension);
+                    await launchSankeyFromUrl(lot, scenario, currentDimension);
                   })
                   .catch(error => {
                     console.error(
@@ -498,7 +543,7 @@
                   // Charger le scénario depuis l'API
                   if (params.scenarioId) {
                     loadScenarioFromAPI(params.scenarioId, params.isLive)
-                      .then(scenario => {
+                      .then(async scenario => {
                         // Créer la structure window.scenarios attendue par le code
                         window.scenarios = [
                           {
@@ -510,7 +555,11 @@
                         ];
                         window.currentScenarioIdx = 0;
 
-                        launchSankeyFromUrl(lot, scenario, currentDimension);
+                        await launchSankeyFromUrl(
+                          lot,
+                          scenario,
+                          currentDimension
+                        );
                       })
                       .catch(error => {
                         console.error(
@@ -538,7 +587,7 @@
               // Charger le scénario depuis l'API
               if (params.scenarioId) {
                 loadScenarioFromAPI(params.scenarioId, params.isLive)
-                  .then(scenario => {
+                  .then(async scenario => {
                     // Créer la structure window.scenarios attendue par le code
                     window.scenarios = [
                       {
@@ -550,7 +599,7 @@
                     ];
                     window.currentScenarioIdx = 0;
 
-                    launchSankeyFromUrl(lot, scenario, currentDimension);
+                    await launchSankeyFromUrl(lot, scenario, currentDimension);
                   })
                   .catch(error => {
                     console.error(

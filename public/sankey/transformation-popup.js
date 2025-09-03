@@ -629,15 +629,30 @@ class TransformationPopup {
     };
 
     saveBtn.onclick = () => {
-      // Séparer les IDs et les noms pour la transformation
-      const selectedIds = this.selectedKeys.map(k => k.id);
-      const selectedNames = this.selectedKeys.map(k => k.name);
+      const selectedType = transfoTypeSelect.value;
+      let transformation;
 
-      const transformation = {
-        type: [transfoTypeSelect.value],
-        keys: [selectedIds], // IDs pour les calculs
-        _displayNames: [selectedNames], // Noms pour l'affichage
-      };
+      // ← NOUVEAU : Détecter si c'est une transformation dynamique
+      if (selectedType.startsWith('dynamic_transfo_')) {
+        // C'est une transformation dynamique
+        const bubbleId = selectedType.replace('dynamic_transfo_', '');
+
+        transformation = {
+          type: [selectedType], // Utiliser le type complet (dynamic_transfo_${bubbleId})
+          dynamic_transfo_id: bubbleId,
+          dynamic_transfo_version: null, // Sera mis à jour lors de l'exécution
+        };
+      } else {
+        // ← EXISTANT : Logique pour les transformations statiques
+        const selectedIds = this.selectedKeys.map(k => k.id);
+        const selectedNames = this.selectedKeys.map(k => k.name);
+
+        transformation = {
+          type: [selectedType],
+          keys: [selectedIds], // IDs pour les calculs
+          _displayNames: [selectedNames], // Noms pour l'affichage
+        };
+      }
 
       if (this.currentRef) {
         if (
