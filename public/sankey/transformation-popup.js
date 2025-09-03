@@ -1,5 +1,5 @@
 // Gestionnaire de la popup de transformation
-console.log('[transformation-popup.js] Fichier chargé');
+// Fichier chargé
 class TransformationPopup {
   constructor() {
     this.backdrop = null;
@@ -15,7 +15,7 @@ class TransformationPopup {
   }
 
   show(ref, mode) {
-    console.log('TransformationPopup.show called with:', { ref, mode });
+    // TransformationPopup.show called
     this.currentRef = ref;
     this.mode = mode;
     this.createPopup(ref);
@@ -168,8 +168,32 @@ class TransformationPopup {
     this.backdrop.appendChild(this.modal);
     document.body.appendChild(this.backdrop);
 
+    // Attacher les event listeners de base IMMÉDIATEMENT (fermeture)
+    this.attachBasicEventListeners();
+
     // Charger les transformations et créer la popup complète
     this.loadTransformationsAndCreateCompletePopup(ref, lastType, keys);
+  }
+
+  // Méthode pour attacher les event listeners de base (fermeture uniquement)
+  attachBasicEventListeners() {
+    // Attacher le gestionnaire de clic directement sur le backdrop
+    if (this.backdrop) {
+      this.backdrop.addEventListener('click', e => {
+        // Si on clique sur le backdrop (pas sur la modal), fermer la popup
+        if (e.target === this.backdrop) {
+          this.close();
+        }
+      });
+    }
+
+    // Attacher le bouton Annuler
+    const cancelBtn = this.modal.querySelector('#cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this.close();
+      });
+    }
   }
 
   // Méthode pour METTRE À JOUR la popup existante (au lieu d'en créer une nouvelle)
@@ -598,9 +622,9 @@ class TransformationPopup {
       updateSaveButtonState();
     });
 
-    console.log('Attaching cancel button listener, cancelBtn:', cancelBtn);
+    // Attaching cancel button listener
     cancelBtn.onclick = () => {
-      console.log('Cancel button clicked, calling this.close()');
+      // Cancel button clicked
       this.close();
     };
 
@@ -692,32 +716,8 @@ class TransformationPopup {
       });
     }
 
-    // SUPPRIMER le this.backdrop.onclick
-    // Ajouter un listener global pour fermer la popup si clic hors modal
-    if (this._globalCloseHandler) {
-      document.removeEventListener('mousedown', this._globalCloseHandler);
-    }
-    this._globalCloseHandler = e => {
-      console.log(
-        'Global click handler, target:',
-        e.target,
-        'modal contains:',
-        this.modal?.contains(e.target),
-        'is backdrop:',
-        e.target === this.backdrop
-      );
-      // Ne pas fermer si on clique sur le backdrop ou la modal
-      if (
-        this.modal &&
-        !this.modal.contains(e.target) &&
-        e.target !== this.backdrop
-      ) {
-        console.log('Click outside modal and backdrop, calling this.close()');
-        this.close();
-      }
-    };
-    document.addEventListener('mousedown', this._globalCloseHandler);
-    console.log('Global close handler attached');
+    // COMMENTÉ : Le gestionnaire global est déjà attaché par attachBasicEventListeners
+    // Pas besoin de le refaire ici
 
     // Gestion du dropdown des paramètres (keyInput et keyDropdown)
     if (keyInput && keyDropdown) {
@@ -872,14 +872,9 @@ class TransformationPopup {
   }
 
   close() {
-    console.log(
-      'close() called, this.backdrop:',
-      this.backdrop,
-      'this.modal:',
-      this.modal
-    );
+    // close() called
     if (this.backdrop) {
-      console.log('Removing backdrop and modal');
+      // Removing backdrop and modal
       if (this._dropdownCloseHandler) {
         document.removeEventListener('mousedown', this._dropdownCloseHandler);
         this._dropdownCloseHandler = null;
@@ -888,21 +883,17 @@ class TransformationPopup {
         document.removeEventListener('keydown', this._escapeHandler);
         this._escapeHandler = null;
       }
-      if (this._globalCloseHandler) {
-        document.removeEventListener('mousedown', this._globalCloseHandler);
-        this._globalCloseHandler = null;
-      }
+      // COMMENTÉ : Plus de gestionnaire global, fermeture directe sur backdrop
+      // if (this._globalCloseHandler) {
+      //   document.removeEventListener('mousedown', this._globalCloseHandler);
+      //   this._globalCloseHandler = null;
+      // }
       this.backdrop.remove();
       this.backdrop = null;
       this.modal = null;
-      console.log(
-        'Backdrop and modal removed, this.backdrop:',
-        this.backdrop,
-        'this.modal:',
-        this.modal
-      );
+      // Backdrop and modal removed
     } else {
-      console.log('No backdrop to remove');
+      // No backdrop to remove
     }
   }
 }
@@ -947,7 +938,4 @@ async function chargerDonneesBaseAPI(dimension) {
 window.transformationPopup = new TransformationPopup();
 window.afficherPopupTransfo = (ref, mode) =>
   window.transformationPopup.show(ref, mode);
-console.log(
-  '[transformation-popup.js] Fonction globale définie:',
-  window.afficherPopupTransfo
-);
+// Fonction globale définie
