@@ -40,131 +40,41 @@ class TransformationPopup {
     if (window.transformationTypes && lastType) {
       keyList = window.transformationTypes[lastType].keyList;
     }
+
     // Si keyList existe, charger dynamiquement la liste depuis l'API Bubble
     if (keyList) {
-      // Ne pas créer le DOM du tout, juste faire le fetch
-      chargerDonneesBaseAPI(keyList).then(data => {
-        // Stocker la liste pour la suite
-        keyListData = data;
-        // Recréer la popup avec la vraie liste
-        this.createPopupWithKeyList(ref, keyList, keyListData);
-      });
+      // Charger les données de base ET les transformations dynamiques
+      Promise.all([
+        chargerDonneesBaseAPI(keyList),
+        window.transformationUtils
+          ? window.transformationUtils.getAvailableTransformations()
+          : Promise.resolve([]),
+      ])
+        .then(([baseData, transformations]) => {
+          // Stocker la liste pour la suite
+          keyListData = baseData;
+          // Recréer la popup avec la vraie liste et les transformations dynamiques
+          this.createPopupWithKeyList(
+            ref,
+            keyList,
+            keyListData,
+            transformations
+          );
+        })
+        .catch(error => {
+          console.error('Erreur lors du chargement des données:', error);
+          // Fallback : créer la popup sans keyList
+          this.createPopupWithoutKeyList(ref, lastType, keys);
+        });
       return; // On arrête ici, la suite sera gérée dans createPopupWithKeyList
     }
 
-    // Création du backdrop (transparent comme dans /lots)
-    this.backdrop = document.createElement('div');
-    this.backdrop.className = 'fixed inset-0 z-50';
-    this.backdrop.style.background = 'none';
-
-    // Création de la modal avec ombre prononcée comme dans /lots
-    this.modal = document.createElement('div');
-    this.modal.className =
-      'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
-    this.modal.style.boxShadow =
-      '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
-    this.modal.style.position = 'absolute';
-    this.modal.style.top = '200px';
-    this.modal.style.left = '50%';
-    this.modal.style.transform = 'translateX(-50%)';
-
-    // Génération dynamique des options du select
-    let options = '';
-    if (!lastType) {
-      options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
-    }
-    options += (
-      window.transformationUtils
-        ? window.transformationUtils.getAvailableTransformations()
-        : []
-    )
-      .map(
-        t =>
-          `<option value="${t.value}" ${lastType === t.value ? 'selected' : ''}>${t.label}</option>`
-      )
-      .join('');
-
-    // Label et description de la transformation sélectionnée
-    const currentLabel =
-      lastType && window.transformationUtils
-        ? window.transformationUtils.getTransformationLabel(lastType)
-        : i18next.t('noTransformation');
-    const currentDesc =
-      lastType && window.transformationUtils
-        ? window.transformationUtils.getTransformationDescription(lastType)
-        : '';
-
-    // Pills pour les keys
-    const pills = keys
-      .map(
-        (key, i) =>
-          `<span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2">
-        ${key}
-        <button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${i}">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </span>`
-      )
-      .join('');
-
-    // Input et dropdown pour les keys (affiché seulement si keyList)
-    const keyInputHTML = keyList
-      ? `
-      <div class="relative mt-2">
-        <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-        <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto hidden">${keyOptions}</div>
-      </div>
-    `
-      : '';
-
-    // Adapter le titre et le texte du bouton selon le mode
-    const title =
-      this.mode === 'add'
-        ? i18next.t('addTransformation')
-        : i18next.t('editTransformation');
-    const buttonText =
-      this.mode === 'add' ? i18next.t('create') : i18next.t('save');
-
-    this.modal.innerHTML = `
-      <h3 class="text-lg font-semibold mb-2">${title}</h3>
-      ${
-        this.mode === 'edit' && lastTransfo && lastTransfo._path
-          ? `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(lastTransfo._path)}</div>
-          ${typeof lastTransfo._index === 'number' ? `<div>Index: ${lastTransfo._index}</div>` : ''}
-         </div>`
-          : this.mode === 'add'
-            ? `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(ref.path)}</div>
-         </div>`
-            : ''
-      }
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
-          <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-            ${options}
-          </select>
-          <div id="transfo-description" class="text-xs text-gray-500 mt-1">${currentDesc}</div>
-          <div id="transfo-keys" class="flex flex-wrap mt-2">${pills}</div>
-          ${keyInputHTML}
-        </div>
-      </div>
-      <div class="mt-6 flex justify-end space-x-3">
-        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
-        <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
-      </div>
-    `;
-
-    this.backdrop.appendChild(this.modal);
-    document.body.appendChild(this.backdrop);
-
-    // Attacher les listeners seulement ici, quand le DOM est prêt
-    this.attachEventListeners();
+    // Pas de keyList, créer la popup directement avec loader
+    this.createPopupWithoutKeyList(ref, lastType, keys);
   }
 
   // Nouvelle méthode pour créer la popup avec la keyList chargée
-  createPopupWithKeyList(ref, keyList, keyListData) {
+  createPopupWithKeyList(ref, keyList, keyListData, transformations) {
     // Création du backdrop (transparent comme dans /lots)
     this.backdrop = document.createElement('div');
     this.backdrop.className = 'fixed inset-0 z-50';
@@ -244,16 +154,30 @@ class TransformationPopup {
     if (!lastType) {
       options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
     }
-    options += (
-      window.transformationUtils
-        ? window.transformationUtils.getAvailableTransformations()
-        : []
-    )
-      .map(
-        t =>
-          `<option value="${t.value}" ${lastType === t.value ? 'selected' : ''}>${t.label}</option>`
+
+    // Utiliser directement les transformations passées en paramètre
+    if (transformations && transformations.length > 0) {
+      transformations.forEach(transfo => {
+        if (transfo.isSeparator) {
+          options += `<option value="" disabled>${transfo.label}</option>`;
+        } else {
+          const selected = lastType === transfo.value ? 'selected' : '';
+          options += `<option value="${transfo.value}" ${selected}>${transfo.label}</option>`;
+        }
+      });
+    } else {
+      // Fallback : utiliser les transformations statiques existantes
+      options += (
+        window.transformationUtils
+          ? window.transformationUtils.getAvailableTransformations()
+          : []
       )
-      .join('');
+        .map(
+          t =>
+            `<option value="${t.value}" ${lastType === t.value ? 'selected' : ''}>${t.label}</option>`
+        )
+        .join('');
+    }
 
     // Adapter le titre et le texte du bouton selon le mode
     const title =
@@ -266,10 +190,10 @@ class TransformationPopup {
     this.modal.innerHTML = `
       <h3 class="text-lg font-semibold mb-2">${title}</h3>
       ${
-        this.mode === 'edit' && lastTransfo && lastTransfo._path
+        this.mode === 'edit' && ref.transformation && ref.transformation._path
           ? `<div class="text-xs text-gray-500 mb-4">
-          <div>Path: ${JSON.stringify(lastTransfo._path)}</div>
-          ${typeof lastTransfo._index === 'number' ? `<div>Index: ${lastTransfo._index}</div>` : ''}
+          <div>Path: ${JSON.stringify(ref.transformation._path)}</div>
+          ${typeof ref.transformation._index === 'number' ? `<div>Index: ${ref.transformation._index}</div>` : ''}
          </div>`
           : this.mode === 'add'
             ? `<div class="text-xs text-gray-500 mb-4">
@@ -297,225 +221,184 @@ class TransformationPopup {
     this.backdrop.appendChild(this.modal);
     document.body.appendChild(this.backdrop);
 
-    // Attacher les listeners seulement ici, quand le DOM est complètement prêt
+    // Attacher les listeners directement (plus besoin de charger les transformations)
     this.attachEventListeners();
+  }
 
-    // Ajouter les listeners pour les pills existantes
-    const keysContainer = this.modal.querySelector('#transfo-keys');
-    if (keysContainer) {
-      keysContainer.querySelectorAll('button[data-key-index]').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.preventDefault();
-          e.stopPropagation();
-          const pill = btn.closest('span');
-          if (pill) {
-            const index = parseInt(btn.dataset.keyIndex);
-            // Récupérer selectedKeys depuis attachEventListeners
-            const selectedKeys = this.getSelectedKeys();
-            if (selectedKeys && index >= 0 && index < selectedKeys.length) {
-              selectedKeys.splice(index, 1);
-              pill.remove();
-              // Mettre à jour l'état du bouton
-              const saveBtn = this.modal.querySelector('#save-btn');
-              const transfoTypeSelect =
-                this.modal.querySelector('#transfo-type');
-              if (saveBtn && transfoTypeSelect) {
-                const selectedType = transfoTypeSelect.value;
-                const isDropdownEmpty = !selectedType;
-                const keyList =
-                  window.transformationTypes &&
-                  window.transformationTypes[selectedType] &&
-                  window.transformationTypes[selectedType].keyList;
-                const isRequiredKey =
-                  window.transformationTypes &&
-                  window.transformationTypes[selectedType] &&
-                  window.transformationTypes[selectedType].requiredKey;
-                const hasKeys = this.selectedKeys.length > 0;
-                const isValid =
-                  !isDropdownEmpty && (!keyList || !isRequiredKey || hasKeys);
-                saveBtn.disabled = !isValid;
-                saveBtn.className = isValid
-                  ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
-                  : 'px-4 py-2 bg-gray-400 text-gray-200 rounded cursor-not-allowed';
-              }
-            }
-          }
-        });
+  // Nouvelle méthode pour charger les transformations dans createPopupWithKeyList
+  async loadTransformationsForPopupWithKeyList(
+    ref,
+    lastType,
+    keys,
+    keyList,
+    keyListData,
+    pills,
+    keyInputHTML,
+    currentLabel,
+    currentDesc,
+    transformations
+  ) {
+    try {
+      // Charger les transformations disponibles
+      // const transformations = await window.transformationUtils.getAvailableTransformations(); // This line is now redundant as transformations are passed as an argument
+
+      // Générer les options du select
+      let options = '';
+      if (!lastType) {
+        options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
+      }
+
+      transformations.forEach(transfo => {
+        if (transfo.isSeparator) {
+          options += `<option value="" disabled>${transfo.label}</option>`;
+        } else {
+          const selected = lastType === transfo.value ? 'selected' : '';
+          options += `<option value="${transfo.value}" ${selected}>${transfo.label}</option>`;
+        }
       });
+
+      // Adapter le titre et le texte du bouton selon le mode
+      const title =
+        this.mode === 'add'
+          ? i18next.t('addTransformation')
+          : i18next.t('editTransformation');
+      const buttonText =
+        this.mode === 'add' ? i18next.t('create') : i18next.t('save');
+
+      this.modal.innerHTML = `
+        <h3 class="text-lg font-semibold mb-2">${title}</h3>
+        ${
+          this.mode === 'edit' && ref.transformation && ref.transformation._path
+            ? `<div class="text-xs text-gray-500 mb-4">
+            <div>Path: ${JSON.stringify(ref.transformation._path)}</div>
+            ${typeof ref.transformation._index === 'number' ? `<div>Index: ${ref.transformation._index}</div>` : ''}
+           </div>`
+            : this.mode === 'add'
+              ? `<div class="text-xs text-gray-500 mb-4">
+            <div>Path: ${JSON.stringify(ref.path)}</div>
+           </div>`
+              : ''
+        }
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
+            <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+              ${options}
+            </select>
+            <div id="transfo-description" class="text-xs text-gray-500 mt-1">${currentDesc}</div>
+            <div id="transfo-keys" class="flex flex-wrap mt-2">${pills}</div>
+            ${keyInputHTML}
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
+          <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
+        </div>
+      `;
+
+      // Attacher les listeners
+      this.attachEventListeners();
+    } catch (error) {
+      console.error('Erreur lors du chargement des transformations:', error);
+
+      // Afficher un message d'erreur
+      this.modal.innerHTML = `
+        <h3 class="text-lg font-semibold mb-2">Erreur</h3>
+        <div class="text-red-600 text-sm mb-4">
+          Erreur lors du chargement des transformations. Veuillez réessayer.
+        </div>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
+        </div>
+      `;
+
+      // Attacher seulement le listener pour le bouton cancel
+      const cancelBtn = this.modal.querySelector('#cancel-btn');
+      if (cancelBtn) {
+        cancelBtn.onclick = () => this.hide();
+      }
     }
+  }
 
-    // Ajouter les listeners pour le dropdown existant si keyListData est disponible
-    if (keyListData && keyList) {
-      const keyInput = this.modal.querySelector('#key-input');
-      const keyDropdown = this.modal.querySelector('#key-dropdown');
-      const keysContainer = this.modal.querySelector('#transfo-keys');
+  // Nouvelle méthode pour charger les transformations et mettre à jour la popup
+  async loadTransformationsAndUpdatePopup(ref, lastType, keys) {
+    try {
+      // Charger les transformations disponibles
+      const transformations =
+        await window.transformationUtils.getAvailableTransformations();
 
-      if (keyInput && keyDropdown && keysContainer) {
-        // Récupérer les keys sélectionnées existantes
-        if (this.currentRef && this.currentRef.transformation) {
-          const lastTransfo = this.currentRef.transformation;
-          const keys =
-            lastTransfo && lastTransfo.keys && lastTransfo.keys[0]
-              ? lastTransfo.keys[0]
-              : [];
-          const displayNames =
-            lastTransfo && lastTransfo._displayNames
-              ? lastTransfo._displayNames[0]
-              : keys;
+      // Générer les options du select
+      let options = '';
+      if (!lastType) {
+        options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
+      }
 
-          if (displayNames && displayNames.length > 0) {
-            this.selectedKeys = displayNames.map((name, index) => {
-              if (lastTransfo && lastTransfo._displayNames && keys[index]) {
-                return { name, id: keys[index] };
-              } else {
-                return { name, id: name };
-              }
-            });
-          }
+      transformations.forEach(transfo => {
+        if (transfo.isSeparator) {
+          options += `<option value="" disabled>${transfo.label}</option>`;
+        } else {
+          const selected = lastType === transfo.value ? 'selected' : '';
+          options += `<option value="${transfo.value}" ${selected}>${transfo.label}</option>`;
         }
+      });
 
-        // Fonction pour mettre à jour l'état du bouton de sauvegarde
-        const updateSaveButtonState = () => {
-          const saveBtn = this.modal.querySelector('#save-btn');
-          const transfoTypeSelect = this.modal.querySelector('#transfo-type');
-          const selectedType = transfoTypeSelect.value;
-          const isDropdownEmpty = !selectedType;
-          const keyList =
-            window.transformationTypes &&
-            window.transformationTypes[selectedType] &&
-            window.transformationTypes[selectedType].keyList;
-          const isRequiredKey =
-            window.transformationTypes &&
-            window.transformationTypes[selectedType] &&
-            window.transformationTypes[selectedType].requiredKey;
-          const hasKeys = this.selectedKeys.length > 0;
-          const isValid =
-            !isDropdownEmpty && (!keyList || !isRequiredKey || hasKeys);
-          saveBtn.disabled = !isValid;
-          saveBtn.className = isValid
-            ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
-            : 'px-4 py-2 bg-gray-400 text-gray-200 rounded cursor-not-allowed';
-        };
+      // Label et description de la transformation sélectionnée
+      const currentLabel =
+        lastType && window.transformationUtils
+          ? window.transformationUtils.getTransformationLabel(lastType)
+          : i18next.t('noTransformation');
+      const currentDesc =
+        lastType && window.transformationUtils
+          ? window.transformationUtils.getTransformationDescription(lastType)
+          : '';
 
-        // Listener pour le dropdown
-        keyDropdown.addEventListener('mousedown', e => {
-          if (e.target && e.target.dataset.name) {
-            const name = e.target.dataset.name;
-            const id = e.target.dataset.id;
-            if (!this.selectedKeys.some(k => k.name === name && k.id === id)) {
-              this.selectedKeys.push({ name, id });
-              // Ajouter le pill visuellement
-              const pill = document.createElement('span');
-              pill.innerHTML = `${name}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${this.selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
-              pill.className =
-                'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
-              keysContainer.appendChild(pill);
-              // Ajout du listener pour suppression
-              pill
-                .querySelector('button[data-key-index]')
-                .addEventListener('click', ev => {
-                  ev.preventDefault();
-                  ev.stopPropagation();
-                  const button = ev.target.closest('button');
-                  if (button) {
-                    const index = parseInt(button.dataset.keyIndex);
-                    if (index >= 0 && index < this.selectedKeys.length) {
-                      this.selectedKeys.splice(index, 1);
-                      pill.remove();
-                      updateSaveButtonState();
-                    }
-                  }
-                });
-              updateSaveButtonState();
-            }
-            keyDropdown.classList.add('hidden');
-            keyInput.value = '';
-          }
-        });
+      // Pills pour les keys
+      const pills = keys
+        .map(
+          (key, i) =>
+            `<span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2">
+          ${key}
+          <button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${i}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </span>`
+        )
+        .join('');
 
-        // Listener pour l'input
-        keyInput.addEventListener('focus', () => {
-          const showFilteredOptions = (searchValue = '') => {
-            const allKeys = Object.entries(keyListData || {});
-            const filtered = allKeys.filter(
-              ([name, itemData]) =>
-                name &&
-                name.toLowerCase().includes(searchValue.toLowerCase()) &&
-                !this.selectedKeys.some(
-                  k => k.name === name && k.id === itemData.bubble_id
-                )
-            );
-            if (filtered.length > 0) {
-              keyDropdown.innerHTML = filtered
-                .map(
-                  ([name, itemData]) =>
-                    `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${name}</div>`
-                )
-                .join('');
-              keyDropdown.classList.remove('hidden');
-            } else {
-              keyDropdown.innerHTML = '';
-              keyDropdown.classList.add('hidden');
-            }
-          };
-          showFilteredOptions();
-        });
+      // Mettre à jour le contenu de la popup
+      const loadingDiv =
+        this.modal.querySelector('.animate-spin').parentElement.parentElement;
+      if (loadingDiv) {
+        loadingDiv.innerHTML = `
+          <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
+          <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+            ${options}
+          </select>
+          <div id="transfo-description" class="text-xs text-gray-500 mt-1">${currentDesc}</div>
+          <div id="transfo-keys" class="flex flex-wrap mt-2">${pills}</div>
+        `;
+      }
 
-        keyInput.addEventListener('input', e => {
-          const showFilteredOptions = (searchValue = '') => {
-            const allKeys = Object.entries(keyListData || {});
-            const filtered = allKeys.filter(
-              ([name, itemData]) =>
-                name &&
-                name.toLowerCase().includes(searchValue.toLowerCase()) &&
-                !this.selectedKeys.some(
-                  k => k.name === name && k.id === itemData.bubble_id
-                )
-            );
-            if (filtered.length > 0) {
-              keyDropdown.innerHTML = filtered
-                .map(
-                  ([name, itemData]) =>
-                    `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${name}</div>`
-                )
-                .join('');
-              keyDropdown.classList.remove('hidden');
-            } else {
-              keyDropdown.innerHTML = '';
-              keyDropdown.classList.add('hidden');
-            }
-          };
-          showFilteredOptions(e.target.value.trim());
-        });
+      // Activer le bouton de sauvegarde
+      const saveBtn = this.modal.querySelector('#save-btn');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+      }
 
-        // Fermer le dropdown si on clique ailleurs
-        if (this._dropdownCloseHandler) {
-          document.removeEventListener('mousedown', this._dropdownCloseHandler);
-        }
-        this._dropdownCloseHandler = e => {
-          if (keyInput && keyDropdown) {
-            if (
-              !keyInput.contains(e.target) &&
-              !keyDropdown.contains(e.target)
-            ) {
-              keyDropdown.classList.add('hidden');
-              keyInput.value = '';
-            }
-          }
-        };
-        document.addEventListener('mousedown', this._dropdownCloseHandler);
+      // Attacher les listeners
+      this.attachEventListeners();
+    } catch (error) {
+      console.error('Erreur lors du chargement des transformations:', error);
 
-        // Ajouter un listener pour fermer le dropdown avec Escape
-        if (this._escapeHandler) {
-          document.removeEventListener('keydown', this._escapeHandler);
-        }
-        this._escapeHandler = e => {
-          if (e.key === 'Escape' && keyDropdown) {
-            keyDropdown.classList.add('hidden');
-            keyInput.value = '';
-          }
-        };
-        document.addEventListener('keydown', this._escapeHandler);
+      // Afficher un message d'erreur
+      const loadingDiv =
+        this.modal.querySelector('.animate-spin').parentElement.parentElement;
+      if (loadingDiv) {
+        loadingDiv.innerHTML = `
+          <div class="text-red-600 text-sm">
+            Erreur lors du chargement des transformations. Veuillez réessayer.
+          </div>
+        `;
       }
     }
   }
@@ -693,6 +576,157 @@ class TransformationPopup {
       }
     };
     document.addEventListener('mousedown', this._globalCloseHandler);
+
+    // Gestion du dropdown des paramètres (keyInput et keyDropdown)
+    if (keyInput && keyDropdown) {
+      // Récupérer les données de base pour ce type de transformation
+      const selectedType = transfoTypeSelect.value;
+      const keyList =
+        window.transformationTypes &&
+        window.transformationTypes[selectedType] &&
+        window.transformationTypes[selectedType].keyList;
+
+      if (keyList) {
+        // Charger les données de base si pas encore fait
+        chargerDonneesBaseAPI(keyList)
+          .then(keyListData => {
+            // Fonction pour récupérer les clés déjà utilisées par cette transformation spécifique
+            const getUsedKeysForThisTransformation = () => {
+              const usedKeys = new Set();
+
+              // Dans les deux modes (add et edit), masquer uniquement les clés de cette transformation
+              if (this.currentRef && this.currentRef.transformation) {
+                // Mode edit : transformation existante
+                const existingTransfo = this.currentRef.transformation;
+                if (
+                  existingTransfo.keys &&
+                  Array.isArray(existingTransfo.keys[0])
+                ) {
+                  existingTransfo.keys[0].forEach(key => {
+                    if (
+                      key &&
+                      typeof key === 'string' &&
+                      /^\d+x\d+$/.test(key)
+                    ) {
+                      usedKeys.add(key);
+                    }
+                  });
+                }
+              }
+
+              return usedKeys;
+            };
+
+            // Fonction pour afficher les options filtrées
+            const showFilteredOptions = (searchValue = '') => {
+              const allKeys = Object.entries(keyListData || {});
+              const usedKeysForThisTransfo = getUsedKeysForThisTransformation();
+
+              const filtered = allKeys.filter(
+                ([name, itemData]) =>
+                  name &&
+                  name.toLowerCase().includes(searchValue.toLowerCase()) &&
+                  // Masquer les clés déjà sélectionnées dans cette popup
+                  !this.selectedKeys.some(
+                    k => k.name === name && k.id === itemData.bubble_id
+                  ) &&
+                  // Masquer uniquement les clés déjà utilisées par cette transformation
+                  !usedKeysForThisTransfo.has(itemData.bubble_id)
+              );
+
+              if (filtered.length > 0) {
+                keyDropdown.innerHTML = filtered
+                  .map(
+                    ([name, itemData]) =>
+                      `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${name}</div>`
+                  )
+                  .join('');
+                keyDropdown.classList.remove('hidden');
+              } else {
+                keyDropdown.innerHTML = '';
+                keyDropdown.classList.add('hidden');
+              }
+            };
+
+            // Listener pour le focus sur l'input
+            keyInput.addEventListener('focus', () => {
+              showFilteredOptions();
+            });
+
+            // Listener pour la saisie
+            keyInput.addEventListener('input', e => {
+              showFilteredOptions(e.target.value.trim());
+            });
+
+            // Listener pour la sélection d'une option
+            keyDropdown.addEventListener('mousedown', e => {
+              if (e.target && e.target.dataset.name) {
+                const name = e.target.dataset.name;
+                const id = e.target.dataset.id;
+
+                if (
+                  !this.selectedKeys.some(k => k.name === name && k.id === id)
+                ) {
+                  this.selectedKeys.push({ name, id });
+
+                  // Ajouter le pill visuellement
+                  const pill = document.createElement('span');
+                  pill.innerHTML = `${name}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${this.selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+                  pill.className =
+                    'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
+
+                  if (keysContainer) {
+                    keysContainer.appendChild(pill);
+                  }
+
+                  updateSaveButtonState();
+                }
+
+                keyDropdown.classList.add('hidden');
+                keyInput.value = '';
+              }
+            });
+
+            // Fermer le dropdown si on clique ailleurs
+            if (this._dropdownCloseHandler) {
+              document.removeEventListener(
+                'mousedown',
+                this._dropdownCloseHandler
+              );
+            }
+            this._dropdownCloseHandler = e => {
+              if (keyInput && keyDropdown) {
+                if (
+                  !keyInput.contains(e.target) &&
+                  !keyDropdown.contains(e.target)
+                ) {
+                  keyDropdown.classList.add('hidden');
+                  keyInput.value = '';
+                }
+              }
+            };
+            document.addEventListener('mousedown', this._dropdownCloseHandler);
+
+            // Fermer le dropdown avec Escape
+            if (this._escapeHandler) {
+              document.removeEventListener('keydown', this._escapeHandler);
+            }
+            this._escapeHandler = e => {
+              if (e.key === 'Escape' && keyDropdown) {
+                keyDropdown.classList.add('hidden');
+                keyInput.value = '';
+              }
+            };
+            document.addEventListener('keydown', this._escapeHandler);
+          })
+          .catch(error => {
+            console.error(
+              'Erreur lors du chargement des données de base:',
+              error
+            );
+          });
+      }
+    }
   }
 
   close() {

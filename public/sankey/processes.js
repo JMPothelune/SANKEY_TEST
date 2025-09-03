@@ -1325,19 +1325,178 @@ const transformationTypes = {
   },
 };
 
+// Cache pour les transformations dynamiques
+let dynamicTransfosCache = new Map();
+let dynamicTransfosLoaded = false;
+
+// Fonction pour charger les transformations dynamiques depuis l'API Bubble
+async function loadDynamicTransformations() {
+  try {
+    const params = getUrlParams();
+    const isLive = params.isLive === 'yes';
+
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        endpoint: 'transfos',
+        params: { isLive },
+        method: 'GET',
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(
+        'Impossible de charger les transformations dynamiques:',
+        response.status
+      );
+      return [];
+    }
+
+    const data = await response.json();
+    console.log('Transformations dynamiques chargées:', data);
+
+    // Vider le cache
+    dynamicTransfosCache.clear();
+
+    // Mettre en cache les transformations
+    Object.entries(data).forEach(([title, transfo]) => {
+      dynamicTransfosCache.set(transfo.bubble_id, {
+        ...transfo,
+        title: title,
+      });
+    });
+
+    dynamicTransfosLoaded = true;
+    return Array.from(dynamicTransfosCache.values());
+  } catch (error) {
+    console.warn(
+      'Erreur lors du chargement des transformations dynamiques:',
+      error
+    );
+    return [];
+  }
+}
+
+// Fonction pour obtenir une transformation dynamique par son ID
+function getDynamicTransfo(bubbleId) {
+  return dynamicTransfosCache.get(bubbleId);
+}
+
 const transformationUtils = {
   getTransformationLabel(type) {
-    return transformationTypes[type]?.label || type;
+    // Vérifier d'abord les transformations statiques
+    if (transformationTypes[type]) {
+      return transformationTypes[type].label;
+    }
+
+    // Vérifier les transformations dynamiques
+    if (type.startsWith('dynamic_transfo_')) {
+      const bubbleId = type.replace('dynamic_transfo_', '');
+      const transfo = getDynamicTransfo(bubbleId);
+      return transfo ? transfo.title : type;
+    }
+
+    return type;
   },
+
   getTransformationDescription(type) {
-    return transformationTypes[type]?.description || '';
+    // Vérifier d'abord les transformations statiques
+    if (transformationTypes[type]) {
+      return transformationTypes[type].description;
+    }
+
+    // Vérifier les transformations dynamiques
+    if (type.startsWith('dynamic_transfo_')) {
+      const bubbleId = type.replace('dynamic_transfo_', '');
+      const transfo = getDynamicTransfo(bubbleId);
+      return transfo ? `Transformation dynamique: ${transfo.step}` : '';
+    }
+
+    return '';
   },
-  getAvailableTransformations() {
-    return Object.entries(transformationTypes).map(([value, info]) => ({
-      value,
-      label: info.label,
-      description: info.description,
+
+  async getAvailableTransformations() {
+    // Transformations statiques
+    const staticTransformations = Object.entries(transformationTypes).map(
+      ([value, info]) => ({
+        value,
+        label: info.label,
+        description: info.description,
+        isStatic: true,
+      })
+    );
+
+    // Charger les transformations dynamiques si pas encore fait
+    if (!dynamicTransfosLoaded) {
+      await loadDynamicTransformations();
+    }
+
+    // Transformations dynamiques
+    const dynamicTransformations = Array.from(
+      dynamicTransfosCache.values()
+    ).map(transfo => ({
+      value: `dynamic_transfo_${transfo.bubble_id}`,
+      label: transfo.title,
+      description: `Transformation dynamique: ${transfo.step}`,
+      isDynamic: true,
+      bubbleId: transfo.bubble_id,
+      version: transfo.version,
     }));
+
+    // Retourner avec séparateur
+    return [
+      ...staticTransformations,
+      {
+        value: 'separator',
+        label: '--- Transformations dynamiques ---',
+        isSeparator: true,
+      },
+      ...dynamicTransformations,
+    ];
+  },
+
+  // Fonction pour obtenir les détails d'une transformation dynamique
+  async getDynamicTransfoDetails(bubbleId) {
+    if (dynamicTransfosCache.has(bubbleId)) {
+      return dynamicTransfosCache.get(bubbleId);
+    }
+
+    try {
+      const params = getUrlParams();
+      const isLive = params.isLive === 'yes';
+
+      const response = await fetch('/api/bubble', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: 'transfo',
+          params: { id: bubbleId, isLive },
+          method: 'POST',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Mettre à jour le cache
+      dynamicTransfosCache.set(bubbleId, data);
+
+      return data;
+    } catch (error) {
+      console.error(
+        'Erreur lors du chargement des détails de la transformation:',
+        error
+      );
+      return null;
+    }
   },
 };
 
