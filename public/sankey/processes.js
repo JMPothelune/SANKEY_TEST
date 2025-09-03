@@ -852,403 +852,6 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
   return { targetLot, coProductLot };
 }
 
-// Les processes
-
-function processLavage(lot, keys = [], params = {}) {
-  // params.yield = rendement (par défaut 1)
-  const yieldPct = params.yield !== undefined ? params.yield : 1;
-  const newLot = JSON.parse(JSON.stringify(lot));
-  newLot.proprete = { propre: 100 };
-  newLot.total = lot.total * yieldPct;
-  // SUPPRIMER le titre si présent
-  delete newLot.titre;
-  // Pas de coproduit si yield = 1
-  let coProductLot = null;
-  if (yieldPct < 1) {
-    coProductLot = JSON.parse(JSON.stringify(lot));
-    coProductLot.total = lot.total * (1 - yieldPct);
-    delete coProductLot.titre;
-  }
-  return { targetLot: newLot, coProductLot };
-}
-
-function processDelissage(lot, keys = [], params = {}) {
-  const yieldPct = params.yield !== undefined ? params.yield : 0.9;
-  const total = lot.total || 0;
-
-  // Fonction utilitaire pour fusionner les répartitions pondérées
-  function mergeDistrib(lot, mass) {
-    const matieres = {};
-    const fibres = {};
-    const couleurs = {};
-    let totalMatiereMass = 0;
-    let totalCouleurMass = 0;
-
-    // Stockage des couleurs pour les formats et types
-    const formatColors = {};
-    const typeColors = {};
-    const matiereColors = {};
-    const fibreColors = {};
-
-    // Parcours tous les formats/types/matières/couleurs
-    Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
-      const formatMass = mass * (formatObj.pourcentage / 100);
-
-      // Récupérer la couleur du format
-      if (formatObj.color) {
-        formatColors[formatKey] = formatObj.color;
-      }
-
-      Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
-        const typeMass = formatMass * (typeObj.pourcentage / 100);
-
-        // Récupérer la couleur du type
-        if (typeObj.color) {
-          typeColors[typeKey] = typeObj.color;
-        }
-
-        // Matières
-        Object.entries(typeObj.matieres || {}).forEach(
-          ([matiereKey, matiereObj]) => {
-            const matiereMass = typeMass * (matiereObj.pourcentage / 100);
-            matieres[matiereKey] = (matieres[matiereKey] || 0) + matiereMass;
-            totalMatiereMass += matiereMass;
-
-            // Récupérer la couleur de la matière
-            if (matiereObj.color) {
-              matiereColors[matiereKey] = matiereObj.color;
-            }
-
-            // Fibres
-            Object.entries(matiereObj.fibres || {}).forEach(
-              ([fibreKey, fibreObj]) => {
-                const pctFibre =
-                  typeof fibreObj === 'object' && fibreObj !== null
-                    ? fibreObj.pourcentage !== undefined
-                      ? fibreObj.pourcentage
-                      : fibreObj
-                    : fibreObj;
-                const fibreMass = matiereMass * (pctFibre / 100);
-                if (!fibres[matiereKey]) fibres[matiereKey] = {};
-                fibres[matiereKey][fibreKey] =
-                  (fibres[matiereKey][fibreKey] || 0) + fibreMass;
-
-                // Récupérer la couleur de la fibre
-                if (fibreObj && fibreObj.color) {
-                  if (!fibreColors[matiereKey]) fibreColors[matiereKey] = {};
-                  fibreColors[matiereKey][fibreKey] = fibreObj.color;
-                }
-              }
-            );
-          }
-        );
-        // Couleurs
-        Object.entries(typeObj.couleurs || {}).forEach(
-          ([couleurKey, couleurObj]) => {
-            const couleurPct =
-              typeof couleurObj === 'object' && couleurObj !== null
-                ? couleurObj.pourcentage !== undefined
-                  ? couleurObj.pourcentage
-                  : couleurObj
-                : couleurObj;
-            const couleurMass = typeMass * (couleurPct / 100);
-            couleurs[couleurKey] = (couleurs[couleurKey] || 0) + couleurMass;
-            totalCouleurMass += couleurMass;
-          }
-        );
-      });
-    });
-
-    // Normalisation en pourcentages
-    const matieresPct = {};
-    Object.entries(matieres).forEach(([k, v]) => {
-      matieresPct[k] = totalMatiereMass > 0 ? (v / totalMatiereMass) * 100 : 0;
-    });
-
-    // Fibres imbriquées dans chaque matière avec couleurs
-    const fibresPct = {};
-    Object.entries(fibres).forEach(([matiereKey, fibresObj]) => {
-      const matiereMass = matieres[matiereKey] || 0;
-      fibresPct[matiereKey] = {};
-      Object.entries(fibresObj).forEach(([fibreKey, fibreMass]) => {
-        fibresPct[matiereKey][fibreKey] = {
-          pourcentage: matiereMass > 0 ? (fibreMass / matiereMass) * 100 : 0,
-        };
-        // Ajouter la couleur de la fibre si disponible
-        if (fibreColors[matiereKey] && fibreColors[matiereKey][fibreKey]) {
-          fibresPct[matiereKey][fibreKey].color =
-            fibreColors[matiereKey][fibreKey];
-        }
-      });
-    });
-
-    // Couleurs imbriquées avec color
-    const couleursPct = {};
-    Object.entries(couleurs).forEach(([k, v]) => {
-      // Chercher la couleur dans le lot d'origine
-      let color = null;
-      Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
-        Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
-          if (
-            typeObj.couleurs &&
-            typeObj.couleurs[k] &&
-            typeObj.couleurs[k].color
-          )
-            color = typeObj.couleurs[k].color;
-        });
-      });
-      couleursPct[k] = {
-        pourcentage: totalCouleurMass > 0 ? (v / totalCouleurMass) * 100 : 0,
-      };
-      if (color) couleursPct[k].color = color;
-    });
-
-    return {
-      matieresPct,
-      fibresPct,
-      couleursPct,
-      formatColors,
-      typeColors,
-      matiereColors,
-    };
-  }
-
-  // Fusion pondérée de la répartition d'origine
-  const {
-    matieresPct,
-    fibresPct,
-    couleursPct,
-    formatColors,
-    typeColors,
-    matiereColors,
-  } = mergeDistrib(lot, total);
-
-  // Création du lot principal (morceaux de tissu)
-  const mainLot = JSON.parse(JSON.stringify(lot));
-  mainLot.total = total * yieldPct;
-  mainLot.formats = {
-    tissu: {
-      pourcentage: 100,
-      color: '#8B4513', // Couleur marron pour le tissu
-      types: {
-        'morceaux de tissu': {
-          pourcentage: 100,
-          color: '#D2691E', // Couleur orange-marron pour les morceaux
-          matieres: {},
-          couleurs: {},
-        },
-      },
-    },
-  };
-
-  // Ajouter les couleurs pour le format et le type (si on a des couleurs d'origine)
-  if (formatColors['tissu']) {
-    mainLot.formats['tissu'].color = formatColors['tissu'];
-  }
-  if (typeColors['morceaux de tissu']) {
-    mainLot.formats['tissu'].types['morceaux de tissu'].color =
-      typeColors['morceaux de tissu'];
-  }
-
-  // Applique la répartition fusionnée
-  Object.entries(matieresPct).forEach(([matiere, pct]) => {
-    mainLot.formats['tissu'].types['morceaux de tissu'].matieres[matiere] = {
-      pourcentage: pct,
-      fibres: fibresPct[matiere] || {},
-    };
-    // Ajouter la couleur de la matière si disponible
-    if (matiereColors[matiere]) {
-      mainLot.formats['tissu'].types['morceaux de tissu'].matieres[
-        matiere
-      ].color = matiereColors[matiere];
-    }
-  });
-  mainLot.formats['tissu'].types['morceaux de tissu'].couleurs = couleursPct;
-
-  // Création du coproduit (points durs)
-  let coProductLot = null;
-  if (yieldPct < 1) {
-    coProductLot = JSON.parse(JSON.stringify(lot));
-    coProductLot.total = total * (1 - yieldPct);
-    coProductLot.formats = {
-      tissu: {
-        pourcentage: 100,
-        color: '#8B4513', // Couleur marron pour le tissu
-        types: {
-          'points durs': {
-            pourcentage: 100,
-            color: '#A0522D', // Couleur marron plus foncé pour les points durs
-            matieres: {},
-            couleurs: {},
-          },
-        },
-      },
-    };
-
-    // Ajouter les couleurs pour le format et le type du coproduit (si on a des couleurs d'origine)
-    if (formatColors['tissu']) {
-      coProductLot.formats['tissu'].color = formatColors['tissu'];
-    }
-    if (typeColors['points durs']) {
-      coProductLot.formats['tissu'].types['points durs'].color =
-        typeColors['points durs'];
-    }
-
-    Object.entries(matieresPct).forEach(([matiere, pct]) => {
-      coProductLot.formats['tissu'].types['points durs'].matieres[matiere] = {
-        pourcentage: pct,
-        fibres: fibresPct[matiere] || {},
-      };
-      // Ajouter la couleur de la matière si disponible
-      if (matiereColors[matiere]) {
-        coProductLot.formats['tissu'].types['points durs'].matieres[
-          matiere
-        ].color = matiereColors[matiere];
-      }
-    });
-    coProductLot.formats['tissu'].types['points durs'].couleurs = couleursPct;
-  }
-
-  delete mainLot.titre;
-  if (coProductLot) delete coProductLot.titre;
-
-  return { targetLot: mainLot, coProductLot };
-}
-
-function processSeparation(lot, keys = [], params = {}) {
-  const total = lot.total || 0;
-  const fibreMasses = {};
-  const fibreColors = {};
-
-  console.log("[processSeparation] Lot d'entrée:", lot);
-
-  // Parcourir tous les formats et types pour agréger les fibres
-  Object.entries(lot.formats || {}).forEach(([formatKey, formatObj]) => {
-    Object.entries(formatObj.types || {}).forEach(([typeKey, typeObj]) => {
-      const typeMass =
-        total * (formatObj.pourcentage / 100) * (typeObj.pourcentage / 100);
-
-      Object.entries(typeObj.matieres || {}).forEach(
-        ([matiereKey, matiereObj]) => {
-          const matiereMass = typeMass * (matiereObj.pourcentage / 100);
-
-          Object.entries(matiereObj.fibres || {}).forEach(
-            ([fibreKey, fibreObj]) => {
-              const fibrePct =
-                typeof fibreObj === 'object' && fibreObj !== null
-                  ? fibreObj.pourcentage !== undefined
-                    ? fibreObj.pourcentage
-                    : fibreObj
-                  : fibreObj;
-
-              const fibreMass = matiereMass * (fibrePct / 100);
-
-              // Agréger les masses par fibre
-              fibreMasses[fibreKey] = (fibreMasses[fibreKey] || 0) + fibreMass;
-
-              // Récupérer la couleur de la fibre si disponible
-              if (!fibreColors[fibreKey] && fibreObj && fibreObj.color) {
-                fibreColors[fibreKey] = fibreObj.color;
-              }
-            }
-          );
-        }
-      );
-    });
-  });
-
-  console.log('[processSeparation] Fibres trouvées:', fibreMasses);
-
-  // Vérifier qu'on a exactement 2 fibres
-  const fibreKeys = Object.keys(fibreMasses);
-  if (fibreKeys.length !== 2) {
-    console.warn(
-      '[processSeparation] Nombre de fibres incorrect:',
-      fibreKeys.length,
-      'fibres trouvées:',
-      fibreKeys
-    );
-    // Retourner le lot original comme targetLot, pas de coproduit
-    return {
-      targetLot: JSON.parse(JSON.stringify(lot)),
-      coProductLot: null,
-    };
-  }
-
-  // Créer les deux lots de sortie
-  const [fibre1, fibre2] = fibreKeys;
-  const mass1 = fibreMasses[fibre1];
-  const mass2 = fibreMasses[fibre2];
-
-  // Lot 1 - Première fibre
-  const lot1 = {
-    total: mass1,
-    formats: {
-      'fibre en vrac': {
-        pourcentage: 100,
-        types: {
-          'fibre séparée': {
-            pourcentage: 100,
-            matieres: {
-              [fibre1]: {
-                pourcentage: 100,
-                fibres: { [fibre1]: 100 },
-              },
-            },
-            couleurs: {},
-          },
-        },
-      },
-    },
-    qualite: JSON.parse(JSON.stringify(lot.qualite || {})),
-    proprete: JSON.parse(JSON.stringify(lot.proprete || {})),
-    titre: fibre1,
-  };
-
-  // Ajouter la couleur si disponible
-  if (fibreColors[fibre1]) {
-    lot1.formats['fibre en vrac'].types['fibre séparée'].matieres[
-      fibre1
-    ].color = fibreColors[fibre1];
-  }
-
-  // Lot 2 - Deuxième fibre
-  const lot2 = {
-    total: mass2,
-    formats: {
-      'fibre en vrac': {
-        pourcentage: 100,
-        types: {
-          'fibre séparée': {
-            pourcentage: 100,
-            matieres: {
-              [fibre2]: {
-                pourcentage: 100,
-                fibres: { [fibre2]: 100 },
-              },
-            },
-            couleurs: {},
-          },
-        },
-      },
-    },
-    qualite: JSON.parse(JSON.stringify(lot.qualite || {})),
-    proprete: JSON.parse(JSON.stringify(lot.proprete || {})),
-    titre: fibre2,
-  };
-
-  // Ajouter la couleur si disponible
-  if (fibreColors[fibre2]) {
-    lot2.formats['fibre en vrac'].types['fibre séparée'].matieres[
-      fibre2
-    ].color = fibreColors[fibre2];
-  }
-
-  console.log('[processSeparation] Lots de sortie:', { lot1, lot2 });
-
-  return { targetLot: lot1, coProductLot: lot2 };
-}
-
 // Table de correspondance entre les noms techniques et les noms d'affichage
 const transformationTypes = {
   selectByFormat: {
@@ -1307,21 +910,6 @@ const transformationTypes = {
     keyList: 'perturbateurs',
     requiredKey: true,
     step: 'sorting',
-  },
-  processLavage: {
-    label: 'Lavage',
-    description: 'Nettoie les articles et modifie leur état de propreté',
-    step: 'sorting',
-  },
-  processDelissage: {
-    label: 'Délissage',
-    description: 'Transforme les articles en morceaux de tissu',
-    step: 'cutting',
-  },
-  processSeparation: {
-    label: 'Séparation',
-    description: "Sépare les fibres d'un tissu composé",
-    step: 'cutting',
   },
 };
 
@@ -1573,168 +1161,15 @@ const transformationUtils = {
 function executeDynamicTransfo(lot, transfoDetails) {
   console.log('executeDynamicTransfo appelée avec:', { lot, transfoDetails });
 
-  // ← CORRECTION : Vérifier que transfoDetails et dimensions existent
-  if (!transfoDetails || !transfoDetails.dimensions) {
-    console.error('transfoDetails ou dimensions manquants:', transfoDetails);
-    // Fallback : transformation basique
-    const targetLot = JSON.parse(JSON.stringify(lot));
-    const coProductLot = JSON.parse(JSON.stringify(lot));
-    const yieldPercent = transfoDetails?.yield || 100;
-    targetLot.total = (lot.total * yieldPercent) / 100;
-    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
-    targetLot.title = transfoDetails?.title || 'Transformation dynamique';
-    coProductLot.title = `Co-produit ${transfoDetails?.title || 'dynamique'}`;
-    return { targetLot, coProductLot };
+  // Utiliser le moteur de transformation générique unifié
+  if (!window.genericTransformationEngine) {
+    window.genericTransformationEngine = new GenericTransformationEngine();
   }
 
-  // Cloner le lot d'entrée
-  const targetLot = JSON.parse(JSON.stringify(lot));
-  const coProductLot = JSON.parse(JSON.stringify(lot));
-
-  // Identifier la dimension primaire (celle qui a des données)
-  const primaryDimension = Object.entries(transfoDetails.dimensions).find(
-    ([dimName, dimData]) =>
-      (dimData.input && Object.keys(dimData.input).length > 0) ||
-      (dimData.target && Object.keys(dimData.target).length > 0) ||
-      (dimData.coproduct && Object.keys(dimData.coproduct).length > 0)
+  return window.genericTransformationEngine.executeTransformation(
+    lot,
+    transfoDetails
   );
-
-  if (!primaryDimension) {
-    console.warn(
-      'Aucune dimension primaire trouvée pour la transformation:',
-      transfoDetails.title
-    );
-    // Fallback : transformation basique
-    const yieldPercent = transfoDetails.yield || 100;
-    targetLot.total = (lot.total * yieldPercent) / 100;
-    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
-    targetLot.title = transfoDetails.title || 'Transformation dynamique';
-    coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
-    return { targetLot, coProductLot };
-  }
-
-  const [dimName, dimData] = primaryDimension;
-  console.log('Dimension primaire identifiée:', dimName, dimData);
-
-  // Appliquer la transformation selon la dimension
-  if (dimName === 'proprete') {
-    // ← LOGIQUE SPÉCIFIQUE POUR LAVAGE
-    return applyPropreteTransformation(
-      lot,
-      transfoDetails,
-      targetLot,
-      coProductLot
-    );
-  } else if (dimName === 'formats') {
-    // ← LOGIQUE POUR EFFILOCHAGE (à implémenter plus tard)
-    return applyFormatsTransformation(
-      lot,
-      transfoDetails,
-      targetLot,
-      coProductLot
-    );
-  } else {
-    // ← AUTRES DIMENSIONS (à implémenter plus tard)
-    console.warn('Dimension non encore implémentée:', dimName);
-    const yieldPercent = transfoDetails.yield || 100;
-    targetLot.total = (lot.total * yieldPercent) / 100;
-    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
-    targetLot.title = transfoDetails.title || 'Transformation dynamique';
-    coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
-    return { targetLot, coProductLot };
-  }
-}
-
-// ← NOUVELLE FONCTION : Transformation spécifique pour la propreté (LAVAGE)
-function applyPropreteTransformation(
-  lot,
-  transfoDetails,
-  targetLot,
-  coProductLot
-) {
-  console.log(
-    'applyPropreteTransformation appelée pour:',
-    transfoDetails.title
-  );
-
-  // ← CORRECTION : Vérifier que proprete existe
-  if (!transfoDetails.dimensions || !transfoDetails.dimensions.proprete) {
-    console.error(
-      'Dimensions ou proprete manquants dans transfoDetails:',
-      transfoDetails
-    );
-    // Fallback : transformation basique
-    const yieldPercent = transfoDetails.yield || 100;
-    targetLot.total = (lot.total * yieldPercent) / 100;
-    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
-    targetLot.title = transfoDetails.title || 'Lavage';
-    coProductLot.title = `Co-produit ${transfoDetails.title || 'Lavage'}`;
-    return { targetLot, coProductLot };
-  }
-
-  const propreteData = transfoDetails.dimensions.proprete;
-  const yieldPercent = transfoDetails.yield || 100;
-
-  // Pour le lavage (yield 100%), tout va dans le lot cible
-  targetLot.total = lot.total;
-  coProductLot.total = 0;
-
-  // Appliquer la transformation de propreté
-  if (propreteData.target && Object.keys(propreteData.target).length > 0) {
-    // Récupérer la clé cible (ex: "Propre")
-    const targetKey = Object.keys(propreteData.target)[0];
-    const targetBubbleId = propreteData.target[targetKey].bubble_id;
-
-    // Concaténer toutes les clés de propreté existantes en une seule
-    const existingPropreteKeys = Object.keys(lot.proprete || {});
-    let totalPropretePercent = 0;
-
-    // Calculer le pourcentage total de propreté existant
-    existingPropreteKeys.forEach(key => {
-      if (
-        lot.proprete[key] &&
-        typeof lot.proprete[key].pourcentage === 'number'
-      ) {
-        totalPropretePercent += lot.proprete[key].pourcentage;
-      }
-    });
-
-    // Créer la nouvelle distribution de propreté
-    targetLot.proprete = {};
-    targetLot.proprete[targetKey] = {
-      pourcentage: 100,
-      bubble_id: targetBubbleId,
-      color: lot.proprete[existingPropreteKeys[0]]?.color || '#000000', // Garder une couleur
-    };
-
-    // Le co-produit n'a pas de propreté (total = 0)
-    coProductLot.proprete = {};
-
-    console.log('Transformation de propreté appliquée:', {
-      original: existingPropreteKeys,
-      target: targetKey,
-      targetBubbleId,
-      targetLotProprete: targetLot.proprete,
-    });
-  }
-
-  // Ajouter les titres
-  targetLot.title = transfoDetails.title || 'Lavage';
-  coProductLot.title = `Co-produit ${transfoDetails.title || 'Lavage'}`;
-
-  return { targetLot, coProductLot };
-}
-
-// ← NOUVELLE FONCTION : Transformation pour les formats (EFFILOCHAGE - à implémenter plus tard)
-function applyFormatsTransformation(
-  lot,
-  transfoDetails,
-  targetLot,
-  coProductLot
-) {
-  // TODO: Implémenter la logique pour l'effilochage
-  console.warn('applyFormatsTransformation pas encore implémentée');
-  return { targetLot, coProductLot };
 }
 
 window.processes = {
@@ -1746,10 +1181,7 @@ window.processes = {
   selectByFibre,
   selectByProprete,
   selectByPerturbateur,
-  processLavage,
-  processDelissage,
-  processSeparation,
-  executeDynamicTransfo, // ← NOUVEAU
+  executeDynamicTransfo,
 };
 
 window.transformationUtils = transformationUtils;
@@ -1758,3 +1190,261 @@ window.transformationTypes = transformationTypes;
 // ← NOUVEAU : Exposer le cache globalement pour le debug
 window.dynamicTransfosCache = dynamicTransfosCache;
 window.dynamicTransfosLoaded = dynamicTransfosLoaded;
+
+// MOTEUR GÉNÉRIQUE UNIFIÉ : Une seule logique pour TOUTES les transformations dynamiques
+class GenericTransformationEngine {
+  constructor() {
+    // Import de la Bible des dimensions depuis config/dimensions.js
+    this.dimensionHierarchy = window.DIMENSION_HIERARCHY;
+    this.processingOrder = window.DIMENSION_PROCESSING_ORDER;
+
+    if (!this.processingOrder) {
+      console.error(
+        'DIMENSION_PROCESSING_ORDER non trouvé ! Vérifiez que config/dimensions.js est chargé'
+      );
+      // Fallback si le fichier n'est pas chargé
+      this.processingOrder = [
+        'formats',
+        'types',
+        'matieres',
+        'fibres',
+        'couleurs',
+        'perturbateurs',
+        'proprete',
+        'qualite',
+      ];
+    }
+  }
+
+  // Méthode principale qui orchestre la transformation
+  executeTransformation(lot, transfoDetails) {
+    console.log(
+      'GenericTransformationEngine.executeTransformation appelée pour:',
+      transfoDetails.title
+    );
+
+    // Vérifications de base
+    if (!transfoDetails || !transfoDetails.dimensions) {
+      console.error('transfoDetails ou dimensions manquants:', transfoDetails);
+      throw new Error('Configuration de transformation invalide');
+    }
+
+    // 1. Identifier la dimension primaire selon les règles du .md
+    const primaryDimension = this.identifyPrimaryDimension(
+      transfoDetails.dimensions
+    );
+    console.log('Dimension primaire identifiée:', primaryDimension);
+
+    if (!primaryDimension) {
+      throw new Error(
+        'Aucune dimension primaire identifiée pour la transformation'
+      );
+    }
+
+    // 2. Appliquer la transformation selon la hiérarchie de config/dimensions.js
+    const transformedLot = this.applyHierarchicalTransformation(
+      lot,
+      transfoDetails,
+      primaryDimension
+    );
+
+    // 3. Créer la structure attendue { targetLot, coProductLot }
+    const targetLot = { ...transformedLot };
+    const coProductLot = { ...lot };
+
+    // Appliquer le yield
+    const yieldPercent = transfoDetails.yield || 100;
+    targetLot.total = (lot.total * yieldPercent) / 100;
+    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
+
+    // Ajouter les titres
+    targetLot.title = transfoDetails.title || 'Transformation dynamique';
+    coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
+
+    return { targetLot, coProductLot };
+  }
+
+  // Identifier la dimension primaire selon les règles du .md
+  identifyPrimaryDimension(dimensions) {
+    // Règle 1: Dimension avec co-produit défini
+    for (const [dimension, config] of Object.entries(dimensions)) {
+      if (this.hasCoproduct(config.coproduct)) {
+        console.log(`Dimension primaire trouvée par co-produit: ${dimension}`);
+        return dimension;
+      }
+    }
+
+    // Règle 2: Première dimension avec target défini selon DIMENSION_PROCESSING_ORDER
+    // de config/dimensions.js
+    for (const dimension of this.processingOrder) {
+      if (this.hasTarget(dimensions[dimension]?.target)) {
+        console.log(`Dimension primaire trouvée par target: ${dimension}`);
+        return dimension;
+      }
+    }
+
+    console.log('Aucune dimension primaire identifiée');
+    return null;
+  }
+
+  // Appliquer la transformation selon la hiérarchie
+  applyHierarchicalTransformation(lot, transfoDetails, primaryDimension) {
+    console.log(
+      'Application de la transformation hiérarchique selon:',
+      this.processingOrder
+    );
+
+    // 1. PRÉSERVER LA STRUCTURE COMPLÈTE du lot d'origine avec deep clone
+    let processedLot = JSON.parse(JSON.stringify(lot));
+
+    // 2. Traitement séquentiel selon DIMENSION_PROCESSING_ORDER de config/dimensions.js
+    for (const dimension of this.processingOrder) {
+      const dimensionConfig = transfoDetails.dimensions[dimension];
+
+      if (this.hasConfiguration(dimensionConfig)) {
+        console.log(`Traitement de la dimension: ${dimension}`);
+        processedLot = this.processDimension(
+          processedLot,
+          dimensionConfig,
+          dimension
+        );
+      }
+    }
+
+    return processedLot;
+  }
+
+  // Traiter une dimension spécifique
+  processDimension(lot, dimensionConfig, dimensionName) {
+    const { input, target, coproduct } = dimensionConfig;
+
+    // Filtrage par critères d'entrée
+    if (this.hasInputCriteria(input)) {
+      console.log(`Filtrage par critères d'entrée pour ${dimensionName}`);
+      lot = this.filterByInputCriteria(lot, input, dimensionName);
+    }
+
+    // Application de la transformation cible
+    if (this.hasTarget(target)) {
+      console.log(
+        `Application de la transformation cible pour ${dimensionName}`
+      );
+      lot = this.applyTargetTransformation(lot, target, dimensionName);
+    }
+
+    // Gestion des co-produits
+    if (this.hasCoproduct(coproduct)) {
+      console.log(`Gestion des co-produits pour ${dimensionName}`);
+      lot = this.handleCoproducts(lot, coproduct, dimensionName);
+    }
+
+    return lot;
+  }
+
+  // Vérifier si une dimension a une configuration
+  hasConfiguration(dimensionConfig) {
+    return (
+      dimensionConfig &&
+      (this.hasInputCriteria(dimensionConfig.input) ||
+        this.hasTarget(dimensionConfig.target) ||
+        this.hasCoproduct(dimensionConfig.coproduct))
+    );
+  }
+
+  // Vérifier si des critères d'entrée sont définis
+  hasInputCriteria(input) {
+    return input && Object.keys(input).length > 0;
+  }
+
+  // Vérifier si une transformation cible est définie
+  hasTarget(target) {
+    return target && Object.keys(target).length > 0;
+  }
+
+  // Vérifier si des co-produits sont définis
+  hasCoproduct(coproduct) {
+    return coproduct && Object.keys(coproduct).length > 0;
+  }
+
+  // Filtrer le lot selon les critères d'entrée
+  filterByInputCriteria(lot, input, dimensionName) {
+    // Filtrage par bubble_id selon les critères d'entrée
+    const inputBubbleIds = Object.values(input).map(item => item.bubble_id);
+
+    if (inputBubbleIds.length === 0) {
+      return lot; // Aucun critère = accepte tout
+    }
+
+    // Filtrer le lot selon les bubble_ids d'entrée avec deep clone
+    const filteredLot = JSON.parse(JSON.stringify(lot));
+    filteredLot[dimensionName] = {};
+
+    for (const [key, value] of Object.entries(lot[dimensionName] || {})) {
+      if (inputBubbleIds.includes(value.bubble_id)) {
+        filteredLot[dimensionName][key] = value;
+      }
+    }
+
+    return filteredLot;
+  }
+
+  // Appliquer la transformation cible
+  applyTargetTransformation(lot, target, dimensionName) {
+    // Concaténation de toutes les clés en une seule clé cible
+    const targetBubbleId = Object.values(target)[0].bubble_id;
+    const targetKey = Object.keys(target)[0];
+
+    // Deep clone pour préserver la structure complète
+    const transformedLot = JSON.parse(JSON.stringify(lot));
+
+    // Remplacer SEULEMENT la dimension spécifiée
+    transformedLot[dimensionName] = {};
+
+    // Créer la nouvelle clé cible en préservant TOUTES les propriétés
+    const targetValue = Object.values(target)[0];
+    transformedLot[dimensionName][targetKey] = { ...targetValue };
+
+    // Concaténer les distributions existantes de cette dimension
+    const existingKeys = Object.keys(lot[dimensionName] || {});
+    if (existingKeys.length > 0) {
+      // Récupérer la première clé existante pour copier ses propriétés (color, etc.)
+      const firstExistingKey = existingKeys[0];
+      const firstExistingValue = lot[dimensionName][firstExistingKey];
+
+      // Préserver les propriétés importantes (color, pourcentage, etc.)
+      if (firstExistingValue.color) {
+        transformedLot[dimensionName][targetKey].color =
+          firstExistingValue.color;
+      }
+      if (firstExistingValue.pourcentage !== undefined) {
+        // Calculer le pourcentage total concaténé
+        let totalPourcentage = 0;
+        existingKeys.forEach(key => {
+          const value = lot[dimensionName][key];
+          if (value && value.pourcentage !== undefined) {
+            totalPourcentage += value.pourcentage;
+          }
+        });
+        transformedLot[dimensionName][targetKey].pourcentage = totalPourcentage;
+      }
+
+      console.log(
+        `Transformation appliquée: ${existingKeys.join(', ')} → ${targetKey} avec pourcentage total: ${transformedLot[dimensionName][targetKey].pourcentage}`
+      );
+    }
+
+    return transformedLot;
+  }
+
+  // Gérer les co-produits
+  handleCoproducts(lot, coproduct, dimensionName) {
+    // Gestion des co-produits avec pourcentages
+    // TODO: Implémenter la logique de distribution des co-produits
+    console.log(`Co-produits à gérer pour ${dimensionName}:`, coproduct);
+
+    return lot;
+  }
+}
+
+// Exposer le moteur de transformation générique globalement
+window.GenericTransformationEngine = GenericTransformationEngine;

@@ -35,6 +35,37 @@ class TransformationPopup {
         ? lastTransfo.keys[0]
         : [];
 
+    // ← NOUVEAU : Détecter si c'est une transformation dynamique
+    const isDynamicTransfo =
+      lastType && lastType.startsWith('dynamic_transfo_');
+
+    if (isDynamicTransfo) {
+      console.log('Transformation dynamique détectée:', lastType);
+      // Pour les transformations dynamiques, utiliser la popup existante
+      // mais charger les transformations disponibles d'abord
+      if (window.transformationUtils) {
+        window.transformationUtils
+          .getAvailableTransformations()
+          .then(transformations => {
+            // Créer la popup normale avec la transformation dynamique présélectionnée
+            this.createPopupWithoutKeyList(ref, lastType, keys);
+            // TODO: Pré-sélectionner la transformation dynamique dans la popup
+          })
+          .catch(error => {
+            console.error(
+              'Erreur lors du chargement des transformations dynamiques:',
+              error
+            );
+            // Fallback : créer la popup de base
+            this.createPopupWithoutKeyList(ref, lastType, keys);
+          });
+      } else {
+        // Fallback : créer la popup de base
+        this.createPopupWithoutKeyList(ref, lastType, keys);
+      }
+      return;
+    }
+
     // Récupérer la keyList de la transformation sélectionnée
     let keyList = null;
     let keyListData = null;

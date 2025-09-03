@@ -198,8 +198,30 @@ Les règles sont les suivantes :
 - Ensuite, dans ce qui correspond, le rapport entre ce qui est traité dans le lot cible et traité dans le lot co-produit est défini par le yield (rendement). Mais sur le total final, le rapport peut être différent puisque ce qui ne correspond pas aux données d'input aura été passé directement dans le co-produit. Dans un cas extrême, si rien ne correspond aux données d'input (par exemple : 'vêtements'), le lot target sera vide et le lot co-produit sera égal au lot d'input. Le 'yield' final sera donc de 0% (même si le yield de la transfo était de 75% par exemple).
 - Il ne peut y avoir un co-produit défini que dans une seule dimension. C'est dans cette dimension que le yield cible est calculé.
 - Quand deux dimensions parentes sont mentionnées, il faut correspondre à chacune des conditions : d'abord les 'vêtements' (par exemple), puis les 'robes' -> tout le reste, qui ne correspond pas, est passé dans le co-produit.
+```
+Lot d'entrée
+├── Formats (1er niveau de filtrage)
+│   ├── Vêtements ✅ → Sélectionné
+│   ├── Linges et rideaux ✅ → Sélectionné
+│   └── Autres formats ❌ → Co-produit
+│
+├── Types (2ème niveau de filtrage)
+│   ├── Dans "Vêtements" :
+│   │   ├── Vestes, manteaux ✅ → Sélectionné
+│   │   ├── Robes ✅ → Sélectionné
+│   │   └── Autres types ❌ → Co-produit
+│   └── Dans "Linges et rideaux" :
+│       ├── Rideaux et voilages ✅ → Sélectionné
+│       └── Autres types ❌ → Co-produit
+│
+└── Dimensions de base (matières, fibres, couleurs, etc.)
+    └── Concaténation des distributions sélectionnées
+```
 - Il faut traiter les dimensions dans l'ordre, en partant du haut vers la bas.
 - Bien sûr, tous les éléments d'une même dimension enfant doivent être concaténés. Par exemple, on mélange des Tshirts et des Pantalons pour en faire des chiquettes. On doit retrouver dans les chiquettes une distribution de matière qui correspond à la convergence des 2 Tshirts et Pantalons.
+- Il faut identifier la dimension 'primaire' -> celle à laquelle va s'appliquer le yield. On la trouve avec :
+-- La dimension dans laquelle le co-produit est défini
+-- Si pas de co-produit défini, on suit l'ordre de traitement (cf. config/dimensions.js) et on prend la première qui a un target défini.
 
 Il faut donc parser le lot d'input pour le transformer.
 Identifier la dimension 'primaire'.
