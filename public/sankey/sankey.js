@@ -954,8 +954,15 @@ function updateSankey(dimension) {
             dimension: dimension,
             path: path,
           };
-          if (window.afficherPopupTransfo)
+          console.log(
+            'Click sur Ajouter transfo, window.afficherPopupTransfo:',
+            window.afficherPopupTransfo
+          );
+          if (window.afficherPopupTransfo) {
             window.afficherPopupTransfo(ref, 'add');
+          } else {
+            console.error("window.afficherPopupTransfo n'est pas définie !");
+          }
         });
 
         document.body.appendChild(dropdownMenu);

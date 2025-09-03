@@ -1,4 +1,5 @@
 // Gestionnaire de la popup de transformation
+console.log('[transformation-popup.js] Fichier chargé');
 class TransformationPopup {
   constructor() {
     this.backdrop = null;
@@ -43,7 +44,10 @@ class TransformationPopup {
 
     // Si keyList existe, charger dynamiquement la liste depuis l'API Bubble
     if (keyList) {
-      // Charger les données de base ET les transformations dynamiques
+      // TOUJOURS créer la popup de base d'abord
+      this.createPopupWithoutKeyList(ref, lastType, keys);
+
+      // Puis charger les données et mettre à jour
       Promise.all([
         chargerDonneesBaseAPI(keyList),
         window.transformationUtils
@@ -53,7 +57,7 @@ class TransformationPopup {
         .then(([baseData, transformations]) => {
           // Stocker la liste pour la suite
           keyListData = baseData;
-          // Recréer la popup avec la vraie liste et les transformations dynamiques
+          // Maintenant on peut mettre à jour la popup existante avec la vraie liste et les transformations dynamiques
           this.createPopupWithKeyList(
             ref,
             keyList,
@@ -63,8 +67,14 @@ class TransformationPopup {
         })
         .catch(error => {
           console.error('Erreur lors du chargement des données:', error);
-          // Fallback : créer la popup sans keyList
-          this.createPopupWithoutKeyList(ref, lastType, keys);
+          // La popup de base existe déjà, on peut afficher l'erreur dedans
+          if (this.modal) {
+            this.modal.innerHTML = `
+              <div class="text-red-600 text-sm">
+                Erreur lors du chargement des données. Veuillez réessayer.
+              </div>
+            `;
+          }
         });
       return; // On arrête ici, la suite sera gérée dans createPopupWithKeyList
     }
@@ -73,8 +83,8 @@ class TransformationPopup {
     this.createPopupWithoutKeyList(ref, lastType, keys);
   }
 
-  // Nouvelle méthode pour créer la popup avec la keyList chargée
-  createPopupWithKeyList(ref, keyList, keyListData, transformations) {
+  // Méthode pour créer la popup sans keyList (pas de paramètres)
+  createPopupWithoutKeyList(ref, lastType, keys) {
     // Création du backdrop (transparent comme dans /lots)
     this.backdrop = document.createElement('div');
     this.backdrop.className = 'fixed inset-0 z-50';
@@ -90,6 +100,96 @@ class TransformationPopup {
     this.modal.style.top = '200px';
     this.modal.style.left = '50%';
     this.modal.style.transform = 'translateX(-50%)';
+
+    // Pills pour les keys existantes
+    const displayNames =
+      ref.transformation && ref.transformation._displayNames
+        ? ref.transformation._displayNames[0]
+        : keys;
+    const pills = displayNames
+      .map((name, i) => {
+        const keyId = keys[i] || name;
+        const isBubbleId = /^\d+x\d+$/.test(keyId);
+        const textColor = isBubbleId ? 'text-blue-800' : 'text-red-600';
+        return `<span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 ${textColor} text-sm mr-2 mb-2">
+        ${name}
+        <button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${i}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </span>`;
+      })
+      .join('');
+
+    // Label et description de la transformation sélectionnée
+    const currentLabel =
+      lastType && window.transformationUtils
+        ? window.transformationUtils.getTransformationLabel(lastType)
+        : i18next.t('noTransformation');
+    const currentDesc =
+      lastType && window.transformationUtils
+        ? window.transformationUtils.getTransformationDescription(lastType)
+        : '';
+
+    // Adapter le titre et le texte du bouton selon le mode
+    const title =
+      this.mode === 'add'
+        ? i18next.t('addTransformation')
+        : i18next.t('editTransformation');
+    const buttonText =
+      this.mode === 'add' ? i18next.t('create') : i18next.t('save');
+
+    this.modal.innerHTML = `
+      <h3 class="text-lg font-semibold mb-2">${title}</h3>
+      ${
+        this.mode === 'edit' && ref.transformation && ref.transformation._path
+          ? `<div class="text-xs text-gray-500 mb-4">
+          <div>Path: ${JSON.stringify(ref.transformation._path)}</div>
+          ${typeof ref.transformation._index === 'number' ? `<div>Index: ${ref.transformation._index}</div>` : ''}
+         </div>`
+          : this.mode === 'add'
+            ? `<div class="text-xs text-gray-500 mb-4">
+          <div>Path: ${JSON.stringify(ref.path)}</div>
+         </div>`
+            : ''
+      }
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
+          <div class="text-sm text-gray-500 mb-2">Chargement des transformations...</div>
+          <div id="transfo-keys" class="flex flex-wrap mt-2">${pills}</div>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end space-x-3">
+        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
+        <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${buttonText}</button>
+      </div>
+    `;
+
+    this.backdrop.appendChild(this.modal);
+    document.body.appendChild(this.backdrop);
+
+    // Charger les transformations et créer la popup complète
+    this.loadTransformationsAndCreateCompletePopup(ref, lastType, keys);
+  }
+
+  // Méthode pour METTRE À JOUR la popup existante (au lieu d'en créer une nouvelle)
+  createPopupWithKeyList(ref, keyList, keyListData, transformations) {
+    // NE PAS créer de nouveaux éléments - utiliser ceux existants !
+    // this.backdrop et this.modal existent déjà depuis createPopupWithoutKeyList
+
+    // COMMENTÉ : Création du backdrop (transparent comme dans /lots)
+    // this.backdrop = document.createElement('div');
+    // this.backdrop.className = 'fixed inset-0 z-50';
+    // this.backdrop.style.background = 'none';
+
+    // COMMENTÉ : Création de la modal avec ombre prononcée comme dans /lots
+    // this.modal = document.createElement('div');
+    // this.modal.className = 'bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6';
+    // this.modal.style.boxShadow = '0 8px 40px 8px rgba(0,0,0,0.35), 0 1.5px 8px rgba(0,0,0,0.10)';
+    // this.modal.style.position = 'absolute';
+    // this.modal.style.top = '200px';
+    // this.modal.style.left = '50%';
+    // this.modal.style.transform = 'translateX(-50%)';
 
     // Récupération de la transformation du lien cliqué
     const lastTransfo = ref.transformation || null;
@@ -218,11 +318,34 @@ class TransformationPopup {
       </div>
     `;
 
-    this.backdrop.appendChild(this.modal);
-    document.body.appendChild(this.backdrop);
-
     // Attacher les listeners directement (plus besoin de charger les transformations)
     this.attachEventListeners();
+  }
+
+  // Nouvelle méthode pour charger les transformations et créer la popup complète sans keyList
+  async loadTransformationsAndCreateCompletePopup(ref, lastType, keys) {
+    try {
+      // Charger les transformations disponibles
+      const transformations =
+        await window.transformationUtils.getAvailableTransformations();
+
+      // Créer directement la popup complète avec les transformations chargées
+      this.createPopupWithKeyList(ref, null, null, transformations);
+    } catch (error) {
+      console.error('Erreur lors du chargement des transformations:', error);
+
+      // Afficher un message d'erreur dans la popup existante
+      if (this.modal) {
+        const contentDiv = this.modal.querySelector('.space-y-4');
+        if (contentDiv) {
+          contentDiv.innerHTML = `
+            <div class="text-red-600 text-sm">
+              Erreur lors du chargement des transformations. Veuillez réessayer.
+            </div>
+          `;
+        }
+      }
+    }
   }
 
   // Nouvelle méthode pour charger les transformations dans createPopupWithKeyList
@@ -475,7 +598,11 @@ class TransformationPopup {
       updateSaveButtonState();
     });
 
-    cancelBtn.onclick = () => this.close();
+    console.log('Attaching cancel button listener, cancelBtn:', cancelBtn);
+    cancelBtn.onclick = () => {
+      console.log('Cancel button clicked, calling this.close()');
+      this.close();
+    };
 
     saveBtn.onclick = () => {
       // Séparer les IDs et les noms pour la transformation
@@ -571,11 +698,26 @@ class TransformationPopup {
       document.removeEventListener('mousedown', this._globalCloseHandler);
     }
     this._globalCloseHandler = e => {
-      if (this.modal && !this.modal.contains(e.target)) {
+      console.log(
+        'Global click handler, target:',
+        e.target,
+        'modal contains:',
+        this.modal?.contains(e.target),
+        'is backdrop:',
+        e.target === this.backdrop
+      );
+      // Ne pas fermer si on clique sur le backdrop ou la modal
+      if (
+        this.modal &&
+        !this.modal.contains(e.target) &&
+        e.target !== this.backdrop
+      ) {
+        console.log('Click outside modal and backdrop, calling this.close()');
         this.close();
       }
     };
     document.addEventListener('mousedown', this._globalCloseHandler);
+    console.log('Global close handler attached');
 
     // Gestion du dropdown des paramètres (keyInput et keyDropdown)
     if (keyInput && keyDropdown) {
@@ -730,7 +872,14 @@ class TransformationPopup {
   }
 
   close() {
+    console.log(
+      'close() called, this.backdrop:',
+      this.backdrop,
+      'this.modal:',
+      this.modal
+    );
     if (this.backdrop) {
+      console.log('Removing backdrop and modal');
       if (this._dropdownCloseHandler) {
         document.removeEventListener('mousedown', this._dropdownCloseHandler);
         this._dropdownCloseHandler = null;
@@ -746,6 +895,14 @@ class TransformationPopup {
       this.backdrop.remove();
       this.backdrop = null;
       this.modal = null;
+      console.log(
+        'Backdrop and modal removed, this.backdrop:',
+        this.backdrop,
+        'this.modal:',
+        this.modal
+      );
+    } else {
+      console.log('No backdrop to remove');
     }
   }
 }
@@ -790,3 +947,7 @@ async function chargerDonneesBaseAPI(dimension) {
 window.transformationPopup = new TransformationPopup();
 window.afficherPopupTransfo = (ref, mode) =>
   window.transformationPopup.show(ref, mode);
+console.log(
+  '[transformation-popup.js] Fonction globale définie:',
+  window.afficherPopupTransfo
+);
