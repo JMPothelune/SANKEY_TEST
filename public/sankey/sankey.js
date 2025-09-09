@@ -1053,14 +1053,31 @@ function updateSankey(dimension) {
   // Application du layout
   const { nodes: sankeyNodes, links: sankeyLinks } = sankey({ nodes, links });
 
-  // Calcul du nombre de colonnes (niveaux)
-  const maxDepth = Math.max(...nodes.map(n => n.depth || 0));
-  const minWidth = width; // On utilise la largeur de la fenêtre comme minimum
-  const dynamicWidth = Math.max(
-    minWidth,
-    (stackbarWidth + extraBlockWidth) * (maxDepth + 1) + 40
-  );
-  svg.attr('width', dynamicWidth);
+  // Imposer un pas horizontal fixe entre colonnes
+  const columnStep = 300; // distance en px entre 2 colonnes
+  const nodeW = stackbarWidth + extraBlockWidth;
+  const maxDepth = Math.max(...sankeyNodes.map(n => n.depth || 0));
+
+  // Déterminer les nœuds sans liens sortants (sinks)
+  const outCountByNodeId = new Map();
+  sankeyLinks.forEach(l => {
+    const sid = String(l.source.id);
+    outCountByNodeId.set(sid, (outCountByNodeId.get(sid) || 0) + 1);
+  });
+
+  sankeyNodes.forEach(n => {
+    const isSink = !outCountByNodeId.get(String(n.id));
+    const depth = isSink ? maxDepth : n.depth || 0;
+    const x0 = horizontalPadding + depth * columnStep;
+    n.x0 = x0;
+    n.x1 = x0 + nodeW;
+  });
+
+  // Largeur requise pour contenir toutes les colonnes
+  const requiredWidth =
+    horizontalPadding + maxDepth * columnStep + nodeW + horizontalPadding;
+  const effectiveWidth = Math.max(width, requiredWidth);
+  svg.attr('width', effectiveWidth);
 
   // Calcul des totaux par target
   const targetTotals = {};

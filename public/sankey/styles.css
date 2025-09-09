@@ -22,7 +22,7 @@ body {
   padding: 0;
   border-radius: 0;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 #sankey-container svg {
