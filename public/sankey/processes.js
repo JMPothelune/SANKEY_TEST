@@ -917,6 +917,105 @@ const transformationTypes = {
 let dynamicTransfosCache = new Map();
 let dynamicTransfosLoaded = false;
 
+// Cache global (bubble_id -> color) pour éviter des appels répétés
+window.colorById = window.colorById || new Map();
+
+// Appelle l'endpoint existant 'item?id={id}' pour récupérer la couleur d'un élément
+async function fetchItemColor(bubbleId) {
+  try {
+    if (!bubbleId || window.colorById.has(bubbleId))
+      return window.colorById.get(bubbleId) || null;
+    const params = getUrlParams();
+    const isLive = params.isLive === 'yes';
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: 'item',
+        params: { id: bubbleId, isLive },
+        method: 'POST',
+      }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data && data.color) {
+      window.colorById.set(bubbleId, data.color);
+      return data.color;
+    }
+    return null;
+  } catch (e) {
+    console.warn('fetchItemColor failed for', bubbleId, e);
+    return null;
+  }
+}
+
+// Charge en masse les couleurs d'une dimension (formats, types, ...)
+async function ensureDimensionColorsLoaded(dimension) {
+  try {
+    if (!dimension) return;
+    const endpointMap = {
+      qualite: 'qualites',
+      proprete: 'propretes',
+    };
+    const endpoint = endpointMap[dimension] || dimension;
+    // Si on a déjà des couleurs pour cette dimension, on garde; on complète seulement
+    const params = getUrlParams();
+    const isLive = params.isLive === 'yes';
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint, params: { isLive }, method: 'GET' }),
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    Object.values(data || {}).forEach(item => {
+      if (
+        item &&
+        item.bubble_id &&
+        item.color &&
+        !window.colorById.has(item.bubble_id)
+      ) {
+        window.colorById.set(item.bubble_id, item.color);
+      }
+    });
+  } catch (e) {
+    console.warn('ensureDimensionColorsLoaded failed for', dimension, e);
+  }
+}
+
+// Précharge les couleurs nécessaires pour une transfo dynamique (targets + coproducts), sans hardcoder les dimensions
+async function preloadColorsForTransfo(details) {
+  if (!details || !details.dimensions) return;
+  const needed = new Map(); // dimension -> Set(ids)
+  Object.entries(details.dimensions).forEach(([dimName, dimCfg]) => {
+    if (!dimCfg) return;
+    // target (une seule clé)
+    const targetVal = dimCfg.target ? Object.values(dimCfg.target)[0] : null;
+    if (targetVal && targetVal.bubble_id) {
+      if (!needed.has(dimName)) needed.set(dimName, new Set());
+      needed.get(dimName).add(targetVal.bubble_id);
+    }
+    // coproduct (plusieurs clés possibles)
+    if (dimCfg.coproduct) {
+      Object.values(dimCfg.coproduct).forEach(c => {
+        if (c && c.bubble_id) {
+          if (!needed.has(dimName)) needed.set(dimName, new Set());
+          needed.get(dimName).add(c.bubble_id);
+        }
+      });
+    }
+  });
+  const pending = [];
+  for (const [dimName, ids] of needed.entries()) {
+    // Charger la liste de la dimension pour remplir massivement les couleurs
+    await ensureDimensionColorsLoaded(dimName);
+    ids.forEach(id => {
+      if (!window.colorById.has(id)) pending.push(fetchItemColor(id));
+    });
+  }
+  if (pending.length > 0) await Promise.allSettled(pending);
+}
+
 // Fonction pour charger les transformations dynamiques depuis l'API Bubble
 async function loadDynamicTransformations() {
   try {
@@ -973,6 +1072,8 @@ async function loadDynamicTransformations() {
             ...detailedTransfo,
             title: title,
           });
+          // Précharger les couleurs des clés utilisées par la transfo
+          await preloadColorsForTransfo(detailedTransfo);
           detailedTransformations.push(detailedTransfo);
           console.log(`Détails chargés pour ${title}:`, detailedTransfo);
         }
@@ -1305,7 +1406,8 @@ class GenericTransformationEngine {
         nonApplicableLot.total || 0,
         coproFromApplicable,
         primaryDimension,
-        primaryCfg.coproduct
+        primaryCfg.coproduct,
+        applicableLot
       );
     }
 
@@ -1467,6 +1569,23 @@ class GenericTransformationEngine {
     // Créer la nouvelle clé cible en préservant TOUTES les propriétés
     const targetValue = Object.values(target)[0];
     transformedLot[dimensionName][targetKey] = { ...targetValue };
+    // Couleur officielle si en cache
+    if (window.colorById && window.colorById.has(targetBubbleId)) {
+      transformedLot[dimensionName][targetKey].color =
+        window.colorById.get(targetBubbleId);
+    }
+
+    // Cas particulier: si on remplace des formats par un format cible,
+    // reconstruire immédiatement la distribution des types en concaténant
+    // ceux des formats applicables (afin que l'étape d'agrégation de type cible fonctionne)
+    if (dimensionName === 'formats') {
+      const aggregatedTypes = this.aggregateTypesFromFormats(lot);
+      if (aggregatedTypes && Object.keys(aggregatedTypes).length > 0) {
+        transformedLot.formats[targetKey] =
+          transformedLot.formats[targetKey] || {};
+        transformedLot.formats[targetKey].types = aggregatedTypes;
+      }
+    }
 
     // Concaténer les distributions existantes de cette dimension
     const existingKeys = Object.keys(lot[dimensionName] || {});
@@ -1475,8 +1594,11 @@ class GenericTransformationEngine {
       const firstExistingKey = existingKeys[0];
       const firstExistingValue = lot[dimensionName][firstExistingKey];
 
-      // Préserver les propriétés importantes (color, pourcentage, etc.)
-      if (firstExistingValue.color) {
+      // Préserver la couleur d'origine SEULEMENT si aucune couleur officielle n'a été posée
+      if (
+        firstExistingValue.color &&
+        !transformedLot[dimensionName][targetKey].color
+      ) {
         transformedLot[dimensionName][targetKey].color =
           firstExistingValue.color;
       }
@@ -1512,7 +1634,8 @@ class GenericTransformationEngine {
     nonApplicableMass,
     coproFromApplicable,
     primaryDimension,
-    coproductCfg
+    coproductCfg,
+    applicableSourceLot // nouveau: pour reconstruire les types issus de la part applicable
   ) {
     const totalCopro = (nonApplicableMass || 0) + (coproFromApplicable || 0);
     if (totalCopro <= 0) return coProductLot;
@@ -1538,6 +1661,9 @@ class GenericTransformationEngine {
       if (!baseDist[name]) baseDist[name] = {};
       baseDist[name].bubble_id = cfg.bubble_id;
       baseDist[name].pourcentage = (baseDist[name].pourcentage || 0) + pct;
+      if (window.colorById && window.colorById.has(cfg.bubble_id)) {
+        baseDist[name].color = window.colorById.get(cfg.bubble_id);
+      }
     });
 
     // 3) Normalisation douce pour viser 100
@@ -1554,7 +1680,96 @@ class GenericTransformationEngine {
     }
 
     coProductLot[primaryDimension] = baseDist;
+    // Si la dimension primaire est 'formats', propager la couleur au niveau format pour l'affichage
+    if (primaryDimension === 'formats' && coProductLot.formats) {
+      Object.entries(baseDist).forEach(([fmtName, fmtObj]) => {
+        if (
+          coProductLot.formats[fmtName] &&
+          fmtObj &&
+          fmtObj.color &&
+          !coProductLot.formats[fmtName].color
+        ) {
+          coProductLot.formats[fmtName].color = fmtObj.color;
+        }
+        // Créer le format s'il n'existe pas encore (cas copro format nouveau)
+        if (!coProductLot.formats[fmtName]) {
+          coProductLot.formats[fmtName] = { pourcentage: fmtObj.pourcentage };
+          if (fmtObj.color) coProductLot.formats[fmtName].color = fmtObj.color;
+        } else {
+          coProductLot.formats[fmtName].pourcentage = fmtObj.pourcentage;
+        }
+        // Reconstruire les types du co-produit:
+        // concaténation des types de la part applicable (plan A)
+        if (applicableSourceLot && applicableSourceLot.formats) {
+          const aggTypes = this.aggregateTypesFromFormats(applicableSourceLot);
+          if (aggTypes && Object.keys(aggTypes).length > 0) {
+            coProductLot.formats[fmtName].types = JSON.parse(
+              JSON.stringify(aggTypes)
+            );
+          }
+        }
+      });
+    }
     return coProductLot;
+  }
+
+  // Concaténer tous les types présents sous les formats du lot courant
+  // Pondération: pour chaque type, masse = format.pourcentage * type.pourcentage
+  // Puis normalisation à 100
+  aggregateTypesFromFormats(lot) {
+    if (!lot || !lot.formats) return {};
+    const accMass = new Map(); // key -> { bubble_id, color, mass }
+    let total = 0;
+    Object.entries(lot.formats).forEach(([fmt, fmtObj]) => {
+      const pctFormat = Math.max(Number(fmtObj.pourcentage) || 0, 0);
+      const types = (fmtObj && fmtObj.types) || {};
+      Object.entries(types).forEach(([tName, tObj]) => {
+        const pctType = Math.max(Number(tObj.pourcentage) || 0, 0);
+        const mass = (pctFormat * pctType) / 100; // masse relative
+        total += mass;
+        if (!accMass.has(tName)) {
+          accMass.set(tName, {
+            bubble_id: tObj.bubble_id,
+            color: tObj.color,
+            mass: 0,
+            // enfants copiés à plat; l’agrégation détaillée enfants se fait plus bas si besoin
+            matieres: tObj.matieres
+              ? JSON.parse(JSON.stringify(tObj.matieres))
+              : undefined,
+            couleurs: tObj.couleurs
+              ? JSON.parse(JSON.stringify(tObj.couleurs))
+              : undefined,
+            perturbateurs: tObj.perturbateurs
+              ? JSON.parse(JSON.stringify(tObj.perturbateurs))
+              : undefined,
+          });
+        }
+        const rec = accMass.get(tName);
+        rec.mass += mass;
+        // color officielle si connue
+        if (
+          window.colorById &&
+          tObj.bubble_id &&
+          window.colorById.has(tObj.bubble_id)
+        ) {
+          rec.color = window.colorById.get(tObj.bubble_id);
+        }
+      });
+    });
+    const result = {};
+    if (total > 0) {
+      accMass.forEach((rec, name) => {
+        result[name] = {
+          bubble_id: rec.bubble_id,
+          pourcentage: (rec.mass / total) * 100,
+        };
+        if (rec.color) result[name].color = rec.color;
+        if (rec.matieres) result[name].matieres = rec.matieres;
+        if (rec.couleurs) result[name].couleurs = rec.couleurs;
+        if (rec.perturbateurs) result[name].perturbateurs = rec.perturbateurs;
+      });
+    }
+    return result;
   }
 
   // Récupérer une fonction de split par dimension (réutilise les sélecteurs existants)
@@ -1680,6 +1895,11 @@ class GenericTransformationEngine {
         couleurs: aggCouleurs,
         perturbateurs: aggPerturbateurs,
       };
+      if (window.colorById && window.colorById.has(targetVal.bubble_id)) {
+        lot.formats[formatKey].types[targetKey].color = window.colorById.get(
+          targetVal.bubble_id
+        );
+      }
     });
   }
 
