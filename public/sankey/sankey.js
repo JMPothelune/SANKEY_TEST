@@ -1334,13 +1334,13 @@ function updateSankey(dimension) {
               const lotToCheck = isMergedTarget
                 ? l.source.lot || {}
                 : l.target.lot || {};
-              if (dimension === 'format') {
+              if (dimension === 'formats') {
                 return lotToCheck.formats &&
                   Object.keys(lotToCheck.formats).includes(key)
                   ? 0.7
                   : 0.18;
               }
-              if (dimension === 'format_type' || dimension === 'type') {
+              if (dimension === 'types' || dimension === 'type') {
                 const hasType = lot =>
                   Object.values(lot.formats || {}).some(
                     f => f.types && Object.keys(f.types).includes(key)
@@ -1373,7 +1373,7 @@ function updateSankey(dimension) {
                   );
                 return hasFibre(lotToCheck) ? 0.7 : 0.18;
               }
-              if (dimension === 'couleur') {
+              if (dimension === 'couleurs') {
                 const hasCouleur = lot =>
                   Object.values(lot.formats || {}).some(
                     f =>
