@@ -30,6 +30,7 @@ waitForI18next();
 window.currentDimension = 'formats';
 window.currentScenarioIdx = 0;
 window.currentLotId = '';
+window.stepIconMap = window.stepIconMap || null;
 
 // Fonction pour gérer l'état du bouton Enregistrer (exposée globalement)
 window.setScenarioModifie = function (modifie) {
@@ -78,6 +79,17 @@ function initializeFromUrl() {
   window.currentScenarioIdx = params.scenarioIdx;
   window.currentLotId = params.lotId;
   window.isEditable = params.isEditable;
+  // Charger le mapping d'icônes des steps si pas déjà chargé
+  if (!window.stepIconMap) {
+    fetch('/config/steps.json')
+      .then(r => r.json())
+      .then(map => {
+        window.stepIconMap = map;
+      })
+      .catch(() => {
+        // silencieux: on utilisera le fallback interne
+      });
+  }
 
   console.log('Sankey initialisé avec:', params);
 
@@ -712,6 +724,11 @@ function getIconSVG(name, className = '') {
 
 // --- Fonction pour récupérer l'icône d'une step ---
 function getStepIcon(stepId) {
+  // Priorité: mapping chargé depuis /data/steps.json si disponible
+  if (window.stepIconMap && window.stepIconMap[stepId]) {
+    return window.stepIconMap[stepId];
+  }
+  // Fallback interne si le JSON n'est pas chargé
   const stepIconMap = {
     collecting: 't-shirt',
     sorting: 'arrows-split',
@@ -721,7 +738,7 @@ function getStepIcon(stepId) {
     polymerization: 'flask',
     spinning: 'gradient',
   };
-  return stepIconMap[stepId] || 'arrows-split'; // fallback sur arrows-split
+  return stepIconMap[stepId] || 'arrows-split';
 }
 
 // --- Fonction utilitaire pour récupérer la step d'une transformation ---
@@ -735,6 +752,14 @@ function getTransformationStep(transformation) {
   // 1. Si la transformation a une step définie, l'utiliser
   if (transformation.step) {
     return transformation.step;
+  }
+
+  // Log explicite si transfo dynamique sans step
+  if (type === 'dynamic_transfo') {
+    console.warn(
+      '[Sankey] Dynamic transformation without step, using fallback',
+      transformation
+    );
   }
 
   // 2. Sinon, chercher dans transformationTypes
@@ -3212,8 +3237,17 @@ function applyScenario(
             transfo.dynamic_transfo_version = transfoDetails.version;
           }
 
-          // ← NOUVEAU : Ajouter le titre de la transformation
+          // ← NOUVEAU : Ajouter le titre et la step de la transformation
           transfo.title = transfoDetails.title || 'Transformation dynamique';
+          if (transfoDetails.step) {
+            transfo.step = transfoDetails.step; // garantit l'icône correcte
+          } else if (!transfo.step) {
+            console.warn(
+              '[Sankey] Dynamic transfo details without step, fallback to sorting',
+              transfoDetails
+            );
+            transfo.step = 'sorting';
+          }
 
           // Appeler la fonction de transformation dynamique (synchrone)
           result = window.processes['executeDynamicTransfo'](

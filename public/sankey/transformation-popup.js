@@ -717,6 +717,8 @@ class TransformationPopup {
           type: ['dynamic_transfo'],
           dynamic_transfo_id: bubbleId,
           dynamic_transfo_version: this._selectedDynamic?.version || null,
+          // Enregistrer explicitement la step pour l'icône
+          step: this._selectedDynamic?.step || 'sorting',
         };
       } else {
         // ← EXISTANT : Logique pour les transformations statiques

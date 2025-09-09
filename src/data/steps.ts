@@ -1,3 +1,5 @@
+// Normalement, on peut effacer ce fichier, on a intégré les steps dans le fichier steps.json
+
 export interface Step {
   nom: string;
   icon: string;

@@ -221,8 +221,31 @@ function updateTransformation(scenario, path, index, newTransformation) {
 
   // Mettre à jour la transformation en gardant les métadonnées existantes
   const oldTransformation = arr[index];
+
+  // Nettoyage ciblé lorsque le type change entre dynamique et statique
+  const getType = t => (Array.isArray(t?.type) ? t.type[0] : t?.type);
+  const oldType = getType(oldTransformation);
+  const newType = getType(newTransformation);
+
+  const cleanedBase = { ...oldTransformation };
+  if (newType === 'dynamic_transfo') {
+    // On passe à une transfo dynamique: retirer les clés propres aux statiques
+    delete cleanedBase.keys;
+    delete cleanedBase._displayNames;
+    // Conserver le titre éventuel pour les dynamiques (il peut être mis à jour ensuite)
+  } else if (newType) {
+    // On passe à une transfo statique: retirer les champs dynamiques
+    delete cleanedBase.dynamic_transfo_id;
+    delete cleanedBase.dynamic_transfo_version;
+    // Un titre hérité d'une dynamique ne doit plus s'appliquer
+    delete cleanedBase.title;
+    // Conserver step (doit rester 'sorting' pour les statiques)
+    if (!cleanedBase.step) cleanedBase.step = 'sorting';
+  }
+
+  // Fusion finale
   arr[index] = {
-    ...oldTransformation,
+    ...cleanedBase,
     ...newTransformation,
     _index: index, // Garder l'index
     _path: path, // Garder le path nettoyé
