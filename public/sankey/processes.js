@@ -1241,25 +1241,89 @@ class GenericTransformationEngine {
       );
     }
 
-    // 2. Appliquer la transformation selon la hiérarchie de config/dimensions.js
-    const transformedLot = this.applyHierarchicalTransformation(
-      lot,
+    // 2. Découper le lot en "applicable" vs "non-applicable" selon la dimension primaire (input)
+    const primaryCfg = transfoDetails.dimensions[primaryDimension] || {};
+    const inputIds = Object.values(primaryCfg.input || {}).map(
+      v => v.bubble_id
+    );
+
+    let applicableLot;
+    let nonApplicableLot;
+
+    // Utiliser les fonctions existantes pour faire le split par dimension
+    const splitter = this.getDimensionSplitter(primaryDimension);
+    if (!splitter) {
+      // Fallback: si pas de splitter, tout est applicable
+      applicableLot = JSON.parse(JSON.stringify(lot));
+      nonApplicableLot = JSON.parse(JSON.stringify(lot));
+      nonApplicableLot.total = 0;
+    } else if (inputIds.length === 0) {
+      // Règle .md: input vide = on accepte tout
+      applicableLot = JSON.parse(JSON.stringify(lot));
+      nonApplicableLot = JSON.parse(JSON.stringify(lot));
+      nonApplicableLot.total = 0;
+    } else {
+      const splitResult = splitter(lot, inputIds);
+      applicableLot = splitResult.targetLot; // ce qui matche l'input
+      nonApplicableLot = splitResult.coProductLot; // le reste
+    }
+
+    // 3. Sur le lot applicable: appliquer les filtres enfants (input) puis la cible sur la dimension primaire
+    let processedApplicable = this.applyHierarchicalTransformation(
+      applicableLot,
       transfoDetails,
       primaryDimension
     );
+    if (this.hasTarget(primaryCfg.target)) {
+      processedApplicable = this.applyTargetTransformation(
+        processedApplicable,
+        primaryCfg.target,
+        primaryDimension
+      );
+    }
 
-    // 3. Créer la structure attendue { targetLot, coProductLot }
-    const targetLot = { ...transformedLot };
-    const coProductLot = { ...lot };
-
-    // Appliquer le yield
+    // 4. Calcul des masses: yield appliqué uniquement sur l'applicable
     const yieldPercent = transfoDetails.yield || 100;
-    targetLot.total = (lot.total * yieldPercent) / 100;
-    coProductLot.total = (lot.total * (100 - yieldPercent)) / 100;
+    const applicableMass = applicableLot.total || 0;
+    const targetMass = (applicableMass * yieldPercent) / 100;
+    const coproFromApplicable = Math.max(applicableMass - targetMass, 0);
 
-    // Ajouter les titres
+    // 5. Construire targetLot et coProductLot
+    const targetLot = JSON.parse(JSON.stringify(processedApplicable));
+    targetLot.total = targetMass;
     targetLot.title = transfoDetails.title || 'Transformation dynamique';
+
+    // Construire co-produit = non-applicable + part applicable non yield
+    let coProductLot = JSON.parse(JSON.stringify(nonApplicableLot));
     coProductLot.title = `Co-produit ${transfoDetails.title || 'dynamique'}`;
+    coProductLot.total = (nonApplicableLot.total || 0) + coproFromApplicable;
+
+    // Distribuer la partie issue de l'applicable selon coproduct (sur la dimension primaire)
+    if (this.hasCoproduct(primaryCfg.coproduct)) {
+      coProductLot = this.applyCoproductDistribution(
+        coProductLot,
+        nonApplicableLot.total || 0,
+        coproFromApplicable,
+        primaryDimension,
+        primaryCfg.coproduct
+      );
+    }
+
+    // 6. Appliquer les targets enfants éventuels (ex: types.target, perturbateurs.target)
+    const childTargets = transfoDetails.dimensions || {};
+    if (childTargets.types && this.hasTarget(childTargets.types.target)) {
+      this.enforceTypesTargetAggregation(targetLot, childTargets.types.target);
+    }
+    if (
+      childTargets.perturbateurs &&
+      this.hasTarget(childTargets.perturbateurs.target)
+    ) {
+      this.setTypeChildDimensionToSingleKey(
+        targetLot,
+        'perturbateurs',
+        childTargets.perturbateurs.target
+      );
+    }
 
     return { targetLot, coProductLot };
   }
@@ -1438,11 +1502,205 @@ class GenericTransformationEngine {
 
   // Gérer les co-produits
   handleCoproducts(lot, coproduct, dimensionName) {
-    // Gestion des co-produits avec pourcentages
-    // TODO: Implémenter la logique de distribution des co-produits
     console.log(`Co-produits à gérer pour ${dimensionName}:`, coproduct);
-
     return lot;
+  }
+
+  // Appliquer la distribution du co-produit sur la dimension primaire
+  applyCoproductDistribution(
+    coProductLot,
+    nonApplicableMass,
+    coproFromApplicable,
+    primaryDimension,
+    coproductCfg
+  ) {
+    const totalCopro = (nonApplicableMass || 0) + (coproFromApplicable || 0);
+    if (totalCopro <= 0) return coProductLot;
+
+    // Base: distribution existante du non-applicable sur la dimension primaire
+    const baseDist = JSON.parse(
+      JSON.stringify(coProductLot[primaryDimension] || {})
+    );
+
+    // 1) Réduire les pourcentages de la base proportionnellement à la part nonApplicableMass
+    const baseScale = nonApplicableMass / totalCopro;
+    Object.values(baseDist).forEach(v => {
+      if (v && typeof v.pourcentage === 'number') {
+        v.pourcentage = v.pourcentage * baseScale;
+      }
+    });
+
+    // 2) Ajouter la distribution définie par coproduct pour la part issue de l'applicable
+    const coproScale = coproFromApplicable / totalCopro;
+    const coproEntries = Object.entries(coproductCfg);
+    coproEntries.forEach(([name, cfg]) => {
+      const pct = (cfg.percent || 0) * coproScale;
+      if (!baseDist[name]) baseDist[name] = {};
+      baseDist[name].bubble_id = cfg.bubble_id;
+      baseDist[name].pourcentage = (baseDist[name].pourcentage || 0) + pct;
+    });
+
+    // 3) Normalisation douce pour viser 100
+    const sum = Object.values(baseDist).reduce(
+      (acc, v) => acc + (typeof v.pourcentage === 'number' ? v.pourcentage : 0),
+      0
+    );
+    if (sum > 0) {
+      Object.values(baseDist).forEach(v => {
+        if (typeof v.pourcentage === 'number') {
+          v.pourcentage = (v.pourcentage / sum) * 100;
+        }
+      });
+    }
+
+    coProductLot[primaryDimension] = baseDist;
+    return coProductLot;
+  }
+
+  // Récupérer une fonction de split par dimension (réutilise les sélecteurs existants)
+  getDimensionSplitter(dimensionName) {
+    const map = {
+      formats: window.processes && window.processes.selectByFormat,
+      types: window.processes && window.processes.selectByType,
+      matieres: window.processes && window.processes.selectByMatiere,
+      fibres: window.processes && window.processes.selectByFibre,
+      couleurs: window.processes && window.processes.selectByCouleur,
+      perturbateurs: window.processes && window.processes.selectByPerturbateur,
+      proprete: window.processes && window.processes.selectByProprete,
+      qualite: window.processes && window.processes.selectByQualite,
+    };
+    return map[dimensionName] || null;
+  }
+
+  // Agréger tous les types d'un format en un seul type cible et concaténer les distributions enfants
+  enforceTypesTargetAggregation(lot, typesTargetCfg) {
+    if (!lot || !lot.formats) return;
+    const targetKey = Object.keys(typesTargetCfg)[0];
+    const targetVal = Object.values(typesTargetCfg)[0];
+
+    Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
+      const types = formatObj.types || {};
+      // Si déjà vide, rien à faire
+      if (Object.keys(types).length === 0) return;
+
+      // Accumulateurs
+      const aggMatieres = {};
+      const aggCouleurs = {};
+      const aggPerturbateurs = {};
+
+      // Agréger par pondération du pourcentage du type
+      Object.entries(types).forEach(([typeName, typeObj]) => {
+        const typeWeight = Math.max(Number(typeObj.pourcentage) || 0, 0);
+
+        // Couleurs
+        if (typeObj.couleurs) {
+          Object.entries(typeObj.couleurs).forEach(([cName, cObj]) => {
+            const add = (Number(cObj.pourcentage) || 0) * (typeWeight / 100);
+            if (!aggCouleurs[cName])
+              aggCouleurs[cName] = { ...cObj, pourcentage: 0 };
+            aggCouleurs[cName].pourcentage += add;
+            if (cObj.bubble_id) aggCouleurs[cName].bubble_id = cObj.bubble_id;
+            if (cObj.color) aggCouleurs[cName].color = cObj.color;
+          });
+        }
+
+        // Perturbateurs
+        if (typeObj.perturbateurs) {
+          Object.entries(typeObj.perturbateurs).forEach(([pName, pObj]) => {
+            const add = (Number(pObj.pourcentage) || 0) * (typeWeight / 100);
+            if (!aggPerturbateurs[pName])
+              aggPerturbateurs[pName] = { ...pObj, pourcentage: 0 };
+            aggPerturbateurs[pName].pourcentage += add;
+            if (pObj.bubble_id)
+              aggPerturbateurs[pName].bubble_id = pObj.bubble_id;
+            if (pObj.color) aggPerturbateurs[pName].color = pObj.color;
+          });
+        }
+
+        // Matières et fibres
+        if (typeObj.matieres) {
+          Object.entries(typeObj.matieres).forEach(([mName, mObj]) => {
+            const mAddBase =
+              (Number(mObj.pourcentage) || 0) * (typeWeight / 100);
+            if (!aggMatieres[mName])
+              aggMatieres[mName] = { ...mObj, pourcentage: 0 };
+            aggMatieres[mName].pourcentage += mAddBase;
+            if (mObj.bubble_id) aggMatieres[mName].bubble_id = mObj.bubble_id;
+            if (mObj.color) aggMatieres[mName].color = mObj.color;
+
+            // Fibres sous matières
+            if (mObj.fibres) {
+              if (!aggMatieres[mName].fibres) aggMatieres[mName].fibres = {};
+              Object.entries(mObj.fibres).forEach(([fName, fObj]) => {
+                const fAdd = (Number(fObj.pourcentage) || 0) * (mAddBase / 100);
+                if (!aggMatieres[mName].fibres[fName]) {
+                  aggMatieres[mName].fibres[fName] = {
+                    ...fObj,
+                    pourcentage: 0,
+                  };
+                }
+                aggMatieres[mName].fibres[fName].pourcentage += fAdd;
+                if (fObj.bubble_id)
+                  aggMatieres[mName].fibres[fName].bubble_id = fObj.bubble_id;
+                if (fObj.color)
+                  aggMatieres[mName].fibres[fName].color = fObj.color;
+              });
+            }
+          });
+        }
+      });
+
+      // Normaliser à 100
+      const normalize = obj => {
+        const sum = Object.values(obj).reduce(
+          (acc, v) => acc + (Number(v.pourcentage) || 0),
+          0
+        );
+        if (sum > 0) {
+          Object.values(obj).forEach(v => {
+            v.pourcentage = (Number(v.pourcentage) || 0) * (100 / sum);
+          });
+        }
+      };
+
+      normalize(aggCouleurs);
+      normalize(aggPerturbateurs);
+      normalize(aggMatieres);
+      // Normaliser fibres par matière
+      Object.values(aggMatieres).forEach(m => {
+        if (m.fibres) normalize(m.fibres);
+      });
+
+      // Remplacer les types par une seule entrée = target
+      lot.formats[formatKey].types = {};
+      lot.formats[formatKey].types[targetKey] = {
+        bubble_id: targetVal.bubble_id,
+        pourcentage: 100,
+        matieres: aggMatieres,
+        couleurs: aggCouleurs,
+        perturbateurs: aggPerturbateurs,
+      };
+    });
+  }
+
+  // Fixer une dimension enfant d'un type (ex: perturbateurs) à une seule clé cible à 100%
+  setTypeChildDimensionToSingleKey(lot, childDimName, targetCfg) {
+    if (!lot || !lot.formats) return;
+    const targetKey = Object.keys(targetCfg)[0];
+    const targetVal = Object.values(targetCfg)[0];
+    Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
+      const types = formatObj.types || {};
+      Object.entries(types).forEach(([typeKey, typeObj]) => {
+        const child = typeObj[childDimName];
+        // Remplacer par la cible à 100%
+        const newChild = {};
+        newChild[targetKey] = {
+          bubble_id: targetVal.bubble_id,
+          pourcentage: 100,
+        };
+        lot.formats[formatKey].types[typeKey][childDimName] = newChild;
+      });
+    });
   }
 }
 

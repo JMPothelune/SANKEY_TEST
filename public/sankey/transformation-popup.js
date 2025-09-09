@@ -35,9 +35,11 @@ class TransformationPopup {
         ? lastTransfo.keys[0]
         : [];
 
-    // ← NOUVEAU : Détecter si c'est une transformation dynamique
+    // Détecter si c'est une transformation dynamique (nouveau format ou ancien)
     const isDynamicTransfo =
-      lastType && lastType.startsWith('dynamic_transfo_');
+      lastType &&
+      (lastType === 'dynamic_transfo' ||
+        lastType.startsWith('dynamic_transfo_'));
 
     if (isDynamicTransfo) {
       console.log('Transformation dynamique détectée:', lastType);
@@ -47,9 +49,14 @@ class TransformationPopup {
         window.transformationUtils
           .getAvailableTransformations()
           .then(transformations => {
-            // Créer la popup normale avec la transformation dynamique présélectionnée
-            this.createPopupWithoutKeyList(ref, lastType, keys);
-            // TODO: Pré-sélectionner la transformation dynamique dans la popup
+            // Calculer la valeur à présélectionner dans le <select>
+            const selectedValue =
+              lastType === 'dynamic_transfo' && lastTransfo?.dynamic_transfo_id
+                ? `dynamic_transfo_${lastTransfo.dynamic_transfo_id}`
+                : lastType;
+            // Créer un squelette minimal puis charger et mettre à jour avec présélection
+            this.createPopupWithoutKeyList(ref, selectedValue, keys);
+            this.loadTransformationsAndUpdatePopup(ref, selectedValue, keys);
           })
           .catch(error => {
             console.error(
@@ -57,11 +64,19 @@ class TransformationPopup {
               error
             );
             // Fallback : créer la popup de base
-            this.createPopupWithoutKeyList(ref, lastType, keys);
+            const selectedValue =
+              lastType === 'dynamic_transfo' && lastTransfo?.dynamic_transfo_id
+                ? `dynamic_transfo_${lastTransfo.dynamic_transfo_id}`
+                : lastType;
+            this.createPopupWithoutKeyList(ref, selectedValue, keys);
           });
       } else {
         // Fallback : créer la popup de base
-        this.createPopupWithoutKeyList(ref, lastType, keys);
+        const selectedValue =
+          lastType === 'dynamic_transfo' && lastTransfo?.dynamic_transfo_id
+            ? `dynamic_transfo_${lastTransfo.dynamic_transfo_id}`
+            : lastType;
+        this.createPopupWithoutKeyList(ref, selectedValue, keys);
       }
       return;
     }
@@ -69,7 +84,13 @@ class TransformationPopup {
     // Récupérer la keyList de la transformation sélectionnée
     let keyList = null;
     let keyListData = null;
-    if (window.transformationTypes && lastType) {
+    if (
+      lastType &&
+      lastType !== 'dynamic_transfo' &&
+      !(lastType && lastType.startsWith('dynamic_transfo_')) &&
+      window.transformationTypes &&
+      window.transformationTypes[lastType]
+    ) {
       keyList = window.transformationTypes[lastType].keyList;
     }
 
@@ -543,17 +564,31 @@ class TransformationPopup {
         )
         .join('');
 
-      // Mettre à jour le contenu de la popup
-      const loadingDiv =
-        this.modal.querySelector('.animate-spin').parentElement.parentElement;
-      if (loadingDiv) {
-        loadingDiv.innerHTML = `
-          <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
-          <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-            ${options}
-          </select>
-          <div id="transfo-description" class="text-xs text-gray-500 mt-1">${currentDesc}</div>
-          <div id="transfo-keys" class="flex flex-wrap mt-2">${pills}</div>
+      // Mettre à jour le contenu de la popup de manière robuste
+      const selectEl = this.modal.querySelector('#transfo-type');
+      const descEl = this.modal.querySelector('#transfo-description');
+      const keysEl = this.modal.querySelector('#transfo-keys');
+      if (selectEl) selectEl.innerHTML = options;
+      if (descEl) descEl.textContent = currentDesc;
+      if (keysEl) keysEl.innerHTML = pills;
+      if (!selectEl) {
+        // Si la structure n'existe pas encore, reconstruire le contenu entier
+        this.modal.innerHTML = `
+          <h3 class="text-lg font-semibold mb-2">${i18next.t('editTransformation')}</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">${i18next.t('transformationType')}</label>
+              <select id="transfo-type" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                ${options}
+              </select>
+              <div id="transfo-description" class="text-xs text-gray-500 mt-1">${currentDesc}</div>
+              <div id="transfo-keys" class="flex flex-wrap mt-2">${pills}</div>
+            </div>
+          </div>
+          <div class="mt-6 flex justify-end space-x-3">
+            <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">${i18next.t('cancel')}</button>
+            <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">${i18next.t('save')}</button>
+          </div>
         `;
       }
 
@@ -664,14 +699,24 @@ class TransformationPopup {
       let transformation;
 
       // ← NOUVEAU : Détecter si c'est une transformation dynamique
-      if (selectedType.startsWith('dynamic_transfo_')) {
-        // C'est une transformation dynamique
-        const bubbleId = selectedType.replace('dynamic_transfo_', '');
+      if (
+        selectedType.startsWith('dynamic_transfo_') ||
+        selectedType === 'dynamic_transfo'
+      ) {
+        // Transformation dynamique (format .md)
+        // 1) Si selectedType vient du menu fusionné (value = dynamic_transfo_<id>)
+        // 2) Ou si l'option est déjà normalisée en 'dynamic_transfo'
+        let bubbleId = null;
+        if (selectedType.startsWith('dynamic_transfo_')) {
+          bubbleId = selectedType.replace('dynamic_transfo_', '');
+        } else if (this._selectedDynamic && this._selectedDynamic.bubbleId) {
+          bubbleId = this._selectedDynamic.bubbleId;
+        }
 
         transformation = {
-          type: [selectedType], // Utiliser le type complet (dynamic_transfo_${bubbleId})
+          type: ['dynamic_transfo'],
           dynamic_transfo_id: bubbleId,
-          dynamic_transfo_version: null, // Sera mis à jour lors de l'exécution
+          dynamic_transfo_version: this._selectedDynamic?.version || null,
         };
       } else {
         // ← EXISTANT : Logique pour les transformations statiques

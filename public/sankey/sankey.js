@@ -3163,11 +3163,11 @@ function applyScenario(
         result = window.processes['selectByProprete'](resteLot, keys);
       } else if (type === 'selectByPerturbateur') {
         result = window.processes['selectByPerturbateur'](resteLot, keys);
-      } else if (type.startsWith('dynamic_transfo_')) {
-        // ← NOUVEAU : Gestion des transformations dynamiques
+      } else if (type === 'dynamic_transfo') {
+        // Gestion des transformations dynamiques (format .md)
         try {
-          // Extraire l'ID de la transformation depuis le type
-          const bubbleId = type.replace('dynamic_transfo_', '');
+          // Extraire l'ID de la transformation depuis la transformation
+          const bubbleId = transfo.dynamic_transfo_id;
 
           // Récupérer les détails de la transformation depuis le cache (synchrone)
           console.log('Recherche de la transformation dynamique:', bubbleId);
@@ -3250,9 +3250,9 @@ function applyScenario(
       const nodeId = `${idGenObj.id++}`;
       // On pousse la référence réelle (pas de clone)
       const newTransformations = [...transformations_appliquees, transfo];
-      // ← CORRECTION : Gérer le cas où keys est undefined pour les transformations dynamiques
+      // Gérer le cas où keys est undefined pour les transformations dynamiques
       let nodeName;
-      if (type.startsWith('dynamic_transfo_')) {
+      if (type === 'dynamic_transfo') {
         // Pour les transformations dynamiques, utiliser le titre de la transformation
         const transfoTitle = transfo.title || 'Transformation dynamique';
         nodeName = targetLot.target

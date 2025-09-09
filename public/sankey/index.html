@@ -644,7 +644,6 @@
           // Limiter la hauteur maximale
           height = Math.min(height, 1200);
 
-          console.log('[IFRAME] Envoi hauteur au parent :', height);
           window.parent.postMessage({ type: 'IFRAME_HEIGHT', height }, '*');
         }
         window.addEventListener('load', sendHeightToParent);
