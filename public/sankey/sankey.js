@@ -30,7 +30,9 @@ waitForI18next();
 window.currentDimension = 'formats';
 window.currentScenarioIdx = 0;
 window.currentLotId = '';
-window.stepIconMap = window.stepIconMap || null;
+// Cache steps meta (labels FR/EN + icon)
+window.stepsMeta = window.stepsMeta || null;
+window.stepsMetaPromise = window.stepsMetaPromise || null;
 
 // Fonction pour gérer l'état du bouton Enregistrer (exposée globalement)
 window.setScenarioModifie = function (modifie) {
@@ -58,7 +60,39 @@ function getUrlParams() {
     isLive: urlParams.get('isLive') === 'true',
     // Supprimer scenarioIsLive car redondant avec isLive
     // scenarioIsLive: urlParams.get('scenarioIsLive') === 'true',
+    lang: (urlParams.get('lang') || 'fr').toLowerCase(),
   };
+}
+// Charger/cacher les steps depuis notre API interne
+async function loadStepsMeta(isLive) {
+  if (window.stepsMeta) return window.stepsMeta;
+  if (window.stepsMetaPromise) return window.stepsMetaPromise;
+  window.stepsMetaPromise = fetch('/api/bubble', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      endpoint: 'steps',
+      method: 'GET',
+      params: { isLive },
+    }),
+  })
+    .then(r => r.json())
+    .then(json => {
+      window.stepsMeta = json || {};
+      return window.stepsMeta;
+    })
+    .catch(err => {
+      console.warn(
+        '[Sankey] Failed to load steps meta, fallback to defaults',
+        err
+      );
+      window.stepsMeta = {};
+      return window.stepsMeta;
+    })
+    .finally(() => {
+      window.stepsMetaPromise = null;
+    });
+  return window.stepsMetaPromise;
 }
 
 // Fonction pour mettre à jour les paramètres d'URL
@@ -79,17 +113,9 @@ function initializeFromUrl() {
   window.currentScenarioIdx = params.scenarioIdx;
   window.currentLotId = params.lotId;
   window.isEditable = params.isEditable;
-  // Charger le mapping d'icônes des steps si pas déjà chargé
-  if (!window.stepIconMap) {
-    fetch('/config/steps.json')
-      .then(r => r.json())
-      .then(map => {
-        window.stepIconMap = map;
-      })
-      .catch(() => {
-        // silencieux: on utilisera le fallback interne
-      });
-  }
+  window.currentLang = params.lang;
+  // Charger la méta steps si nécessaire
+  loadStepsMeta(params.isLive);
 
   console.log('Sankey initialisé avec:', params);
 
@@ -716,6 +742,7 @@ function getIconSVG(name, className = '') {
     atom: 'ph-atom',
     flask: 'ph-flask',
     gradient: 'ph-gradient',
+    truck: 'ph-truck',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';
@@ -724,12 +751,15 @@ function getIconSVG(name, className = '') {
 
 // --- Fonction pour récupérer l'icône d'une step ---
 function getStepIcon(stepId) {
-  // Priorité: mapping chargé depuis /data/steps.json si disponible
-  if (window.stepIconMap && window.stepIconMap[stepId]) {
-    return window.stepIconMap[stepId];
+  if (
+    window.stepsMeta &&
+    window.stepsMeta[stepId] &&
+    window.stepsMeta[stepId].icon
+  ) {
+    return window.stepsMeta[stepId].icon;
   }
-  // Fallback interne si le JSON n'est pas chargé
-  const stepIconMap = {
+  // Fallback interne si non chargé
+  const fallback = {
     collecting: 't-shirt',
     sorting: 'arrows-split',
     'de-zipping': 'corners-in',
@@ -737,8 +767,25 @@ function getStepIcon(stepId) {
     depolymerization: 'atom',
     polymerization: 'flask',
     spinning: 'gradient',
+    transport: 'truck',
   };
-  return stepIconMap[stepId] || 'arrows-split';
+  return fallback[stepId] || 'arrows-split';
+}
+
+function getStepLabel(stepId) {
+  const lang = (
+    window.currentLang ||
+    (window.i18next && window.i18next.language) ||
+    'fr'
+  )
+    .slice(0, 2)
+    .toLowerCase();
+  const meta = window.stepsMeta && window.stepsMeta[stepId];
+  if (meta) {
+    if (lang === 'fr' && meta.fr) return meta.fr;
+    if (lang !== 'fr' && meta.en) return meta.en;
+  }
+  return stepId;
 }
 
 // --- Fonction utilitaire pour récupérer la step d'une transformation ---
@@ -1721,9 +1768,10 @@ function updateSankey(dimension) {
             if (transfo.scenario && transfo.scenario.target) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
             }
-            // Ajouter la step de la transformation
+            // Ajouter la step de la transformation (label localisé)
             const stepId = getTransformationStep(transfo);
-            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('step')}</span> <span class="tooltip-value">${stepId}</span></td></tr>`;
+            const stepLabel = getStepLabel(stepId);
+            tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('step')}</span> <span class="tooltip-value">${stepLabel}</span></td></tr>`;
 
             // Ajouter la rate (débit) de la transformation
             if (transfo.yield !== undefined) {

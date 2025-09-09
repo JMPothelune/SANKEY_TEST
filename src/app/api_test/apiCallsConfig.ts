@@ -1,5 +1,18 @@
 export const bubbleApiCalls = [
   {
+    name: 'Get all steps',
+    endpoint: 'steps',
+    method: 'GET',
+    params: [
+      {
+        name: 'isLive',
+        label: "Utiliser l'API Live ?",
+        type: 'boolean',
+        required: true,
+      },
+    ],
+  },
+  {
     name: 'Get Liste Propreté',
     endpoint: 'propretes',
     method: 'GET',
