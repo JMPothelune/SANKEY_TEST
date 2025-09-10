@@ -743,6 +743,7 @@ function getIconSVG(name, className = '') {
     flask: 'ph-flask',
     gradient: 'ph-gradient',
     truck: 'ph-truck',
+    broom: 'ph-broom',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';

@@ -2,6 +2,7 @@ export const translations = {
   fr_fr: {
     translation: {
       dimension: 'Dimension :',
+      loading: 'Chargement...',
       save: 'Enregistrer',
       saving: 'Enregistrement...',
       saved: 'Enregistré !',
