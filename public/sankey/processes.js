@@ -926,7 +926,7 @@ async function fetchItemColor(bubbleId) {
     if (!bubbleId || window.colorById.has(bubbleId))
       return window.colorById.get(bubbleId) || null;
     const params = getUrlParams();
-    const isLive = params.isLive === 'yes';
+    const isLive = params.isLive === 'true';
     const response = await fetch('/api/bubble', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -960,7 +960,7 @@ async function ensureDimensionColorsLoaded(dimension) {
     const endpoint = endpointMap[dimension] || dimension;
     // Si on a déjà des couleurs pour cette dimension, on garde; on complète seulement
     const params = getUrlParams();
-    const isLive = params.isLive === 'yes';
+    const isLive = params.isLive === 'true';
     const response = await fetch('/api/bubble', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1020,7 +1020,7 @@ async function preloadColorsForTransfo(details) {
 async function loadDynamicTransformations() {
   try {
     const params = getUrlParams();
-    const isLive = params.isLive === 'yes';
+    const isLive = params.isLive === 'true';
 
     const response = await fetch('/api/bubble', {
       method: 'POST',
@@ -1216,7 +1216,7 @@ const transformationUtils = {
 
     try {
       const params = getUrlParams();
-      const isLive = params.isLive === 'yes';
+      const isLive = params.isLive === 'true';
 
       const response = await fetch('/api/bubble', {
         method: 'POST',
