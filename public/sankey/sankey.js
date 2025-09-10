@@ -935,16 +935,43 @@ function updateSankey(dimension) {
         .style('stroke-width', '1px')
         .style('opacity', 1);
 
-      // Titre du lot
-      nodeGroup
-        .append('text')
-        .attr('class', 'lot-title')
-        .attr('x', (stackbarWidth + extraBlockWidth) / 2)
-        .attr('y', -8)
-        .attr('text-anchor', 'middle')
-        .text(d.lot && d.lot.title ? d.lot.title : d.name)
-        .style('font-size', '11px')
-        .style('fill', '#666');
+      // Titre du lot (seulement si ce n'est pas le premier nœud)
+      if (d.id !== '0') {
+        const titleText = d.lot && d.lot.title ? d.lot.title : d.name;
+
+        // Diviser le texte en lignes de max 20 caractères
+        const words = titleText.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        for (const word of words) {
+          if ((currentLine + ' ' + word).length <= 20) {
+            currentLine = currentLine ? currentLine + ' ' + word : word;
+          } else {
+            if (currentLine) lines.push(currentLine);
+            currentLine = word;
+          }
+        }
+        if (currentLine) lines.push(currentLine);
+
+        const textElement = nodeGroup
+          .append('text')
+          .attr('class', 'lot-title')
+          .attr('x', -10)
+          .attr('y', nodeHeight / 2 - (lines.length - 1) * 6)
+          .attr('text-anchor', 'end')
+          .attr('dominant-baseline', 'middle')
+          .style('font-size', '11px')
+          .style('fill', '#666');
+
+        lines.forEach((line, index) => {
+          textElement
+            .append('tspan')
+            .attr('x', -10)
+            .attr('dy', index === 0 ? 0 : '1.2em')
+            .text(line);
+        });
+      }
 
       // Bouton + pour ajouter une transformation (même logique que dans la boucle node.each)
       const yPlus = nodeHeight / 2 - 14;
@@ -2301,15 +2328,15 @@ function updateSankey(dimension) {
   svg.selectAll('.titles-layer').remove();
   const titlesLayer = svg.append('g').attr('class', 'titles-layer');
   sankeyNodes.forEach(d => {
+    // Exclure le premier nœud (id === '0')
+    if (d.id === '0') return;
+
     // Déterminer le titre à afficher
     let displayTitle = '';
 
     if (d.isTarget) {
       // Pour les nœuds target, afficher le nom du target
       displayTitle = d.name;
-    } else if (d.id === '0') {
-      // Pour le nœud initial, afficher le nom du lot d'entrée
-      displayTitle = d.lot && d.lot.title ? d.lot.title : d.name;
     } else if (d.name && d.name.startsWith('Reste')) {
       // Pour les nœuds co-produits (reste), afficher "Reste"
       displayTitle = 'Reste';
@@ -2339,16 +2366,39 @@ function updateSankey(dimension) {
       }
     }
 
-    titlesLayer
+    // Diviser le texte en lignes de max 20 caractères
+    const words = displayTitle.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      if ((currentLine + ' ' + word).length <= 20) {
+        currentLine = currentLine ? currentLine + ' ' + word : word;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    const textElement = titlesLayer
       .append('text')
       .attr('class', 'lot-title')
-      .attr('x', (d.x0 + d.x1) / 2 - extraBlockWidth / 2)
-      .attr('y', d.y0 - 8)
-      .attr('text-anchor', 'middle')
-      .text(displayTitle)
+      .attr('x', d.x0 - 10)
+      .attr('y', (d.y0 + d.y1) / 2 - (lines.length - 1) * 6)
+      .attr('text-anchor', 'end')
+      .attr('dominant-baseline', 'middle')
       .style('font-size', '11px')
       .style('fill', '#666')
       .style('pointer-events', 'none');
+
+    lines.forEach((line, index) => {
+      textElement
+        .append('tspan')
+        .attr('x', d.x0 - 10)
+        .attr('dy', index === 0 ? 0 : '1.2em')
+        .text(line);
+    });
   });
 
   // Calculer et afficher les coûts totaux
