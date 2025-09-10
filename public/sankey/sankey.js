@@ -744,6 +744,7 @@ function getIconSVG(name, className = '') {
     gradient: 'ph-gradient',
     truck: 'ph-truck',
     broom: 'ph-broom',
+    package: 'ph-package',
   };
   const iconClass = iconMap[name];
   if (!iconClass) return '';
