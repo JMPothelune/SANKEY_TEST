@@ -1104,6 +1104,10 @@ function getDynamicTransfo(bubbleId) {
   return dynamicTransfosCache.get(bubbleId);
 }
 
+// Exporter les fonctions globalement
+window.preloadColorsForTransfo = preloadColorsForTransfo;
+window.fetchItemColor = fetchItemColor;
+
 // ← NOUVELLE FONCTION : Obtenir les détails complets d'une transformation
 async function getDetailedTransfo(bubbleId, isLive) {
   try {

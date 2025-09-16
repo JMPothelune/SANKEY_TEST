@@ -577,15 +577,16 @@ const stackbarComponents = {
           });
         }
       });
+      // Ajouter la part sans couleur AVANT normalisation
+      if (totalSansCouleur > 0 && totalLot > 0) {
+        values['inconnu'] = (totalSansCouleur / totalLot) * 100;
+      }
       // Normalisation pour que la somme fasse 100%
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
       if (sum > 0) {
         Object.keys(values).forEach(k => {
           values[k] = (values[k] / sum) * 100;
         });
-      }
-      if (totalSansCouleur > 0 && totalLot > 0) {
-        values['inconnu'] = (totalSansCouleur / totalLot) * 100;
       }
 
       // Conserver les couleurs des couleurs
@@ -664,15 +665,17 @@ const stackbarComponents = {
       // On cherche les perturbateurs dans chaque type de chaque format
       if (!lot.formats) return {};
       const values = {};
-      let total = 0;
+      let totalLot = 0;
       let totalSansPerturbateur = 0;
       Object.values(lot.formats).forEach(formatObj => {
+        const pctFormat =
+          typeof formatObj.pourcentage === 'number'
+            ? formatObj.pourcentage
+            : 100;
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
-            const pctType =
-              typeof typeObj.pourcentage === 'number'
-                ? typeObj.pourcentage
-                : 100;
+            const masseType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
+            totalLot += masseType;
             if (
               typeObj.perturbateurs &&
               Object.keys(typeObj.perturbateurs).length > 0
@@ -687,30 +690,31 @@ const stackbarComponents = {
                       : typeof pertObj === 'number'
                         ? pertObj
                         : 0;
-                  values[pert] = (values[pert] || 0) + pct * (pctType / 100);
-                  sumPert += pct * (pctType / 100);
+                  values[pert] = (values[pert] || 0) + (pct / 100) * masseType;
+                  sumPert += (pct / 100) * masseType;
                 }
               );
-              total += sumPert;
-              if (sumPert < pctType) {
-                totalSansPerturbateur += pctType - sumPert;
+              // Si la somme des perturbateurs ne couvre pas toute la masse du type, le reste est inconnu
+              if (sumPert < masseType) {
+                totalSansPerturbateur += masseType - sumPert;
               }
             } else {
               // Pas de perturbateur renseigné pour ce type
-              totalSansPerturbateur += pctType;
+              totalSansPerturbateur += masseType;
             }
           });
         }
       });
+      // Ajouter la part sans perturbateur AVANT normalisation
+      if (totalSansPerturbateur > 0 && totalLot > 0) {
+        values['inconnu'] = (totalSansPerturbateur / totalLot) * 100;
+      }
       // Normalisation pour que la somme fasse 100%
-      const sum = total + totalSansPerturbateur;
+      const sum = Object.values(values).reduce((a, b) => a + b, 0);
       if (sum > 0) {
         Object.keys(values).forEach(k => {
           values[k] = (values[k] / sum) * 100;
         });
-        if (totalSansPerturbateur > 0) {
-          values['inconnu'] = (totalSansPerturbateur / sum) * 100;
-        }
       }
       return values;
     },
@@ -2751,6 +2755,11 @@ window.updateSankeyFromParams = function (params) {
 };
 
 function mergeLots(lots) {
+  // Si un seul lot, le retourner tel quel
+  if (lots.length === 1) {
+    return lots[0];
+  }
+
   // 1. Première passe : calculer les masses totales
   const masses = {
     total: 0,
@@ -3076,32 +3085,54 @@ function mergeLots(lots) {
         }
       });
 
-      perturbateursInType.forEach(perturbateur => {
-        if (!masses.perturbateurs[perturbateur]) return;
-        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-        let perturbateurColor = null;
-        for (const lot of lots) {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].perturbateurs[perturbateur] &&
-            lot.formats[format].types[type].perturbateurs[perturbateur].color
-          ) {
-            perturbateurColor =
-              lot.formats[format].types[type].perturbateurs[perturbateur].color;
-            break; // Prendre la première couleur trouvée
-          }
+      // Ne traiter les perturbateurs que si le type en a
+      if (perturbateursInType.size > 0) {
+        // Calculer la masse totale des perturbateurs pour ce type
+        const perturbateursMassInType =
+          perturbateursInType.size > 0
+            ? Array.from(perturbateursInType).reduce((sum, p) => {
+                return sum + (masses.perturbateurs[p] || 0);
+              }, 0)
+            : 0;
+
+        // Initialiser l'objet perturbateurs seulement si nécessaire
+        if (!result.formats[format].types[type].perturbateurs) {
+          result.formats[format].types[type].perturbateurs = {};
         }
 
-        result.formats[format].types[type].perturbateurs[perturbateur] = {
-          pourcentage:
-            (masses.perturbateurs[perturbateur] / masses.types[type]) * 100,
-        };
-        if (perturbateurColor)
-          result.formats[format].types[type].perturbateurs[perturbateur].color =
-            perturbateurColor;
-      });
+        perturbateursInType.forEach(perturbateur => {
+          if (!masses.perturbateurs[perturbateur]) return;
+          // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
+          let perturbateurColor = null;
+          for (const lot of lots) {
+            if (
+              lot.formats &&
+              lot.formats[format] &&
+              lot.formats[format].types[type] &&
+              lot.formats[format].types[type].perturbateurs[perturbateur] &&
+              lot.formats[format].types[type].perturbateurs[perturbateur].color
+            ) {
+              perturbateurColor =
+                lot.formats[format].types[type].perturbateurs[perturbateur]
+                  .color;
+              break; // Prendre la première couleur trouvée
+            }
+          }
+
+          result.formats[format].types[type].perturbateurs[perturbateur] = {
+            pourcentage:
+              perturbateursMassInType > 0
+                ? (masses.perturbateurs[perturbateur] /
+                    perturbateursMassInType) *
+                  100
+                : 0,
+          };
+          if (perturbateurColor)
+            result.formats[format].types[type].perturbateurs[
+              perturbateur
+            ].color = perturbateurColor;
+        });
+      }
 
       // Qualités pour ce type
       const qualitesInType = new Set();
@@ -3351,6 +3382,11 @@ function applyScenario(
               transfoDetails
             );
             transfo.step = 'sorting';
+          }
+
+          // Précharger les couleurs pour cette transformation dynamique
+          if (window.preloadColorsForTransfo) {
+            window.preloadColorsForTransfo(transfoDetails).catch(console.warn);
           }
 
           // Appeler la fonction de transformation dynamique (synchrone)
