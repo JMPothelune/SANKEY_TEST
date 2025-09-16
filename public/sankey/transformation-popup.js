@@ -30,10 +30,7 @@ class TransformationPopup {
         ? lastTransfo.type[0]
         : lastTransfo.type
       : null;
-    const keys =
-      lastTransfo && lastTransfo.keys && lastTransfo.keys[0]
-        ? lastTransfo.keys[0]
-        : [];
+    const keys = lastTransfo && lastTransfo.keys ? lastTransfo.keys : [];
 
     // Détecter si c'est une transformation dynamique (nouveau format ou ancien)
     const isDynamicTransfo =
@@ -230,14 +227,8 @@ class TransformationPopup {
   // Méthode pour attacher les event listeners de base (fermeture uniquement)
   attachBasicEventListeners() {
     // Attacher le gestionnaire de clic directement sur le backdrop
-    if (this.backdrop) {
-      this.backdrop.addEventListener('click', e => {
-        // Si on clique sur le backdrop (pas sur la modal), fermer la popup
-        if (e.target === this.backdrop) {
-          this.close();
-        }
-      });
-    }
+    // SUPPRIMÉ : Gestionnaire du backdrop qui causait des problèmes
+    // La popup ne se fermera que via le bouton Annuler ou Sauvegarder
 
     // Attacher le bouton Annuler
     const cancelBtn = this.modal.querySelector('#cancel-btn');
@@ -274,10 +265,7 @@ class TransformationPopup {
         ? lastTransfo.type[0]
         : lastTransfo.type
       : null;
-    const keys =
-      lastTransfo && lastTransfo.keys && lastTransfo.keys[0]
-        ? lastTransfo.keys[0]
-        : [];
+    const keys = lastTransfo && lastTransfo.keys ? lastTransfo.keys : [];
 
     // Pills pour les keys (utiliser _displayNames si disponible, sinon les keys)
     const displayNames =
@@ -310,7 +298,7 @@ class TransformationPopup {
       ? `
       <div class="relative mt-2">
         <input id="key-input" type="text" autocomplete="off" placeholder="${i18next.t('parameters')}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-        <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-40 overflow-y-auto hidden">${keyOptions}</div>
+        <div id="key-dropdown" class="absolute left-0 right-0 bg-white border border-gray-200 rounded shadow-lg z-[60] max-h-40 overflow-y-auto hidden">${keyOptions}</div>
       </div>
     `
       : '';
@@ -616,6 +604,23 @@ class TransformationPopup {
     }
   }
 
+  // Fonction pour initialiser selectedKeys avec les données existantes
+  initializeSelectedKeys() {
+    if (!this.currentRef?.transformation) return [];
+
+    const transfo = this.currentRef.transformation;
+    const keys = transfo.keys || [];
+    const displayNames = transfo._displayNames?.[0] || [];
+
+    // Si on a les displayNames, les utiliser
+    if (displayNames.length === keys.length) {
+      return keys.map((id, i) => ({ id, name: displayNames[i] }));
+    }
+
+    // Sinon, utiliser les keys comme noms (fallback)
+    return keys.map(id => ({ id, name: id }));
+  }
+
   attachEventListeners() {
     const cancelBtn = this.modal.querySelector('#cancel-btn');
     const saveBtn = this.modal.querySelector('#save-btn');
@@ -626,23 +631,25 @@ class TransformationPopup {
     const keyDropdown = this.modal.querySelector('#key-dropdown');
 
     // Pour garder la liste des keys sélectionnées
-    this.selectedKeys = [];
+    // Initialiser avec les keys existantes si on édite une transformation
+    this.selectedKeys = this.initializeSelectedKeys();
 
     // Fonction pour vérifier si le bouton de sauvegarde doit être activé
     const updateSaveButtonState = () => {
       const selectedType = transfoTypeSelect.value;
       const isDropdownEmpty = !selectedType;
-      const keyList =
-        window.transformationTypes &&
-        window.transformationTypes[selectedType] &&
-        window.transformationTypes[selectedType].keyList;
       const isRequiredKey =
         window.transformationTypes &&
         window.transformationTypes[selectedType] &&
         window.transformationTypes[selectedType].requiredKey;
       const hasKeys = this.selectedKeys.length > 0;
-      const isValid =
-        !isDropdownEmpty && (!keyList || !isRequiredKey || hasKeys);
+
+      // NOUVELLE LOGIQUE : Permettre la suppression du dernier tag
+      // Le bouton "Enregistrer" est désactivé seulement si :
+      // 1. Aucun type sélectionné OU
+      // 2. Type avec requiredKey=true ET aucun tag sélectionné
+      const isValid = !isDropdownEmpty && (!isRequiredKey || hasKeys);
+
       saveBtn.disabled = !isValid;
       saveBtn.className = isValid
         ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
@@ -674,7 +681,7 @@ class TransformationPopup {
           ...this.currentRef,
           transformation: {
             type: [newType],
-            keys: [[]],
+            keys: [],
             _displayNames: [[]],
             // Conserver les métadonnées importantes
             _path: existingTransfo?._path,
@@ -727,7 +734,7 @@ class TransformationPopup {
 
         transformation = {
           type: [selectedType],
-          keys: [selectedIds], // IDs pour les calculs
+          keys: selectedIds, // IDs pour les calculs
           _displayNames: [selectedNames], // Noms pour l'affichage
         };
       }
@@ -802,6 +809,15 @@ class TransformationPopup {
             if (index >= 0 && index < this.selectedKeys.length) {
               this.selectedKeys.splice(index, 1);
               pill.remove();
+
+              // Mettre à jour les data-key-index des pills restants
+              const remainingPills = keysContainer.querySelectorAll(
+                'button[data-key-index]'
+              );
+              remainingPills.forEach((btn, newIndex) => {
+                btn.dataset.keyIndex = newIndex;
+              });
+
               updateSaveButtonState();
             }
           }
@@ -888,59 +904,56 @@ class TransformationPopup {
               showFilteredOptions();
             });
 
+            // Listener pour le clic sur l'input (pour rouvrir le dropdown même si déjà focus)
+            keyInput.addEventListener('click', () => {
+              showFilteredOptions();
+            });
+
             // Listener pour la saisie
             keyInput.addEventListener('input', e => {
               showFilteredOptions(e.target.value.trim());
             });
 
             // Listener pour la sélection d'une option
-            keyDropdown.addEventListener('mousedown', e => {
-              if (e.target && e.target.dataset.name) {
-                const name = e.target.dataset.name;
-                const id = e.target.dataset.id;
+            keyDropdown.addEventListener(
+              'mousedown',
+              e => {
+                if (e.target && e.target.dataset.name) {
+                  // Empêcher la propagation ET le comportement par défaut
+                  e.stopPropagation();
+                  e.preventDefault();
 
-                if (
-                  !this.selectedKeys.some(k => k.name === name && k.id === id)
-                ) {
-                  this.selectedKeys.push({ name, id });
+                  const name = e.target.dataset.name;
+                  const id = e.target.dataset.id;
 
-                  // Ajouter le pill visuellement
-                  const pill = document.createElement('span');
-                  pill.innerHTML = `${name}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${this.selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
-                  pill.className =
-                    'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
+                  if (
+                    !this.selectedKeys.some(k => k.name === name && k.id === id)
+                  ) {
+                    this.selectedKeys.push({ name, id });
 
-                  if (keysContainer) {
-                    keysContainer.appendChild(pill);
+                    // Ajouter le pill visuellement
+                    const pill = document.createElement('span');
+                    pill.innerHTML = `${name}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${this.selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+                    pill.className =
+                      'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
+
+                    if (keysContainer) {
+                      keysContainer.appendChild(pill);
+                    }
+
+                    updateSaveButtonState();
                   }
 
-                  updateSaveButtonState();
-                }
-
-                keyDropdown.classList.add('hidden');
-                keyInput.value = '';
-              }
-            });
-
-            // Fermer le dropdown si on clique ailleurs
-            if (this._dropdownCloseHandler) {
-              document.removeEventListener(
-                'mousedown',
-                this._dropdownCloseHandler
-              );
-            }
-            this._dropdownCloseHandler = e => {
-              if (keyInput && keyDropdown) {
-                if (
-                  !keyInput.contains(e.target) &&
-                  !keyDropdown.contains(e.target)
-                ) {
                   keyDropdown.classList.add('hidden');
                   keyInput.value = '';
                 }
-              }
-            };
-            document.addEventListener('mousedown', this._dropdownCloseHandler);
+              },
+              { capture: true }
+            );
+
+            keyDropdown.addEventListener('click', e => {
+              e.stopPropagation();
+            });
 
             // Fermer le dropdown avec Escape
             if (this._escapeHandler) {

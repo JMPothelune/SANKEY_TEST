@@ -1618,7 +1618,10 @@ function updateSankey(dimension) {
                 transfo.keys[0].length > 0
               ) {
                 // Fallback sur les keys si pas de displayNames
-                tooltipTitle += ` : ${transfo.keys[0].join(', ')}`;
+                const keysArray = Array.isArray(transfo.keys)
+                  ? transfo.keys
+                  : [];
+                tooltipTitle += ` : ${keysArray.join(', ')}`;
               }
             } else {
               tooltipTitle = d.lot && d.lot.title ? d.lot.title : d.name;
@@ -1792,7 +1795,8 @@ function updateSankey(dimension) {
               transfo.keys[0].length
             ) {
               // Fallback sur les keys si pas de displayNames
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo.keys[0].join(', ')}</span></td></tr>`;
+              const keysArray = Array.isArray(transfo.keys) ? transfo.keys : [];
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${keysArray.join(', ')}</span></td></tr>`;
             }
             if (transfo.scenario && transfo.scenario.target) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
@@ -3281,30 +3285,30 @@ function applyScenario(
       if (typeof transfo._index !== 'number') transfo._index = idx;
 
       if (type === 'selectByFormat') {
-        result = window.processes['selectByFormat'](resteLot, keys);
+        result = window.processes['selectByFormat'](resteLot, keys || []);
       } else if (type === 'selectByType') {
-        result = window.processes['selectByType'](resteLot, keys);
+        result = window.processes['selectByType'](resteLot, keys || []);
       } else if (type === 'selectByMatiere') {
-        result = window.processes['selectByMatiere'](resteLot, keys);
+        result = window.processes['selectByMatiere'](resteLot, keys || []);
       } else if (type === 'selectByQualite') {
-        result = window.processes['selectByQualite'](resteLot, keys);
+        result = window.processes['selectByQualite'](resteLot, keys || []);
       } else if (type === 'selectByCouleur') {
-        result = window.processes['selectByCouleur'](resteLot, keys);
+        result = window.processes['selectByCouleur'](resteLot, keys || []);
       } else if (type === 'selectByFibre') {
         if ('threshold' in transfo && 'condition' in transfo) {
           result = window.processes['selectByFibre'](
             resteLot,
-            keys,
+            keys || [],
             transfo.threshold,
             transfo.condition
           );
         } else {
-          result = window.processes['selectByFibre'](resteLot, keys);
+          result = window.processes['selectByFibre'](resteLot, keys || []);
         }
       } else if (type === 'selectByProprete') {
-        result = window.processes['selectByProprete'](resteLot, keys);
+        result = window.processes['selectByProprete'](resteLot, keys || []);
       } else if (type === 'selectByPerturbateur') {
-        result = window.processes['selectByPerturbateur'](resteLot, keys);
+        result = window.processes['selectByPerturbateur'](resteLot, keys || []);
       } else if (type === 'dynamic_transfo') {
         // Gestion des transformations dynamiques (format .md)
         try {
@@ -3411,9 +3415,10 @@ function applyScenario(
           : transfoTitle;
       } else {
         // Pour les transformations statiques, utiliser keys comme avant
+        const keysArray = Array.isArray(keys) ? keys : [];
         nodeName = targetLot.target
-          ? `${type}: ${keys.join(' + ')} → ${targetLot.target}`
-          : `${type}: ${keys.join(' + ')}`;
+          ? `${type}: ${keysArray.join(' + ')} → ${targetLot.target}`
+          : `${type}: ${keysArray.join(' + ')}`;
       }
       targetLot.id = nodeId;
 
