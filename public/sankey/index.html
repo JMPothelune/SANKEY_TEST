@@ -135,7 +135,7 @@
       }
 
       // Variables globales
-      let currentDimension = 'formats';
+      // currentDimension supprimée - on utilise window.currentDimension
       let dimensions = [
         { value: 'formats', label: 'Formats' },
         { value: 'types', label: 'Types' },
@@ -264,12 +264,12 @@
       // Fonction pour lancer le Sankey avec une dimension spécifique
       async function launchSankeyFromUrl(lot, scenario, dimension = null) {
         const params = getUrlParams();
-        const selectedDimension = dimension || params.dimension;
+        window.currentDimension = dimension || params.dimension;
 
         console.log('[HTML] Lancement Sankey avec:', {
           lot,
           scenario,
-          dimension: selectedDimension,
+          dimension: window.currentDimension,
           availableScenarios: window.scenarios?.length || 0,
         });
 
@@ -318,7 +318,7 @@
             lot,
             scenario,
             containerId: 'sankey-container',
-            dimension: selectedDimension,
+            dimension: window.currentDimension,
           });
           // Masquer le loader
           document.getElementById('loader').style.display = 'none';
@@ -379,13 +379,13 @@
         if (dimensionSelect) {
           // Définir la valeur initiale depuis les paramètres d'URL
           dimensionSelect.value = params.dimension;
-          currentDimension = params.dimension;
+          window.currentDimension = params.dimension;
 
           // Gestion du changement de dimension
           dimensionSelect.addEventListener('change', function () {
             const newDimension = this.value;
             console.log('[HTML] Changement de dimension:', newDimension);
-            currentDimension = newDimension;
+            window.currentDimension = newDimension;
 
             // Relancer le Sankey avec la nouvelle dimension si les données sont disponibles
             if (
