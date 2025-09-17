@@ -1571,13 +1571,11 @@ class GenericTransformationEngine {
     transformedLot[dimensionName] = {};
 
     // Créer la nouvelle clé cible en préservant TOUTES les propriétés
-    const targetValue = Object.values(target)[0];
-    transformedLot[dimensionName][targetKey] = { ...targetValue };
-    // Couleur officielle si en cache
+    const targetValue = { ...Object.values(target)[0] };
     if (window.colorById && window.colorById.has(targetBubbleId)) {
-      transformedLot[dimensionName][targetKey].color =
-        window.colorById.get(targetBubbleId);
+      targetValue.color = window.colorById.get(targetBubbleId);
     }
+    transformedLot[dimensionName][targetKey] = targetValue;
 
     // Cas particulier: si on remplace des formats par un format cible,
     // reconstruire immédiatement la distribution des types en concaténant
@@ -1617,10 +1615,6 @@ class GenericTransformationEngine {
         });
         transformedLot[dimensionName][targetKey].pourcentage = totalPourcentage;
       }
-
-      console.log(
-        `Transformation appliquée: ${existingKeys.join(', ')} → ${targetKey} avec pourcentage total: ${transformedLot[dimensionName][targetKey].pourcentage}`
-      );
     }
 
     return transformedLot;
@@ -1736,7 +1730,7 @@ class GenericTransformationEngine {
             bubble_id: tObj.bubble_id,
             color: tObj.color,
             mass: 0,
-            // enfants copiés à plat; l’agrégation détaillée enfants se fait plus bas si besoin
+            // enfants copiés à plat; l'agrégation détaillée enfants se fait plus bas si besoin
             matieres: tObj.matieres
               ? JSON.parse(JSON.stringify(tObj.matieres))
               : undefined,
@@ -1820,6 +1814,15 @@ class GenericTransformationEngine {
             aggCouleurs[cName].pourcentage += add;
             if (cObj.bubble_id) aggCouleurs[cName].bubble_id = cObj.bubble_id;
             if (cObj.color) aggCouleurs[cName].color = cObj.color;
+
+            // Appliquer la couleur officielle depuis window.colorById si disponible
+            if (
+              window.colorById &&
+              cObj.bubble_id &&
+              window.colorById.has(cObj.bubble_id)
+            ) {
+              aggCouleurs[cName].color = window.colorById.get(cObj.bubble_id);
+            }
           });
         }
 
@@ -1833,6 +1836,17 @@ class GenericTransformationEngine {
             if (pObj.bubble_id)
               aggPerturbateurs[pName].bubble_id = pObj.bubble_id;
             if (pObj.color) aggPerturbateurs[pName].color = pObj.color;
+
+            // Appliquer la couleur officielle depuis window.colorById si disponible
+            if (
+              window.colorById &&
+              pObj.bubble_id &&
+              window.colorById.has(pObj.bubble_id)
+            ) {
+              aggPerturbateurs[pName].color = window.colorById.get(
+                pObj.bubble_id
+              );
+            }
           });
         }
 
@@ -1922,6 +1936,11 @@ class GenericTransformationEngine {
           bubble_id: targetVal.bubble_id,
           pourcentage: 100,
         };
+
+        // Appliquer la couleur depuis window.colorById si disponible
+        if (window.colorById && window.colorById.has(targetVal.bubble_id)) {
+          newChild[targetKey].color = window.colorById.get(targetVal.bubble_id);
+        }
         lot.formats[formatKey].types[typeKey][childDimName] = newChild;
       });
     });
