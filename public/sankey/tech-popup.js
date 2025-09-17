@@ -66,8 +66,8 @@ class TechPopup {
   }
 
   async loadTeamTechs(teamId) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isLive = urlParams.get('isLive') === 'true';
+    const params = getUrlParams();
+    const isLive = params.isLive;
 
     const response = await fetch('/api/bubble', {
       method: 'POST',
@@ -108,8 +108,8 @@ class TechPopup {
 
   // Nouvelle fonction pour charger les détails d'une tech
   async loadTechDetails(techId) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isLive = urlParams.get('isLive') === 'true';
+    const params = getUrlParams();
+    const isLive = params.isLive;
 
     const response = await fetch('/api/bubble', {
       method: 'POST',
