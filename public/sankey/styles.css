@@ -97,7 +97,8 @@ body {
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .tooltip-row:last-child {
@@ -117,7 +118,11 @@ body {
 .tooltip-label {
   color: #333;
   font-weight: 500;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  line-height: 1;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .tooltip-value {
@@ -125,9 +130,11 @@ body {
   font-family: 'Courier New', monospace;
   font-size: 12px;
   text-align: right;
-  word-break: break-word;
-  flex: 1;
+  word-break: keep-all;
+  white-space: nowrap;
+  flex-shrink: 0;
   margin-left: 8px;
+  min-width: 0;
 }
 
 text.lot-title {

@@ -92,15 +92,19 @@ class TechPopup {
     );
 
     // Filtrer les technologies selon la step
-    if (teamData.techs && Array.isArray(teamData.techs)) {
-      teamData.techs = teamData.techs.filter(tech => {
-        // Si la tech a une step définie, vérifier qu'elle correspond
+    if (teamData.techs && typeof teamData.techs === 'object') {
+      const filteredTechs = {};
+      Object.entries(teamData.techs).forEach(([name, tech]) => {
         if (tech.step) {
-          return tech.step === targetStep;
+          if (tech.step === targetStep) {
+            filteredTechs[name] = tech;
+          }
+        } else {
+          // Si pas de step définie, garder la tech (comportement par défaut)
+          filteredTechs[name] = tech;
         }
-        // Sinon, accepter toutes les techs (comportement par défaut)
-        return true;
       });
+      teamData.techs = filteredTechs;
     }
 
     return teamData;

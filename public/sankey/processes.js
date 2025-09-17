@@ -855,7 +855,7 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
 // Table de correspondance entre les noms techniques et les noms d'affichage
 const transformationTypes = {
   selectByFormat: {
-    label: 'Sélection par format',
+    label: 'Tri par format',
     description:
       'Sélectionne les articles selon leur format (vêtements, chaussures, etc.)',
     keyList: 'formats',
@@ -863,49 +863,49 @@ const transformationTypes = {
     step: 'sorting',
   },
   selectByType: {
-    label: 'Sélection par type',
+    label: 'Tri par type',
     description: 'Sélectionne les articles selon leur type (après format)',
     keyList: 'types',
     requiredKey: true,
     step: 'sorting',
   },
   selectByMatiere: {
-    label: 'Sélection par matière',
+    label: 'Tri par matière',
     description: 'Sélectionne les articles selon leur matière',
     keyList: 'matieres',
     requiredKey: true,
     step: 'sorting',
   },
   selectByQualite: {
-    label: 'Sélection par qualité',
+    label: 'Tri par qualité',
     description: 'Sélectionne les articles selon leur qualité',
     keyList: 'qualite',
     requiredKey: true,
     step: 'sorting',
   },
   selectByCouleur: {
-    label: 'Sélection par couleur',
+    label: 'Tri par couleur',
     description: 'Sélectionne les articles selon leur couleur',
     keyList: 'couleurs',
     requiredKey: true,
     step: 'sorting',
   },
   selectByFibre: {
-    label: 'Sélection par fibre',
+    label: 'Tri par fibre',
     description: 'Sélectionne les articles selon leur composition en fibres',
     keyList: 'fibres',
     requiredKey: true,
     step: 'sorting',
   },
   selectByProprete: {
-    label: 'Sélection par propreté',
+    label: 'Tri par propreté',
     description: 'Sélectionne les articles selon leur propreté',
     keyList: 'proprete',
     requiredKey: true,
     step: 'sorting',
   },
   selectByPerturbateur: {
-    label: 'Sélection par perturbateur',
+    label: 'Tri par perturbateur',
     description: 'Sélectionne les articles selon la présence de perturbateurs',
     keyList: 'perturbateurs',
     requiredKey: true,
