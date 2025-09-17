@@ -1610,22 +1610,11 @@ function updateSankey(dimension) {
               }
 
               // Ajouter les paramètres en français si disponibles
-              if (
-                transfo._displayNames &&
-                transfo._displayNames[0] &&
-                transfo._displayNames[0].length > 0
-              ) {
-                tooltipTitle += ` : ${transfo._displayNames[0].join(', ')}`;
-              } else if (
-                transfo.keys &&
-                transfo.keys[0] &&
-                transfo.keys[0].length > 0
-              ) {
+              if (transfo._displayNames && transfo._displayNames.length > 0) {
+                tooltipTitle += ` : ${transfo._displayNames.join(', ')}`;
+              } else if (transfo.keys && transfo.keys.length > 0) {
                 // Fallback sur les keys si pas de displayNames
-                const keysArray = Array.isArray(transfo.keys)
-                  ? transfo.keys
-                  : [];
-                tooltipTitle += ` : ${keysArray.join(', ')}`;
+                tooltipTitle += ` : ${transfo.keys.join(', ')}`;
               }
             } else {
               tooltipTitle = d.lot && d.lot.title ? d.lot.title : d.name;
@@ -1786,21 +1775,12 @@ function updateSankey(dimension) {
               : type;
             let tableRows = '';
 
-            if (
-              transfo._displayNames &&
-              transfo._displayNames[0] &&
-              transfo._displayNames[0].length > 0
-            ) {
+            if (transfo._displayNames && transfo._displayNames.length > 0) {
               // Utiliser les noms d'affichage français
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo._displayNames[0].join(', ')}</span></td></tr>`;
-            } else if (
-              transfo.keys &&
-              transfo.keys.length &&
-              transfo.keys[0].length
-            ) {
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo._displayNames.join(', ')}</span></td></tr>`;
+            } else if (transfo.keys && transfo.keys.length > 0) {
               // Fallback sur les keys si pas de displayNames
-              const keysArray = Array.isArray(transfo.keys) ? transfo.keys : [];
-              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${keysArray.join(', ')}</span></td></tr>`;
+              tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('keys')}</span> <span class="tooltip-value">${transfo.keys.join(', ')}</span></td></tr>`;
             }
             if (transfo.scenario && transfo.scenario.target) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('target')}</span> <span class="tooltip-value">${transfo.scenario.target}</span></td></tr>`;
@@ -3309,7 +3289,7 @@ function applyScenario(
       let result;
       // Support nouvelle structure : type et keys sont des tableaux
       const type = Array.isArray(transfo.type) ? transfo.type[0] : transfo.type;
-      const keys = Array.isArray(transfo.keys) ? transfo.keys[0] : transfo.keys;
+      const keys = transfo.keys || [];
 
       // --- Marquage du path et de l'index sur la transformation ---
       if (!transfo._path) transfo._path = [...pathArr];

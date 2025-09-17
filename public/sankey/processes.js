@@ -916,6 +916,7 @@ const transformationTypes = {
 // Cache pour les transformations dynamiques
 let dynamicTransfosCache = new Map();
 let dynamicTransfosLoaded = false;
+let lastLoadedIsLive = null; // Pour tracker le dernier mode chargé
 
 // Cache global (bubble_id -> color) pour éviter des appels répétés
 window.colorById = window.colorById || new Map();
@@ -1022,6 +1023,20 @@ async function loadDynamicTransformations() {
     const params = getUrlParams();
     const isLive = params.isLive === 'true';
 
+    // Vérifier si le mode isLive a changé
+    if (lastLoadedIsLive !== null && lastLoadedIsLive !== isLive) {
+      console.log(
+        'Mode isLive changé, réinitialisation du cache des transformations dynamiques'
+      );
+      dynamicTransfosCache.clear();
+      dynamicTransfosLoaded = false;
+    }
+
+    // Si déjà chargé pour ce mode, ne pas recharger
+    if (dynamicTransfosLoaded && lastLoadedIsLive === isLive) {
+      return Array.from(dynamicTransfosCache.values());
+    }
+
     const response = await fetch('/api/bubble', {
       method: 'POST',
       headers: {
@@ -1089,6 +1104,7 @@ async function loadDynamicTransformations() {
     console.log('Cache mis à jour avec les détails complets');
 
     dynamicTransfosLoaded = true;
+    lastLoadedIsLive = isLive; // Mémoriser le mode chargé
     return Array.from(dynamicTransfosCache.values());
   } catch (error) {
     console.warn(
@@ -1183,8 +1199,11 @@ const transformationUtils = {
       })
     );
 
-    // Charger les transformations dynamiques si pas encore fait
-    if (!dynamicTransfosLoaded) {
+    // Charger les transformations dynamiques si pas encore fait ou si le mode a changé
+    const params = getUrlParams();
+    const currentIsLive = params.isLive === 'true';
+
+    if (!dynamicTransfosLoaded || lastLoadedIsLive !== currentIsLive) {
       await loadDynamicTransformations();
     }
 
