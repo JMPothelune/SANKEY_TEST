@@ -1,6 +1,22 @@
 // Nouvelle transformation adaptée à lotType : sélection par format
 function selectByFormat(lot, selectedFormats) {
-  // Deep clone pour ne pas modifier l'objet d'origine
+  // Vérifications de sécurité
+  if (!lot.formats) {
+    console.warn('[selectByFormat] Lot sans dimension formats');
+    return {
+      targetLot: { total: 0, formats: {} },
+      coProductLot: lot,
+    };
+  }
+
+  if (!selectedFormats || selectedFormats.length === 0) {
+    console.warn('[selectByFormat] Aucun format sélectionné');
+    return {
+      targetLot: { total: 0, formats: {} },
+      coProductLot: lot,
+    };
+  }
+
   const dist = lot.formats;
   let selected = {};
   let rest = {};
@@ -8,25 +24,35 @@ function selectByFormat(lot, selectedFormats) {
   let restPct = 0;
 
   Object.entries(dist).forEach(([key, value]) => {
-    // Comparer avec les bubble_id au lieu des noms
-    if (selectedFormats.includes(value.bubble_id)) {
+    const pourcentage = value.pourcentage || 0; // Protection contre undefined
+    // Parcourir le tableau de tableaux pour trouver le bubble_id
+    const isSelected = selectedFormats.some(subArray =>
+      Array.isArray(subArray)
+        ? subArray.includes(value.bubble_id)
+        : subArray === value.bubble_id
+    );
+
+    if (isSelected) {
       selected[key] = { ...value };
-      if (value.color) selected[key].color = value.color;
-      selectedPct += value.pourcentage;
+      selectedPct += pourcentage;
     } else {
       rest[key] = { ...value };
-      if (value.color) rest[key].color = value.color;
-      restPct += value.pourcentage;
+      restPct += pourcentage;
     }
   });
 
-  // Recalcul des pourcentages
-  Object.keys(selected).forEach(k => {
-    selected[k].pourcentage = (selected[k].pourcentage / selectedPct) * 100;
-  });
-  Object.keys(rest).forEach(k => {
-    rest[k].pourcentage = (rest[k].pourcentage / restPct) * 100;
-  });
+  // Éviter les divisions par zéro
+  if (selectedPct > 0) {
+    Object.keys(selected).forEach(k => {
+      selected[k].pourcentage = (selected[k].pourcentage / selectedPct) * 100;
+    });
+  }
+
+  if (restPct > 0) {
+    Object.keys(rest).forEach(k => {
+      rest[k].pourcentage = (rest[k].pourcentage / restPct) * 100;
+    });
+  }
 
   // Création des deux lots avec deep clone
   const targetLot = JSON.parse(JSON.stringify(lot));
