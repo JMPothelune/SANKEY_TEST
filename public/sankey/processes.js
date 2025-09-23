@@ -953,7 +953,7 @@ async function fetchItemColor(bubbleId) {
     if (!bubbleId || window.colorById.has(bubbleId))
       return window.colorById.get(bubbleId) || null;
     const params = getUrlParams();
-    const isLive = params.isLive === 'true';
+    const isLive = params.isLive;
     const response = await fetch('/api/bubble', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -987,7 +987,7 @@ async function ensureDimensionColorsLoaded(dimension) {
     const endpoint = endpointMap[dimension] || dimension;
     // Si on a déjà des couleurs pour cette dimension, on garde; on complète seulement
     const params = getUrlParams();
-    const isLive = params.isLive === 'true';
+    const isLive = params.isLive;
     const response = await fetch('/api/bubble', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1047,7 +1047,7 @@ async function preloadColorsForTransfo(details) {
 async function loadDynamicTransformations() {
   try {
     const params = getUrlParams();
-    const isLive = params.isLive === 'true';
+    const isLive = params.isLive;
 
     // Vérifier si le mode isLive a changé
     if (lastLoadedIsLive !== null && lastLoadedIsLive !== isLive) {
@@ -1152,6 +1152,13 @@ window.fetchItemColor = fetchItemColor;
 
 // ← NOUVELLE FONCTION : Obtenir les détails complets d'une transformation
 async function getDetailedTransfo(bubbleId, isLive) {
+  // ✅ Vérifier le cache d'abord avec clé composite
+  const cacheKey = `${bubbleId}_${isLive}`;
+  if (dynamicTransfosCache.has(cacheKey)) {
+    console.log(`Cache hit pour ${bubbleId} (${isLive ? 'live' : 'dev'})`);
+    return dynamicTransfosCache.get(cacheKey);
+  }
+
   try {
     const response = await fetch('/api/bubble', {
       method: 'POST',
@@ -1171,6 +1178,10 @@ async function getDetailedTransfo(bubbleId, isLive) {
 
     const data = await response.json();
     console.log(`Détails complets pour ${bubbleId}:`, data);
+
+    // ✅ Mettre en cache immédiatement avec clé composite
+    dynamicTransfosCache.set(cacheKey, data);
+
     return data;
   } catch (error) {
     console.error(
@@ -1227,7 +1238,7 @@ const transformationUtils = {
 
     // Charger les transformations dynamiques si pas encore fait ou si le mode a changé
     const params = getUrlParams();
-    const currentIsLive = params.isLive === 'true';
+    const currentIsLive = params.isLive;
 
     if (!dynamicTransfosLoaded || lastLoadedIsLive !== currentIsLive) {
       await loadDynamicTransformations();
@@ -1259,13 +1270,17 @@ const transformationUtils = {
 
   // Fonction pour obtenir les détails d'une transformation dynamique
   async getDynamicTransfoDetails(bubbleId) {
-    if (dynamicTransfosCache.has(bubbleId)) {
-      return dynamicTransfosCache.get(bubbleId);
+    const params = getUrlParams();
+    const isLive = params.isLive;
+    const cacheKey = `${bubbleId}_${isLive}`;
+
+    if (dynamicTransfosCache.has(cacheKey)) {
+      return dynamicTransfosCache.get(cacheKey);
     }
 
     try {
       const params = getUrlParams();
-      const isLive = params.isLive === 'true';
+      const isLive = params.isLive;
 
       const response = await fetch('/api/bubble', {
         method: 'POST',
@@ -1285,8 +1300,8 @@ const transformationUtils = {
 
       const data = await response.json();
 
-      // Mettre à jour le cache
-      dynamicTransfosCache.set(bubbleId, data);
+      // Mettre à jour le cache avec clé composite
+      dynamicTransfosCache.set(cacheKey, data);
 
       return data;
     } catch (error) {
@@ -1300,8 +1315,12 @@ const transformationUtils = {
 
   // Fonction synchrone pour obtenir les détails depuis le cache uniquement
   getDynamicTransfoDetailsSync(bubbleId) {
-    if (dynamicTransfosCache.has(bubbleId)) {
-      return dynamicTransfosCache.get(bubbleId);
+    const params = getUrlParams();
+    const isLive = params.isLive;
+    const cacheKey = `${bubbleId}_${isLive}`;
+
+    if (dynamicTransfosCache.has(cacheKey)) {
+      return dynamicTransfosCache.get(cacheKey);
     }
     return null;
   },
