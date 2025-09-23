@@ -927,6 +927,198 @@ function updateSankey(dimension) {
           .style('opacity', 1);
       }
 
+      // Affichage des segments stackbar avec couleur du JSON
+      sortedEntries.forEach(([key, value]) => {
+        // Récupérer la valeur et la couleur depuis la nouvelle structure
+        let pourcentage,
+          color = '#bbb';
+
+        if (typeof value === 'object' && value !== null) {
+          // Nouvelle structure avec couleur
+          pourcentage = value.pourcentage || value;
+          color = value.color || '#bbb';
+        } else {
+          // Ancienne structure (fallback)
+          pourcentage = value;
+          // Chercher la couleur dans le JSON du lot (ancienne logique)
+          if (
+            dimension === 'formats' &&
+            d.lot.formats &&
+            d.lot.formats[key] &&
+            d.lot.formats[key].color
+          ) {
+            color = d.lot.formats[key].color;
+          } else if (dimension === 'types' && d.lot.formats) {
+            // Trouver le type dans chaque format
+            Object.values(d.lot.formats).forEach(formatObj => {
+              if (
+                formatObj.types &&
+                formatObj.types[key] &&
+                formatObj.types[key].color
+              ) {
+                color = formatObj.types[key].color;
+              }
+            });
+          } else if (dimension === 'matieres' && d.lot.formats) {
+            Object.values(d.lot.formats).forEach(formatObj => {
+              if (formatObj.types) {
+                Object.values(formatObj.types).forEach(typeObj => {
+                  if (
+                    typeObj.matieres &&
+                    typeObj.matieres[key] &&
+                    typeObj.matieres[key].color
+                  ) {
+                    color = typeObj.matieres[key].color;
+                  }
+                });
+              }
+            });
+          } else if (dimension === 'fibres' && d.lot.formats) {
+            Object.values(d.lot.formats).forEach(formatObj => {
+              if (formatObj.types) {
+                Object.values(formatObj.types).forEach(typeObj => {
+                  if (typeObj.matieres) {
+                    Object.values(typeObj.matieres).forEach(matiereObj => {
+                      if (
+                        matiereObj.fibres &&
+                        matiereObj.fibres[key] &&
+                        matiereObj.fibres[key].color
+                      ) {
+                        color = matiereObj.fibres[key].color;
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          } else if (dimension === 'couleurs' && d.lot.formats) {
+            Object.values(d.lot.formats).forEach(formatObj => {
+              if (formatObj.types) {
+                Object.values(formatObj.types).forEach(typeObj => {
+                  if (
+                    typeObj.couleurs &&
+                    typeObj.couleurs[key] &&
+                    typeObj.couleurs[key].color
+                  ) {
+                    color = typeObj.couleurs[key].color;
+                  }
+                });
+              }
+            });
+          } else if (
+            dimension === 'qualite' &&
+            d.lot.qualite &&
+            d.lot.qualite[key] &&
+            d.lot.qualite[key].color
+          ) {
+            color = d.lot.qualite[key].color;
+          } else if (
+            dimension === 'proprete' &&
+            d.lot.proprete &&
+            d.lot.proprete[key] &&
+            d.lot.proprete[key].color
+          ) {
+            color = d.lot.proprete[key].color;
+          } else if (dimension === 'perturbateurs' && d.lot.formats) {
+            Object.values(d.lot.formats).forEach(formatObj => {
+              if (formatObj.types) {
+                Object.values(formatObj.types).forEach(typeObj => {
+                  if (
+                    typeObj.perturbateurs &&
+                    typeObj.perturbateurs[key] &&
+                    typeObj.perturbateurs[key].color
+                  ) {
+                    color = typeObj.perturbateurs[key].color;
+                  }
+                });
+              }
+            });
+          }
+        }
+
+        const height = sum > 0 ? (pourcentage / sum) * nodeHeight : 0;
+        const fillColorStr = color + (color.length === 7 ? '99' : ''); // Opacité 60% si hex, sinon rgba déjà
+        const strokeColorStr = color;
+        const isUnknown =
+          key.toLowerCase() === 'inconnu' || key.toLowerCase() === 'autre';
+        nodeGroup
+          .append('rect')
+          .attr('x', 0)
+          .attr('y', yOffset)
+          .attr('height', height)
+          .attr('width', stackbarWidth)
+          .attr('rx', 4)
+          .attr('ry', 4)
+          .attr('class', 'stackbar-segment')
+          .attr('data-key', key)
+          .attr('data-dimension', dimension)
+          .style('fill', isUnknown ? 'url(#dashed-bg)' : fillColorStr)
+          .style('stroke', isUnknown ? '#999' : strokeColorStr)
+          .style('stroke-width', '1px')
+          .style('opacity', 1)
+          .on('mouseover', function () {
+            // Utiliser la valeur correcte pour le tooltip
+            const tooltipValue =
+              typeof value === 'object' && value !== null
+                ? value.pourcentage
+                : value;
+            let tooltipContent = component
+              ? component.getTooltipContent(
+                  d.lot,
+                  key,
+                  tooltipValue,
+                  d.lot.total
+                )
+              : '';
+            tooltip.transition().duration(200).style('opacity', 0.9);
+            // ===== TOOLTIP DES ÉLÉMENTS DE STACKBAR (NON-TRANSFO) - VRAI =====
+            // Forcer la largeur à 180px directement
+            tooltip.classed('narrow', true);
+            tooltip.style('width', '180px !important');
+            const svgRect = svg.node().ownerSVGElement.getBoundingClientRect();
+            const rect = this.getBoundingClientRect();
+            const offsetX = rect.left - svgRect.left;
+            const offsetY = rect.top - svgRect.top;
+            tooltip
+              .html(tooltipContent)
+              .style(
+                'left',
+                (() => {
+                  const windowWidth = window.innerWidth;
+
+                  // Détecter si c'est un nœud de droite (bout du Sankey)
+                  const isRightNode = false; // Pour les scénarios vides, toujours false
+
+                  if (isRightNode) {
+                    // Pour les nœuds de droite, déporter de -80px
+                    return svgRect.left + offsetX - 100 + 'px';
+                  } else {
+                    // Pour les nœuds normaux, positionnement normal
+                    return svgRect.left + offsetX + 'px';
+                  }
+                })()
+              )
+              .style('top', svgRect.top + offsetY + 'px');
+            // Highlight links (pas applicable pour scénarios vides)
+            svg
+              .selectAll('.link')
+              .transition()
+              .duration(100)
+              .style('stroke-opacity', 0.18);
+          })
+          .on('mouseout', function () {
+            tooltip.transition().duration(500).style('opacity', 0);
+            // Reset links
+            svg
+              .selectAll('.link')
+              .transition()
+              .duration(100)
+              .style('stroke-opacity', 0.18);
+          });
+
+        yOffset += height;
+      });
+
       // Bloc à droite de la stackbar
       nodeGroup
         .append('rect')
