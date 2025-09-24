@@ -756,6 +756,10 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
   let selectedMassTotal = 0;
   let restMassTotal = 0;
 
+  // Initialiser les formats vides
+  targetLot.formats = {};
+  coProductLot.formats = {};
+
   Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
     const typesObj = formatObj.types;
     let selectedTypes = {};
@@ -1244,17 +1248,24 @@ const transformationUtils = {
       await loadDynamicTransformations();
     }
 
-    // Transformations dynamiques
-    const dynamicTransformations = Array.from(
-      dynamicTransfosCache.values()
-    ).map(transfo => ({
-      value: `dynamic_transfo_${transfo.bubble_id}`,
-      label: transfo.title,
-      description: `Transformation dynamique: ${transfo.step}`,
-      isDynamic: true,
-      bubbleId: transfo.bubble_id,
-      version: transfo.version,
-    }));
+    // Transformations dynamiques - dédupliquer par bubble_id
+    const seenBubbleIds = new Set();
+    const dynamicTransformations = Array.from(dynamicTransfosCache.values())
+      .filter(transfo => {
+        if (seenBubbleIds.has(transfo.bubble_id)) {
+          return false; // Déjà vu, ignorer
+        }
+        seenBubbleIds.add(transfo.bubble_id);
+        return true;
+      })
+      .map(transfo => ({
+        value: `dynamic_transfo_${transfo.bubble_id}`,
+        label: transfo.title,
+        description: `Transformation dynamique: ${transfo.step}`,
+        isDynamic: true,
+        bubbleId: transfo.bubble_id,
+        version: transfo.version,
+      }));
 
     // Retourner avec séparateur
     return [

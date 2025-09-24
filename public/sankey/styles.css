@@ -62,10 +62,14 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   width: 280px;
   line-height: 1.4;
+  max-width: 280px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .tooltip.narrow {
   width: 180px;
+  max-width: 180px;
 }
 
 .tooltip strong {
@@ -85,20 +89,20 @@ body {
 
 /* Classes pour le tooltip table */
 .tooltip-table {
-  width: calc(100% + 16px);
+  width: 100%;
   margin-top: 8px;
   border-collapse: collapse;
-  margin-left: -8px;
-  margin-right: -8px;
+  table-layout: fixed;
 }
 
 .tooltip-row {
-  padding: 4px 12px;
+  padding: 4px 8px;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 8px;
+  min-width: 0;
 }
 
 .tooltip-row:last-child {
@@ -118,11 +122,13 @@ body {
 .tooltip-label {
   color: #333;
   font-weight: 500;
-  flex-shrink: 1;
-  line-height: 1;
+  flex: 1 1 auto;
+  line-height: 1.2;
   word-wrap: break-word;
-  word-break: break-word;
+  overflow-wrap: break-word;
   white-space: normal;
+  min-width: 0;
+  max-width: 60%;
 }
 
 .tooltip-value {
@@ -130,11 +136,12 @@ body {
   font-family: 'Courier New', monospace;
   font-size: 12px;
   text-align: right;
-  word-break: keep-all;
+  flex: 0 0 auto;
   white-space: nowrap;
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-left: 8px;
-  min-width: 0;
+  max-width: 40%;
 }
 
 text.lot-title {
