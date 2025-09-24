@@ -273,9 +273,11 @@
           availableScenarios: window.scenarios?.length || 0,
         });
 
-        // ← NOUVEAU : Charger les transformations dynamiques AVANT de lancer le Sankey
+        // Charger la LISTE des transformations dynamiques (sans détails)
         try {
-          console.log('[HTML] Chargement des transformations dynamiques...');
+          console.log(
+            '[HTML] Chargement de la liste des transformations dynamiques...'
+          );
 
           // Vérifier si window.transformationUtils existe (processes.js chargé)
           if (
@@ -285,7 +287,7 @@
           ) {
             await window.transformationUtils.getAvailableTransformations();
             console.log(
-              '[HTML] Transformations dynamiques chargées avec succès'
+              '[HTML] Liste des transformations dynamiques chargée avec succès'
             );
           } else {
             console.warn(
@@ -300,7 +302,7 @@
             if (window.transformationUtils) {
               await window.transformationUtils.getAvailableTransformations();
               console.log(
-                '[HTML] Transformations dynamiques chargées après attente'
+                '[HTML] Liste des transformations dynamiques chargée après attente'
               );
             } else {
               console.error('[HTML] Impossible de charger transformationUtils');
@@ -308,7 +310,7 @@
           }
         } catch (error) {
           console.error(
-            '[HTML] Erreur lors du chargement des transformations dynamiques:',
+            '[HTML] Erreur lors du chargement de la liste des transformations dynamiques:',
             error
           );
         }

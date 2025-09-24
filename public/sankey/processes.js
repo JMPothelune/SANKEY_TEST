@@ -1088,50 +1088,18 @@ async function loadDynamicTransformations() {
     }
 
     const data = await response.json();
-    console.log('Transformations dynamiques chargées:', data);
+    console.log('Liste des transformations dynamiques chargée:', data);
 
     // Vider le cache
     dynamicTransfosCache.clear();
 
-    // Mettre en cache les transformations
+    // Mettre en cache SEULEMENT la liste (sans détails)
     Object.entries(data).forEach(([title, transfo]) => {
       dynamicTransfosCache.set(transfo.bubble_id, {
         ...transfo,
         title: title,
       });
     });
-
-    // ← NOUVEAU : Charger les détails complets de chaque transformation
-    console.log('Chargement des détails complets des transformations...');
-    const detailedTransformations = [];
-
-    for (const [title, transfo] of Object.entries(data)) {
-      try {
-        const detailedTransfo = await getDetailedTransfo(
-          transfo.bubble_id,
-          params.isLive
-        );
-        if (detailedTransfo) {
-          // Mettre à jour le cache avec les détails complets
-          dynamicTransfosCache.set(transfo.bubble_id, {
-            ...detailedTransfo,
-            title: title,
-          });
-          // Précharger les couleurs des clés utilisées par la transfo
-          await preloadColorsForTransfo(detailedTransfo);
-          detailedTransformations.push(detailedTransfo);
-          console.log(`Détails chargés pour ${title}:`, detailedTransfo);
-        }
-      } catch (error) {
-        console.warn(
-          `Erreur lors du chargement des détails pour ${title}:`,
-          error
-        );
-        // Garder la version basique en cache
-      }
-    }
-
-    console.log('Cache mis à jour avec les détails complets');
 
     dynamicTransfosLoaded = true;
     lastLoadedIsLive = isLive; // Mémoriser le mode chargé
@@ -1240,7 +1208,7 @@ const transformationUtils = {
       })
     );
 
-    // Charger les transformations dynamiques si pas encore fait ou si le mode a changé
+    // Charger la LISTE des transformations dynamiques (sans détails)
     const params = getUrlParams();
     const currentIsLive = params.isLive;
 
