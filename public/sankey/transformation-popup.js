@@ -668,6 +668,71 @@ class TransformationPopup {
           window.transformationUtils.getTransformationDescription(newType);
       }
 
+      // ← NOUVEAU : Détecter si c'est une transformation dynamique et afficher le tableau
+      if (newType.startsWith('dynamic_transfo_')) {
+        const bubbleId = newType.replace('dynamic_transfo_', '');
+        console.log('Transformation dynamique sélectionnée:', bubbleId);
+
+        // Masquer les keys pour les transformations dynamiques
+        const keysContainer = this.modal.querySelector('#transfo-keys');
+        if (keysContainer) {
+          keysContainer.style.display = 'none';
+        }
+
+        // Masquer aussi l'input des paramètres
+        const keyInput = this.modal.querySelector('#key-input');
+        if (keyInput) {
+          keyInput.parentElement.style.display = 'none';
+        }
+
+        // Masquer la description de la transformation
+        const transfoDescription = this.modal.querySelector(
+          '#transfo-description'
+        );
+        if (transfoDescription) {
+          transfoDescription.style.display = 'none';
+        }
+
+        // Afficher le tableau des détails
+        this.displayDynamicTransfoDetails(bubbleId);
+        // Pour les transformations dynamiques, ne pas vérifier les paramètres
+        updateSaveButtonState();
+        return;
+      } else {
+        // Afficher les keys pour les transformations statiques
+        const keysContainer = this.modal.querySelector('#transfo-keys');
+        if (keysContainer) {
+          keysContainer.style.display = 'block';
+        }
+
+        // Afficher aussi l'input des paramètres
+        const keyInput = this.modal.querySelector('#key-input');
+        if (keyInput) {
+          keyInput.parentElement.style.display = 'block';
+        }
+
+        // Afficher la description de la transformation
+        const transfoDescription = this.modal.querySelector(
+          '#transfo-description'
+        );
+        if (transfoDescription) {
+          transfoDescription.style.display = 'block';
+        }
+
+        // Supprimer le tableau s'il existe (pour les transformations non-dynamiques)
+        const existingTable = this.modal.querySelector(
+          '#transfo-details-table'
+        );
+        if (existingTable) {
+          existingTable.remove();
+        }
+
+        // Réinitialiser la step à 'sorting' pour les transformations statiques
+        if (this.currentRef && this.currentRef.transformation) {
+          this.currentRef.transformation.step = 'sorting';
+        }
+      }
+
       // Vérifier si la nouvelle transformation nécessite des paramètres
       const keyList =
         window.transformationTypes &&
@@ -1000,6 +1065,186 @@ class TransformationPopup {
       // Backdrop and modal removed
     } else {
       // No backdrop to remove
+    }
+  }
+
+  // Fonction pour récupérer l'objet complet depuis Bubble (adaptée pour le contexte sankey)
+  async recupererElementComplet(bubbleId) {
+    try {
+      const params = getUrlParams();
+      const isLive = params.isLive;
+
+      const response = await fetch('/api/bubble', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: 'item',
+          method: 'POST',
+          params: {
+            id: bubbleId,
+            isLive: isLive,
+          },
+        }),
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+      console.log('Élément complet récupéré:', data);
+      return data;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération de l'élément complet:",
+        error
+      );
+      return null;
+    }
+  }
+
+  // Fonction pour convertir les bubble_id en noms d'affichage
+  async getBubbleIdsAsNames(bubbleIdObjects) {
+    const names = [];
+
+    for (const [key, obj] of Object.entries(bubbleIdObjects)) {
+      const bubbleId = obj.bubble_id;
+      const percent = obj.percent ? ` (${obj.percent}%)` : '';
+
+      try {
+        // Utiliser la fonction existante depuis lot.js (adaptée pour le contexte sankey)
+        const elementComplet = await this.recupererElementComplet(bubbleId);
+        if (elementComplet) {
+          const nomReel = Object.keys(elementComplet)[0];
+          names.push(`${nomReel}${percent}`);
+        } else {
+          names.push(`${key}${percent}`);
+        }
+      } catch (error) {
+        console.warn(`Erreur pour ${bubbleId}:`, error);
+        names.push(`${key}${percent}`);
+      }
+    }
+
+    return names.join(', ');
+  }
+
+  // Fonction pour extraire les données du tableau à partir des détails de transformation
+  async extractTableDataFromTransfo(transfoDetails) {
+    const rows = [];
+
+    // Parcourir toutes les dimensions
+    for (const [dimension, config] of Object.entries(
+      transfoDetails.dimensions || {}
+    )) {
+      // Vérifier si cette dimension a des configurations actives
+      const hasInput = config.input && Object.keys(config.input).length > 0;
+      const hasTarget = config.target && Object.keys(config.target).length > 0;
+      const hasCoproduct =
+        config.coproduct && Object.keys(config.coproduct).length > 0;
+
+      if (hasInput || hasTarget || hasCoproduct) {
+        const inputTarget = hasInput
+          ? await this.getBubbleIdsAsNames(config.input)
+          : '-';
+        const targetLot = hasTarget
+          ? await this.getBubbleIdsAsNames(config.target)
+          : '-';
+        const coProductLot = hasCoproduct
+          ? await this.getBubbleIdsAsNames(config.coproduct)
+          : '-';
+
+        rows.push({
+          dimension:
+            window.DIMENSION_HIERARCHY[dimension]?.description || dimension,
+          inputTarget: inputTarget,
+          targetLot: targetLot,
+          coProductLot: coProductLot,
+        });
+      }
+    }
+
+    return rows;
+  }
+
+  // Fonction pour afficher le tableau des détails de transformation
+  async displayDynamicTransfoDetails(bubbleId) {
+    try {
+      // Récupérer les détails de la transformation
+      const transfoDetails =
+        await window.transformationUtils.getDynamicTransfoDetails(bubbleId);
+
+      if (!transfoDetails) {
+        console.warn('Impossible de charger les détails de la transformation');
+        return;
+      }
+
+      // Extraire les données pour le tableau
+      const tableData = await this.extractTableDataFromTransfo(transfoDetails);
+
+      // Créer et afficher le tableau
+      this.renderTransfoDetailsTable(tableData);
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'affichage des détails de transformation:",
+        error
+      );
+    }
+  }
+
+  // Fonction pour créer et afficher le tableau HTML
+  renderTransfoDetailsTable(data) {
+    if (data.length === 0) {
+      console.log('Aucune donnée à afficher dans le tableau');
+      return;
+    }
+
+    // Créer le HTML du tableau (version compacte et élégante)
+    const tableHTML = `
+      <div id="transfo-details-table" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <h4 class="text-sm font-medium text-gray-900">Détails de la transformation</h4>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-white">
+              <tr>
+                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Dimension</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Input Target</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Target Lot</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Co-product Lot</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              ${data
+                .map(
+                  row => `
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 font-medium text-gray-900">${row.dimension}</td>
+                  <td class="px-4 py-3 text-gray-700">${row.inputTarget}</td>
+                  <td class="px-4 py-3 text-gray-700">${row.targetLot}</td>
+                  <td class="px-4 py-3 text-gray-700">${row.coProductLot}</td>
+                </tr>
+              `
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Supprimer l'ancien tableau s'il existe
+    const existingTable = this.modal.querySelector('#transfo-details-table');
+    if (existingTable) {
+      existingTable.remove();
+    }
+
+    // Ajouter le tableau après le select de type de transformation
+    const transfoTypeSelect = this.modal.querySelector('#transfo-type');
+    if (transfoTypeSelect) {
+      transfoTypeSelect.insertAdjacentHTML('afterend', tableHTML);
+    } else {
+      console.warn(
+        'Impossible de trouver le select de type de transformation pour insérer le tableau'
+      );
     }
   }
 }
