@@ -390,7 +390,7 @@ function createStackbarSegments(
       .attr('x', 0)
       .attr('y', yOffset)
       .attr('height', height)
-      .attr('width', stackbarWidth)
+      .attr('width', STACKBAR_WIDTH)
       .attr('rx', 4)
       .attr('ry', 4)
       .attr('class', 'stackbar-segment')
@@ -1106,6 +1106,117 @@ function getTransformationStep(transformation) {
   return 'sorting';
 }
 
+// Constantes communes pour le rendu
+const STACKBAR_WIDTH = 80;
+const EXTRA_BLOCK_WIDTH = 30;
+const HORIZONTAL_PADDING = 20;
+
+// Fonction utilitaire pour créer le fond dashed d'une stackbar vide
+function createDashedBackground(nodeGroup, nodeHeight, stackbarWidth) {
+  nodeGroup
+    .append('rect')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('height', nodeHeight)
+    .attr('width', stackbarWidth)
+    .attr('rx', 4)
+    .attr('ry', 4)
+    .style('fill', 'url(#dashed-bg)')
+    .style('stroke', '#bbb')
+    .style('stroke-width', '1px')
+    .style('opacity', 1);
+}
+
+// Fonction utilitaire pour créer le bloc extra à droite de la stackbar
+function createExtraBlock(
+  nodeGroup,
+  stackbarWidth,
+  extraBlockWidth,
+  nodeHeight,
+  nodeData
+) {
+  nodeGroup
+    .append('rect')
+    .attr('x', stackbarWidth)
+    .attr('y', 0)
+    .attr('width', extraBlockWidth)
+    .attr('height', nodeHeight)
+    .attr('rx', 4)
+    .attr('ry', 4)
+    .style('fill', 'rgba(204,204,204,0.6)')
+    .style('stroke', 'rgba(204,204,204,1)')
+    .style('stroke-width', '1px')
+    .style('opacity', 1);
+}
+
+// Fonction commune pour rendre un nœud
+function renderNode(node, position, isStandalone, dimension) {
+  const nodeHeight = Math.max(100, height * 0.8);
+  const nodeGroup = svg
+    .append('g')
+    .attr('transform', `translate(${position.x},${position.y})`);
+
+  // Stackbar (fond)
+  nodeGroup
+    .append('rect')
+    .attr('x', 0)
+    .attr('height', nodeHeight)
+    .attr('width', STACKBAR_WIDTH)
+    .style('fill', '#e0e0e0')
+    .style('opacity', 0.6);
+
+  // Stackbars pour la dimension sélectionnée
+  const component = stackbarComponents[dimension];
+  const dimensionValues = component ? component.getStackValues(node.lot) : {};
+  const sum = Object.values(dimensionValues).reduce((a, b) => {
+    const value = typeof b === 'object' && b !== null ? b.pourcentage : b;
+    return a + value;
+  }, 0);
+  const sortedEntries = Object.entries(dimensionValues)
+    .filter(([key]) => !key.startsWith('_'))
+    .sort((a, b) => {
+      const valueA =
+        typeof a[1] === 'object' && a[1] !== null ? a[1].pourcentage : a[1];
+      const valueB =
+        typeof b[1] === 'object' && b[1] !== null ? b[1].pourcentage : b[1];
+      return valueB - valueA;
+    });
+
+  // Si la stackbar est vide, afficher un fond dashed
+  if (sortedEntries.length === 0) {
+    createDashedBackground(nodeGroup, nodeHeight, STACKBAR_WIDTH);
+  }
+
+  // Affichage des segments stackbar avec couleur du JSON
+  createStackbarSegments(
+    nodeGroup,
+    sortedEntries,
+    dimension,
+    node,
+    nodeHeight,
+    STACKBAR_WIDTH,
+    component,
+    sum
+  );
+
+  // Bloc à droite de la stackbar
+  createExtraBlock(
+    nodeGroup,
+    STACKBAR_WIDTH,
+    EXTRA_BLOCK_WIDTH,
+    nodeHeight,
+    node
+  );
+
+  // Gestion des événements et tooltips pour le cas normal
+  if (!isStandalone) {
+    // Ajouter les événements mouseover/mouseout pour les tooltips
+    // (code existant pour les tooltips)
+  }
+
+  return nodeGroup;
+}
+
 function updateSankey(dimension) {
   // Attendre que les données de la team soient chargées si on a un teamId
   const teamId = getUrlParams().teamId;
@@ -1155,89 +1266,20 @@ function updateSankey(dimension) {
     // Cas spécial : un seul nœud => affichage manuel
     // (on saute la logique D3 Sankey)
     if (nodes.length === 1) {
-      const stackbarWidth = 80;
-      const extraBlockWidth = 30;
-      const horizontalPadding = 20;
       const nodeHeight = Math.max(100, height * 0.8);
-      const x = horizontalPadding;
-      const y = 40;
-      const d = nodes[0];
-      const nodeGroup = svg
-        .append('g')
-        .attr('transform', `translate(${x},${y})`);
-
-      // Stackbar (fond)
-      nodeGroup
-        .append('rect')
-        .attr('x', 0)
-        .attr('height', nodeHeight)
-        .attr('width', stackbarWidth)
-        .style('fill', '#e0e0e0')
-        .style('opacity', 0.6);
-
-      // Stackbars pour la dimension sélectionnée
-      let yOffset = 0;
-      const component = stackbarComponents[dimension];
-      const dimensionValues = component ? component.getStackValues(d.lot) : {};
-      const sum = Object.values(dimensionValues).reduce((a, b) => {
-        const value = typeof b === 'object' && b !== null ? b.pourcentage : b;
-        return a + value;
-      }, 0);
-      const sortedEntries = Object.entries(dimensionValues)
-        .filter(([key]) => !key.startsWith('_'))
-        .sort((a, b) => {
-          const valueA =
-            typeof a[1] === 'object' && a[1] !== null ? a[1].pourcentage : a[1];
-          const valueB =
-            typeof b[1] === 'object' && b[1] !== null ? b[1].pourcentage : b[1];
-          return valueB - valueA;
-        });
-
-      // Si la stackbar est vide, afficher un fond dashed
-      if (sortedEntries.length === 0) {
-        nodeGroup
-          .append('rect')
-          .attr('x', 0)
-          .attr('y', 0)
-          .attr('height', nodeHeight)
-          .attr('width', stackbarWidth)
-          .attr('rx', 4)
-          .attr('ry', 4)
-          .style('fill', 'url(#dashed-bg)')
-          .style('stroke', '#bbb')
-          .style('stroke-width', '1px')
-          .style('opacity', 1);
-      }
-
-      // Affichage des segments stackbar avec couleur du JSON
-      createStackbarSegments(
-        nodeGroup,
-        sortedEntries,
-        dimension,
-        d,
-        nodeHeight,
-        stackbarWidth,
-        component,
-        sum
+      const nodeGroup = renderNode(
+        nodes[0],
+        { x: HORIZONTAL_PADDING, y: 40 },
+        true,
+        dimension
       );
 
-      // Bloc à droite de la stackbar
-      nodeGroup
-        .append('rect')
-        .attr('x', stackbarWidth)
-        .attr('y', 0)
-        .attr('width', extraBlockWidth)
-        .attr('height', nodeHeight)
-        .attr('rx', 4)
-        .attr('ry', 4)
-        .style('fill', 'rgba(204,204,204,0.6)') // gris clair, opacité 60%
-        .style('stroke', 'rgba(204,204,204,1)') // bordure 100%
-        .style('stroke-width', '1px')
-        .style('opacity', 1);
-
       // Titre du lot (seulement si ce n'est pas le premier nœud)
-      if (d.id !== '0') {
-        const titleText = d.lot && d.lot.title ? d.lot.title : d.name;
+      if (nodes[0].id !== '0') {
+        const titleText =
+          nodes[0].lot && nodes[0].lot.title
+            ? nodes[0].lot.title
+            : nodes[0].name;
 
         // Diviser le texte en lignes de max 20 caractères
         const words = titleText.split(' ');
@@ -1277,7 +1319,7 @@ function updateSankey(dimension) {
       const yPlus = nodeHeight / 2 - 14;
       const fo = nodeGroup
         .append('foreignObject')
-        .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+        .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
         .attr('y', yPlus)
         .attr('width', 28)
         .attr('height', 28);
@@ -1296,9 +1338,9 @@ function updateSankey(dimension) {
           icon: 'plus',
           label: i18next.t('addTransfo'),
           onClick: () => {
-            const path = getPathForNewTransformation(d);
+            const path = getPathForNewTransformation(nodes[0]);
             const ref = {
-              nodeId: d.id,
+              nodeId: nodes[0].id,
               dimension: dimension,
               path: path,
             };
@@ -1371,9 +1413,6 @@ function updateSankey(dimension) {
   ];
 
   // Création du layout Sankey
-  const stackbarWidth = 80;
-  const extraBlockWidth = 30;
-  const horizontalPadding = 20;
 
   // Préserver l'ordre des liens
   const linkOrder = new Map();
@@ -1387,11 +1426,11 @@ function updateSankey(dimension) {
 
   const sankey = d3
     .sankey()
-    .nodeWidth(stackbarWidth + extraBlockWidth)
+    .nodeWidth(STACKBAR_WIDTH + EXTRA_BLOCK_WIDTH)
     .nodePadding(10)
     .extent([
-      [horizontalPadding, 0],
-      [width - horizontalPadding, height],
+      [HORIZONTAL_PADDING, 0],
+      [width - HORIZONTAL_PADDING, height],
     ])
     .nodeId(d => d.id)
     .linkSort((a, b) => {
@@ -1407,7 +1446,7 @@ function updateSankey(dimension) {
 
   // Imposer un pas horizontal fixe entre colonnes
   const columnStep = 300; // distance en px entre 2 colonnes
-  const nodeW = stackbarWidth + extraBlockWidth;
+  const nodeW = STACKBAR_WIDTH + EXTRA_BLOCK_WIDTH;
   const maxDepth = Math.max(...sankeyNodes.map(n => n.depth || 0));
 
   // Déterminer les nœuds sans liens sortants (sinks)
@@ -1420,14 +1459,14 @@ function updateSankey(dimension) {
   sankeyNodes.forEach(n => {
     const isSink = !outCountByNodeId.get(String(n.id));
     const depth = isSink ? maxDepth : n.depth || 0;
-    const x0 = horizontalPadding + depth * columnStep;
+    const x0 = HORIZONTAL_PADDING + depth * columnStep;
     n.x0 = x0;
     n.x1 = x0 + nodeW;
   });
 
   // Largeur requise pour contenir toutes les colonnes
   const requiredWidth =
-    horizontalPadding + maxDepth * columnStep + nodeW + horizontalPadding;
+    HORIZONTAL_PADDING + maxDepth * columnStep + nodeW + HORIZONTAL_PADDING;
   const effectiveWidth = Math.max(width, requiredWidth);
   svg.attr('width', effectiveWidth);
 
@@ -1470,7 +1509,7 @@ function updateSankey(dimension) {
       .append('rect')
       .attr('x', 0)
       .attr('height', nodeHeight)
-      .attr('width', stackbarWidth)
+      .attr('width', STACKBAR_WIDTH)
       .style('fill', '#e0e0e0')
       .style('opacity', 0.6);
 
@@ -1499,7 +1538,7 @@ function updateSankey(dimension) {
         .attr('x', 0)
         .attr('y', 0)
         .attr('height', nodeHeight)
-        .attr('width', stackbarWidth)
+        .attr('width', STACKBAR_WIDTH)
         .attr('rx', 4)
         .attr('ry', 4)
         .style('fill', 'url(#dashed-bg)')
@@ -1514,7 +1553,7 @@ function updateSankey(dimension) {
       dimension,
       d,
       nodeHeight,
-      stackbarWidth,
+      STACKBAR_WIDTH,
       component,
       sum
     );
@@ -1522,9 +1561,9 @@ function updateSankey(dimension) {
     // Bloc à droite de la stackbar
     nodeGroup
       .append('rect')
-      .attr('x', stackbarWidth)
+      .attr('x', STACKBAR_WIDTH)
       .attr('y', 0)
-      .attr('width', extraBlockWidth)
+      .attr('width', EXTRA_BLOCK_WIDTH)
       .attr('height', nodeHeight)
       .attr('rx', 4)
       .attr('ry', 4)
@@ -1695,7 +1734,7 @@ function updateSankey(dimension) {
         const linkY = link.y0 - d.y0;
         const fo = nodeGroup
           .append('foreignObject')
-          .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+          .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
           .attr('y', linkY - 14)
           .attr('width', 28)
           .attr('height', 28);
@@ -1956,7 +1995,7 @@ function updateSankey(dimension) {
           dropdownMenu.style.overflow = 'hidden'; // Empêche tout débordement
           const rect = div.getBoundingClientRect();
           dropdownMenu.style.top = rect.bottom + window.scrollY + 'px';
-          dropdownMenu.style.left = rect.right - stackbarWidth - 28 + 'px';
+          dropdownMenu.style.left = rect.right - STACKBAR_WIDTH - 28 + 'px';
           // Génération dynamique du menu avec désactivation Monter/Descendre
           const isFirst = outgoingLinks.indexOf(link) === 0;
           const isLast =
@@ -2144,7 +2183,7 @@ function updateSankey(dimension) {
       const linkY = link.y0 - d.y0;
       const fo = nodeGroup
         .append('foreignObject')
-        .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+        .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
         .attr('y', linkY - 14)
         .attr('width', 28)
         .attr('height', 28);
@@ -2190,7 +2229,7 @@ function updateSankey(dimension) {
       const yPlus = nodeHeight / 2 - 14;
       const fo = nodeGroup
         .append('foreignObject')
-        .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+        .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
         .attr('y', yPlus)
         .attr('width', 28)
         .attr('height', 28);
@@ -2235,7 +2274,7 @@ function updateSankey(dimension) {
       const yCheck = nodeHeight / 2 - 14;
       const fo = nodeGroup
         .append('foreignObject')
-        .attr('x', stackbarWidth + (extraBlockWidth - 28) / 2)
+        .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
         .attr('y', yCheck)
         .attr('width', 28)
         .attr('height', 28);
@@ -2718,529 +2757,6 @@ window.addEventListener('popstate', function () {
   initializeFromUrl();
 });
 
-// Fonction pour mettre à jour le Sankey depuis l'extérieur (React)
-window.updateSankeyFromParams = function (params) {
-  updateUrlParams(params);
-  initializeFromUrl();
-};
-
-function mergeLots(lots) {
-  // Si un seul lot, le retourner tel quel
-  if (lots.length === 1) {
-    return lots[0];
-  }
-
-  // 1. Première passe : calculer les masses totales
-  const masses = {
-    total: 0,
-    formats: {},
-    types: {},
-    matieres: {},
-    couleurs: {},
-    fibres: {},
-    perturbateurs: {},
-    qualites: {},
-    propres: {},
-  };
-
-  lots.forEach(lot => {
-    masses.total += lot.total;
-    Object.entries(lot.formats).forEach(([format, formatObj]) => {
-      masses.formats[format] =
-        (masses.formats[format] || 0) +
-        lot.total * (formatObj.pourcentage / 100);
-      Object.entries(formatObj.types).forEach(([type, typeObj]) => {
-        masses.types[type] =
-          (masses.types[type] || 0) +
-          lot.total *
-            (formatObj.pourcentage / 100) *
-            (typeObj.pourcentage / 100);
-        // Matières
-        Object.entries(typeObj.matieres || {}).forEach(
-          ([matiere, matiereObj]) => {
-            masses.matieres[matiere] =
-              (masses.matieres[matiere] || 0) +
-              lot.total *
-                (formatObj.pourcentage / 100) *
-                (typeObj.pourcentage / 100) *
-                (matiereObj.pourcentage / 100);
-            // Fibres
-            Object.entries(matiereObj.fibres || {}).forEach(
-              ([fibre, fibreObj]) => {
-                masses.fibres[fibre] =
-                  (masses.fibres[fibre] || 0) +
-                  lot.total *
-                    (formatObj.pourcentage / 100) *
-                    (typeObj.pourcentage / 100) *
-                    (matiereObj.pourcentage / 100) *
-                    (fibreObj.pourcentage / 100);
-              }
-            );
-          }
-        );
-        // Couleurs
-        Object.entries(typeObj.couleurs || {}).forEach(
-          ([couleur, couleurObj]) => {
-            masses.couleurs[couleur] =
-              (masses.couleurs[couleur] || 0) +
-              lot.total *
-                (formatObj.pourcentage / 100) *
-                (typeObj.pourcentage / 100) *
-                (couleurObj.pourcentage / 100);
-          }
-        );
-        // Perturbateurs
-        Object.entries(typeObj.perturbateurs || {}).forEach(
-          ([perturbateur, perturbateurObj]) => {
-            masses.perturbateurs[perturbateur] =
-              (masses.perturbateurs[perturbateur] || 0) +
-              lot.total *
-                (formatObj.pourcentage / 100) *
-                (typeObj.pourcentage / 100) *
-                (perturbateurObj.pourcentage / 100);
-          }
-        );
-        // Qualités
-        Object.entries(typeObj.qualites || {}).forEach(
-          ([qualite, qualiteObj]) => {
-            masses.qualites[qualite] =
-              (masses.qualites[qualite] || 0) +
-              lot.total *
-                (formatObj.pourcentage / 100) *
-                (typeObj.pourcentage / 100) *
-                (qualiteObj.pourcentage / 100);
-          }
-        );
-        // Propres
-        Object.entries(typeObj.propres || {}).forEach(([propre, propreObj]) => {
-          masses.propres[propre] =
-            (masses.propres[propre] || 0) +
-            lot.total *
-              (formatObj.pourcentage / 100) *
-              (typeObj.pourcentage / 100) *
-              (propreObj.pourcentage / 100);
-        });
-      });
-    });
-  });
-
-  const total = masses.total;
-
-  // 2. Deuxième passe : reconstruire la structure avec les pourcentages calculés
-  const result = {
-    total,
-    formats: {},
-  };
-
-  // Formats
-  Object.entries(masses.formats).forEach(([format, masse]) => {
-    // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-    let formatColor = null;
-    for (const lot of lots) {
-      if (lot.formats && lot.formats[format] && lot.formats[format].color) {
-        formatColor = lot.formats[format].color;
-        break; // Prendre la première couleur trouvée
-      }
-    }
-    result.formats[format] = {
-      pourcentage: (masse / total) * 100,
-      types: {},
-    };
-    if (formatColor) result.formats[format].color = formatColor;
-
-    // Types pour ce format
-    const typesInFormat = new Set();
-    lots.forEach(lot => {
-      if (lot.formats && lot.formats[format] && lot.formats[format].types) {
-        Object.keys(lot.formats[format].types).forEach(type =>
-          typesInFormat.add(type)
-        );
-      }
-    });
-
-    typesInFormat.forEach(type => {
-      if (!masses.types[type]) return;
-      // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-      let typeColor = null;
-      for (const lot of lots) {
-        if (
-          lot.formats &&
-          lot.formats[format] &&
-          lot.formats[format].types[type] &&
-          lot.formats[format].types[type].color
-        ) {
-          typeColor = lot.formats[format].types[type].color;
-          break; // Prendre la première couleur trouvée
-        }
-      }
-      result.formats[format].types[type] = {
-        pourcentage: (masses.types[type] / masse) * 100,
-        matieres: {},
-        couleurs: {},
-        perturbateurs: {},
-        qualites: {},
-        propres: {},
-      };
-      if (typeColor) result.formats[format].types[type].color = typeColor;
-
-      // Matières pour ce type
-      const matieresInType = new Set();
-      lots.forEach(lot => {
-        if (
-          lot.formats &&
-          lot.formats[format] &&
-          lot.formats[format].types[type] &&
-          lot.formats[format].types[type].matieres
-        ) {
-          Object.keys(lot.formats[format].types[type].matieres).forEach(
-            matiere => matieresInType.add(matiere)
-          );
-        }
-      });
-
-      matieresInType.forEach(matiere => {
-        if (!masses.matieres[matiere]) return;
-        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-        let matiereColor = null;
-        for (const lot of lots) {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].matieres[matiere] &&
-            lot.formats[format].types[type].matieres[matiere].color
-          ) {
-            matiereColor =
-              lot.formats[format].types[type].matieres[matiere].color;
-            break; // Prendre la première couleur trouvée
-          }
-        }
-
-        // Calculer la distribution des fibres
-        const fibresAgg = {};
-        let fibresSum = 0;
-        lots.forEach(lot => {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].matieres[matiere] &&
-            lot.formats[format].types[type].matieres[matiere].fibres
-          ) {
-            const matiereObj =
-              lot.formats[format].types[type].matieres[matiere];
-            const pctMatiere =
-              typeof matiereObj.pourcentage === 'number'
-                ? matiereObj.pourcentage
-                : 100;
-            const pctType =
-              typeof lot.formats[format].types[type].pourcentage === 'number'
-                ? lot.formats[format].types[type].pourcentage
-                : 100;
-            const pctFormat =
-              typeof lot.formats[format].pourcentage === 'number'
-                ? lot.formats[format].pourcentage
-                : 100;
-            Object.entries(matiereObj.fibres).forEach(([fibre, fibreObj]) => {
-              const pctFibre =
-                typeof fibreObj === 'object' && fibreObj !== null
-                  ? fibreObj.pourcentage !== undefined
-                    ? fibreObj.pourcentage
-                    : fibreObj
-                  : fibreObj;
-              const pct =
-                (pctFibre / 100) *
-                (pctMatiere / 100) *
-                (pctType / 100) *
-                (pctFormat / 100) *
-                100;
-              fibresAgg[fibre] = (fibresAgg[fibre] || 0) + pct;
-              fibresSum += pct;
-            });
-          }
-        });
-
-        // Normaliser les fibres
-        const fibresObj = {};
-        if (fibresSum > 0) {
-          Object.entries(fibresAgg).forEach(([fibre, pct]) => {
-            fibresObj[fibre] = {
-              pourcentage: (pct / fibresSum) * 100,
-            };
-            // Chercher la couleur de la fibre dans les lots fusionnés (prendre la première trouvée)
-            for (const lot of lots) {
-              if (
-                lot.formats &&
-                lot.formats[format] &&
-                lot.formats[format].types[type] &&
-                lot.formats[format].types[type].matieres[matiere] &&
-                lot.formats[format].types[type].matieres[matiere].fibres[
-                  fibre
-                ] &&
-                lot.formats[format].types[type].matieres[matiere].fibres[fibre]
-                  .color
-              ) {
-                fibresObj[fibre].color =
-                  lot.formats[format].types[type].matieres[matiere].fibres[
-                    fibre
-                  ].color;
-                break; // Prendre la première couleur trouvée
-              }
-            }
-          });
-        }
-
-        result.formats[format].types[type].matieres[matiere] = {
-          pourcentage: (masses.matieres[matiere] / masses.types[type]) * 100,
-          fibres: fibresObj,
-        };
-        if (matiereColor)
-          result.formats[format].types[type].matieres[matiere].color =
-            matiereColor;
-      });
-
-      // Couleurs pour ce type
-      const couleursInType = new Set();
-      lots.forEach(lot => {
-        if (
-          lot.formats &&
-          lot.formats[format] &&
-          lot.formats[format].types[type] &&
-          lot.formats[format].types[type].couleurs
-        ) {
-          Object.keys(lot.formats[format].types[type].couleurs).forEach(
-            couleur => couleursInType.add(couleur)
-          );
-        }
-      });
-
-      couleursInType.forEach(couleur => {
-        if (!masses.couleurs[couleur]) return;
-        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-        let couleurColor = null;
-        for (const lot of lots) {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].couleurs[couleur] &&
-            lot.formats[format].types[type].couleurs[couleur].color
-          ) {
-            couleurColor =
-              lot.formats[format].types[type].couleurs[couleur].color;
-            break; // Prendre la première couleur trouvée
-          }
-        }
-
-        result.formats[format].types[type].couleurs[couleur] = {
-          pourcentage: (masses.couleurs[couleur] / masses.types[type]) * 100,
-        };
-        if (couleurColor)
-          result.formats[format].types[type].couleurs[couleur].color =
-            couleurColor;
-      });
-
-      // Perturbateurs pour ce type
-      const perturbateursInType = new Set();
-      lots.forEach(lot => {
-        if (
-          lot.formats &&
-          lot.formats[format] &&
-          lot.formats[format].types[type] &&
-          lot.formats[format].types[type].perturbateurs
-        ) {
-          Object.keys(lot.formats[format].types[type].perturbateurs).forEach(
-            perturbateur => perturbateursInType.add(perturbateur)
-          );
-        }
-      });
-
-      // Ne traiter les perturbateurs que si le type en a
-      if (perturbateursInType.size > 0) {
-        // Calculer la masse totale des perturbateurs pour ce type
-        const perturbateursMassInType =
-          perturbateursInType.size > 0
-            ? Array.from(perturbateursInType).reduce((sum, p) => {
-                return sum + (masses.perturbateurs[p] || 0);
-              }, 0)
-            : 0;
-
-        // Initialiser l'objet perturbateurs seulement si nécessaire
-        if (!result.formats[format].types[type].perturbateurs) {
-          result.formats[format].types[type].perturbateurs = {};
-        }
-
-        perturbateursInType.forEach(perturbateur => {
-          if (!masses.perturbateurs[perturbateur]) return;
-          // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-          let perturbateurColor = null;
-          for (const lot of lots) {
-            if (
-              lot.formats &&
-              lot.formats[format] &&
-              lot.formats[format].types[type] &&
-              lot.formats[format].types[type].perturbateurs[perturbateur] &&
-              lot.formats[format].types[type].perturbateurs[perturbateur].color
-            ) {
-              perturbateurColor =
-                lot.formats[format].types[type].perturbateurs[perturbateur]
-                  .color;
-              break; // Prendre la première couleur trouvée
-            }
-          }
-
-          result.formats[format].types[type].perturbateurs[perturbateur] = {
-            pourcentage:
-              perturbateursMassInType > 0
-                ? (masses.perturbateurs[perturbateur] /
-                    perturbateursMassInType) *
-                  100
-                : 0,
-          };
-          if (perturbateurColor)
-            result.formats[format].types[type].perturbateurs[
-              perturbateur
-            ].color = perturbateurColor;
-        });
-      }
-
-      // Qualités pour ce type
-      const qualitesInType = new Set();
-      lots.forEach(lot => {
-        if (
-          lot.formats &&
-          lot.formats[format] &&
-          lot.formats[format].types[type] &&
-          lot.formats[format].types[type].qualites
-        ) {
-          Object.keys(lot.formats[format].types[type].qualites).forEach(
-            qualite => qualitesInType.add(qualite)
-          );
-        }
-      });
-
-      qualitesInType.forEach(qualite => {
-        if (!masses.qualites[qualite]) return;
-        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-        let qualiteColor = null;
-        for (const lot of lots) {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].qualites[qualite] &&
-            lot.formats[format].types[type].qualites[qualite].color
-          ) {
-            qualiteColor =
-              lot.formats[format].types[type].qualites[qualite].color;
-            break; // Prendre la première couleur trouvée
-          }
-        }
-
-        result.formats[format].types[type].qualites[qualite] = {
-          pourcentage: (masses.qualites[qualite] / masses.types[type]) * 100,
-        };
-        if (qualiteColor)
-          result.formats[format].types[type].qualites[qualite].color =
-            qualiteColor;
-      });
-
-      // Propres pour ce type
-      const propresInType = new Set();
-      lots.forEach(lot => {
-        if (
-          lot.formats &&
-          lot.formats[format] &&
-          lot.formats[format].types[type] &&
-          lot.formats[format].types[type].propres
-        ) {
-          Object.keys(lot.formats[format].types[type].propres).forEach(propre =>
-            propresInType.add(propre)
-          );
-        }
-      });
-
-      propresInType.forEach(propre => {
-        if (!masses.propres[propre]) return;
-        // Chercher la couleur dans les lots fusionnés (prendre la première trouvée)
-        let propreColor = null;
-        for (const lot of lots) {
-          if (
-            lot.formats &&
-            lot.formats[format] &&
-            lot.formats[format].types[type] &&
-            lot.formats[format].types[type].propres[propre] &&
-            lot.formats[format].types[type].propres[propre].color
-          ) {
-            propreColor = lot.formats[format].types[type].propres[propre].color;
-            break; // Prendre la première couleur trouvée
-          }
-        }
-
-        result.formats[format].types[type].propres[propre] = {
-          pourcentage: (masses.propres[propre] / masses.types[type]) * 100,
-        };
-        if (propreColor)
-          result.formats[format].types[type].propres[propre].color =
-            propreColor;
-      });
-    });
-  });
-
-  // Après la fusion des formats/types, fusionner la propreté et la qualité au niveau racine
-  // Propreté
-  const allPropretes = Array.from(
-    new Set(
-      lots.flatMap(lot => (lot.proprete ? Object.keys(lot.proprete) : []))
-    )
-  );
-  result.proprete = {};
-  allPropretes.forEach(prop => {
-    let sum = 0;
-    let color = null;
-    lots.forEach(lot => {
-      if (lot.proprete && lot.proprete[prop]) {
-        const val =
-          typeof lot.proprete[prop] === 'number'
-            ? lot.proprete[prop]
-            : lot.proprete[prop].pourcentage || 0;
-        sum += (lot.total * val) / 100;
-        if (lot.proprete[prop].color) color = lot.proprete[prop].color;
-      }
-    });
-    result.proprete[prop] = {
-      pourcentage: (sum / total) * 100,
-    };
-    if (color) result.proprete[prop].color = color;
-  });
-  // Qualité
-  const allQualites = Array.from(
-    new Set(lots.flatMap(lot => (lot.qualite ? Object.keys(lot.qualite) : [])))
-  );
-  result.qualite = {};
-  allQualites.forEach(qual => {
-    let sum = 0;
-    let color = null;
-    lots.forEach(lot => {
-      if (lot.qualite && lot.qualite[qual]) {
-        const val =
-          typeof lot.qualite[qual] === 'number'
-            ? lot.qualite[qual]
-            : lot.qualite[qual].pourcentage || 0;
-        sum += (lot.total * val) / 100;
-        if (lot.qualite[qual].color) color = lot.qualite[qual].color;
-      }
-    });
-    result.qualite[qual] = {
-      pourcentage: (sum / total) * 100,
-    };
-    if (color) result.qualite[qual].color = color;
-  });
-
-  return result;
-}
-window.mergeLots = mergeLots;
-
 function applyScenario(
   lot,
   scenario,
@@ -3697,7 +3213,7 @@ function createDropdown(button, options, positionOffset = 0) {
     // Utiliser la même logique de positionnement que les icônes de transformation
     if (positionOffset !== 0) {
       // Pour les boutons +, utiliser la même logique que les icônes de transformation
-      dropdownMenu.style.left = rect.right - 80 - 28 + 'px'; // stackbarWidth = 80
+      dropdownMenu.style.left = rect.right - STACKBAR_WIDTH - 28 + 'px';
     } else {
       // Positionnement par défaut
       dropdownMenu.style.left = rect.right - 170 + 'px';
