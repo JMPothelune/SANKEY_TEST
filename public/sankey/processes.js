@@ -115,7 +115,13 @@ function selectByType(lot, selectedTypes) {
 
     // Si aucun type n'est sélectionné, tout va au reste
     if (selectedPct === 0) {
-      restPct = 100;
+      // Normaliser restPct pour couvrir 100% du format
+      const totalPct = selectedPct + restPct;
+      if (totalPct > 0) {
+        restPct = (restPct / totalPct) * 100;
+      } else {
+        restPct = 100;
+      }
     }
 
     // Recalcul des pourcentages pour ce format
@@ -139,12 +145,10 @@ function selectByType(lot, selectedTypes) {
       const restMass = formatMass * (restPct / 100);
 
       targetLot.formats[formatKey].types = selected;
-      targetLot.formats[formatKey].pourcentage =
-        (selectedMass / lot.total) * 100;
+      targetLot.formats[formatKey].pourcentage = selectedMass;
 
       coProductLot.formats[formatKey].types = rest;
-      coProductLot.formats[formatKey].pourcentage =
-        (restMass / lot.total) * 100;
+      coProductLot.formats[formatKey].pourcentage = restMass;
 
       selectedMassTotal += selectedMass;
       restMassTotal += restMass;
@@ -164,7 +168,24 @@ function selectByType(lot, selectedTypes) {
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
 
-  if (Math.abs(lot.total - (targetLot.total + coProductLot.total)) > 2) {
+  // Normalisation des pourcentages des formats pour qu'ils fassent 100%
+  if (selectedMassTotal > 0) {
+    Object.keys(targetLot.formats).forEach(formatKey => {
+      targetLot.formats[formatKey].pourcentage =
+        (targetLot.formats[formatKey].pourcentage / selectedMassTotal) * 100;
+    });
+  }
+
+  if (restMassTotal > 0) {
+    Object.keys(coProductLot.formats).forEach(formatKey => {
+      coProductLot.formats[formatKey].pourcentage =
+        (coProductLot.formats[formatKey].pourcentage / restMassTotal) * 100;
+    });
+  }
+
+  // Vérification adaptée pour les transformations enchaînées
+  const totalResult = targetLot.total + coProductLot.total;
+  if (Math.abs(lot.total - totalResult) > 2) {
     console.warn(
       '[selectByType] Poids incohérent : origine =',
       lot.total,
@@ -173,7 +194,7 @@ function selectByType(lot, selectedTypes) {
       'reste =',
       coProductLot.total,
       'somme =',
-      targetLot.total + coProductLot.total
+      totalResult
     );
   }
 
@@ -297,7 +318,9 @@ function selectByMatiere(lot, selectedMatieres) {
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
 
-  if (Math.abs(lot.total - (targetLot.total + coProductLot.total)) > 2) {
+  // Vérification adaptée pour les transformations enchaînées
+  const totalResult = targetLot.total + coProductLot.total;
+  if (Math.abs(lot.total - totalResult) > 2) {
     console.warn(
       '[selectByMatiere] Poids incohérent : origine =',
       lot.total,
@@ -306,7 +329,7 @@ function selectByMatiere(lot, selectedMatieres) {
       'reste =',
       coProductLot.total,
       'somme =',
-      targetLot.total + coProductLot.total
+      totalResult
     );
   }
 
@@ -541,7 +564,9 @@ function selectByCouleur(lot, selectedCouleurs) {
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
 
-  if (Math.abs(lot.total - (targetLot.total + coProductLot.total)) > 2) {
+  // Vérification adaptée pour les transformations enchaînées
+  const totalResult = targetLot.total + coProductLot.total;
+  if (Math.abs(lot.total - totalResult) > 2) {
     console.warn(
       '[selectByCouleur] Poids incohérent : origine =',
       lot.total,
@@ -550,7 +575,7 @@ function selectByCouleur(lot, selectedCouleurs) {
       'reste =',
       coProductLot.total,
       'somme =',
-      targetLot.total + coProductLot.total
+      totalResult
     );
   }
 
@@ -673,7 +698,9 @@ function selectByFibre(
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
 
-  if (Math.abs(lot.total - (targetLot.total + coProductLot.total)) > 2) {
+  // Vérification adaptée pour les transformations enchaînées
+  const totalResult = targetLot.total + coProductLot.total;
+  if (Math.abs(lot.total - totalResult) > 2) {
     console.warn(
       '[selectByFibre] Poids incohérent : origine =',
       lot.total,
@@ -682,7 +709,7 @@ function selectByFibre(
       'reste =',
       coProductLot.total,
       'somme =',
-      targetLot.total + coProductLot.total
+      totalResult
     );
   }
 
@@ -884,7 +911,9 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
 
-  if (Math.abs(lot.total - (targetLot.total + coProductLot.total)) > 2) {
+  // Vérification adaptée pour les transformations enchaînées
+  const totalResult = targetLot.total + coProductLot.total;
+  if (Math.abs(lot.total - totalResult) > 2) {
     console.warn(
       '[selectByPerturbateur] Poids incohérent : origine =',
       lot.total,
@@ -893,7 +922,7 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
       'reste =',
       coProductLot.total,
       'somme =',
-      targetLot.total + coProductLot.total
+      totalResult
     );
   }
 
