@@ -1292,16 +1292,47 @@ const transformationUtils = {
     }
   },
 
-  // Fonction synchrone pour obtenir les détails depuis le cache uniquement
+  // Fonction synchrone pour obtenir les détails (charge à la demande si pas en cache)
   getDynamicTransfoDetailsSync(bubbleId) {
     const params = getUrlParams();
     const isLive = params.isLive;
     const cacheKey = `${bubbleId}_${isLive}`;
 
+    // Si déjà en cache, retourner
     if (dynamicTransfosCache.has(cacheKey)) {
       return dynamicTransfosCache.get(cacheKey);
     }
-    return null;
+
+    // Si pas en cache, charger MAINTENANT de manière synchrone
+    console.log('Chargement synchrone des détails pour:', bubbleId);
+
+    try {
+      // Utiliser XMLHttpRequest pour un appel synchrone
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/bubble', false); // false = synchrone
+      xhr.setRequestHeader('Content-Type', 'application/json');
+
+      xhr.send(
+        JSON.stringify({
+          endpoint: 'transfo',
+          params: { id: bubbleId, isLive },
+          method: 'POST',
+        })
+      );
+
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText);
+        dynamicTransfosCache.set(cacheKey, data);
+        console.log('Détails chargés et mis en cache pour:', bubbleId);
+        return data;
+      } else {
+        console.error('Erreur lors du chargement synchrone:', xhr.status);
+        return null;
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement synchrone des détails:', error);
+      return null;
+    }
   },
 };
 
