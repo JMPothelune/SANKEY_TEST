@@ -530,7 +530,7 @@ function selectByCouleur(lot, selectedCouleurs) {
       targetLot.formats[formatKey] = {
         ...formatObj,
         types: selectedTypes,
-        pourcentage: (formatSelectedMass / lot.total) * 100,
+        pourcentage: formatSelectedMass,
       };
     }
     if (formatRestMass > 0) {
@@ -541,7 +541,7 @@ function selectByCouleur(lot, selectedCouleurs) {
       coProductLot.formats[formatKey] = {
         ...formatObj,
         types: restTypes,
-        pourcentage: (formatRestMass / lot.total) * 100,
+        pourcentage: formatRestMass,
       };
     }
 
@@ -563,6 +563,21 @@ function selectByCouleur(lot, selectedCouleurs) {
   // Mise à jour des totaux
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
+
+  // Normalisation des pourcentages des formats pour qu'ils fassent 100%
+  if (selectedMassTotal > 0) {
+    Object.keys(targetLot.formats).forEach(formatKey => {
+      targetLot.formats[formatKey].pourcentage =
+        (targetLot.formats[formatKey].pourcentage / selectedMassTotal) * 100;
+    });
+  }
+
+  if (restMassTotal > 0) {
+    Object.keys(coProductLot.formats).forEach(formatKey => {
+      coProductLot.formats[formatKey].pourcentage =
+        (coProductLot.formats[formatKey].pourcentage / restMassTotal) * 100;
+    });
+  }
 
   // Vérification adaptée pour les transformations enchaînées
   const totalResult = targetLot.total + coProductLot.total;
@@ -680,14 +695,22 @@ function selectByFibre(
         selectedTypes[typeKey].pourcentage =
           (typeMassesSelected[typeKey] / formatSelectedMass) * 100;
       });
-      targetLot.formats[formatKey].types = selectedTypes;
+      targetLot.formats[formatKey] = {
+        ...formatObj,
+        types: selectedTypes,
+        pourcentage: formatSelectedMass,
+      };
     }
     if (formatRestMass > 0) {
       Object.keys(restTypes).forEach(typeKey => {
         restTypes[typeKey].pourcentage =
           (typeMassesRest[typeKey] / formatRestMass) * 100;
       });
-      coProductLot.formats[formatKey].types = restTypes;
+      coProductLot.formats[formatKey] = {
+        ...formatObj,
+        types: restTypes,
+        pourcentage: formatRestMass,
+      };
     }
 
     selectedMassTotal += formatSelectedMass;
@@ -697,6 +720,21 @@ function selectByFibre(
   // Mise à jour des totaux
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
+
+  // Normalisation des pourcentages des formats pour qu'ils fassent 100%
+  if (selectedMassTotal > 0) {
+    Object.keys(targetLot.formats).forEach(formatKey => {
+      targetLot.formats[formatKey].pourcentage =
+        (targetLot.formats[formatKey].pourcentage / selectedMassTotal) * 100;
+    });
+  }
+
+  if (restMassTotal > 0) {
+    Object.keys(coProductLot.formats).forEach(formatKey => {
+      coProductLot.formats[formatKey].pourcentage =
+        (coProductLot.formats[formatKey].pourcentage / restMassTotal) * 100;
+    });
+  }
 
   // Vérification adaptée pour les transformations enchaînées
   const totalResult = targetLot.total + coProductLot.total;
@@ -891,6 +929,7 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
       targetLot.formats[formatKey] = {
         ...formatObj,
         types: selectedTypes,
+        pourcentage: formatSelectedMass,
       };
       if (formatObj.color) targetLot.formats[formatKey].color = formatObj.color;
       selectedMassTotal += formatSelectedMass;
@@ -900,6 +939,7 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
       coProductLot.formats[formatKey] = {
         ...formatObj,
         types: restTypes,
+        pourcentage: formatRestMass,
       };
       if (formatObj.color)
         coProductLot.formats[formatKey].color = formatObj.color;
@@ -910,6 +950,21 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
   // Mise à jour des totaux
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
+
+  // Normalisation des pourcentages des formats pour qu'ils fassent 100%
+  if (selectedMassTotal > 0) {
+    Object.keys(targetLot.formats).forEach(formatKey => {
+      targetLot.formats[formatKey].pourcentage =
+        (targetLot.formats[formatKey].pourcentage / selectedMassTotal) * 100;
+    });
+  }
+
+  if (restMassTotal > 0) {
+    Object.keys(coProductLot.formats).forEach(formatKey => {
+      coProductLot.formats[formatKey].pourcentage =
+        (coProductLot.formats[formatKey].pourcentage / restMassTotal) * 100;
+    });
+  }
 
   // Vérification adaptée pour les transformations enchaînées
   const totalResult = targetLot.total + coProductLot.total;
