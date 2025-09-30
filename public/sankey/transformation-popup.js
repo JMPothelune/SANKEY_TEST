@@ -8,6 +8,7 @@ class TransformationPopup {
     this.mode = null; // Pour stocker le mode
     this._dropdownCloseHandler = null; // Pour gérer le dropdown proprement
     this.selectedKeys = []; // Pour stocker les keys sélectionnées
+    this.isLoadingData = false; // Flag pour tracker le chargement des données API
   }
 
   getSelectedKeys() {
@@ -43,30 +44,18 @@ class TransformationPopup {
       // Pour les transformations dynamiques, utiliser la popup existante
       // mais charger les transformations disponibles d'abord
       if (window.transformationUtils) {
-        window.transformationUtils
-          .getAvailableTransformations()
-          .then(transformations => {
-            // Calculer la valeur à présélectionner dans le <select>
-            const selectedValue =
-              lastType === 'dynamic_transfo' && lastTransfo?.dynamic_transfo_id
-                ? `dynamic_transfo_${lastTransfo.dynamic_transfo_id}`
-                : lastType;
-            // Créer un squelette minimal puis charger et mettre à jour avec présélection
-            this.createPopupWithoutKeyList(ref, selectedValue, keys);
-            this.loadTransformationsAndUpdatePopup(ref, selectedValue, keys);
-          })
-          .catch(error => {
-            console.error(
-              'Erreur lors du chargement des transformations dynamiques:',
-              error
-            );
-            // Fallback : créer la popup de base
-            const selectedValue =
-              lastType === 'dynamic_transfo' && lastTransfo?.dynamic_transfo_id
-                ? `dynamic_transfo_${lastTransfo.dynamic_transfo_id}`
-                : lastType;
-            this.createPopupWithoutKeyList(ref, selectedValue, keys);
-          });
+        // Créer un squelette minimal d'abord
+        const selectedValue =
+          lastType === 'dynamic_transfo' && lastTransfo?.dynamic_transfo_id
+            ? `dynamic_transfo_${lastTransfo.dynamic_transfo_id}`
+            : lastType;
+        this.createPopupWithoutKeyList(ref, selectedValue, keys);
+
+        // Activer le flag de chargement
+        this.isLoadingData = true;
+
+        // Puis charger et mettre à jour avec présélection
+        this.loadTransformationsAndUpdatePopup(ref, selectedValue, keys);
       } else {
         // Fallback : créer la popup de base
         const selectedValue =
@@ -96,6 +85,9 @@ class TransformationPopup {
       // TOUJOURS créer la popup de base d'abord
       this.createPopupWithoutKeyList(ref, lastType, keys);
 
+      // Activer le flag de chargement
+      this.isLoadingData = true;
+
       // Puis charger les données et mettre à jour
       Promise.all([
         chargerDonneesBaseAPI(keyList),
@@ -113,9 +105,13 @@ class TransformationPopup {
             keyListData,
             transformations
           );
+          // Désactiver le flag de chargement
+          this.isLoadingData = false;
         })
         .catch(error => {
           console.error('Erreur lors du chargement des données:', error);
+          // Désactiver le flag de chargement même en cas d'erreur
+          this.isLoadingData = false;
           // La popup de base existe déjà, on peut afficher l'erreur dedans
           if (this.modal) {
             this.modal.innerHTML = `
@@ -219,6 +215,9 @@ class TransformationPopup {
 
     // Attacher les event listeners de base IMMÉDIATEMENT (fermeture)
     this.attachBasicEventListeners();
+
+    // Activer le flag de chargement
+    this.isLoadingData = true;
 
     // Charger les transformations et créer la popup complète
     this.loadTransformationsAndCreateCompletePopup(ref, lastType, keys);
@@ -395,8 +394,14 @@ class TransformationPopup {
 
       // Créer directement la popup complète avec les transformations chargées
       this.createPopupWithKeyList(ref, null, null, transformations);
+
+      // Désactiver le flag de chargement après le chargement réussi
+      this.isLoadingData = false;
     } catch (error) {
       console.error('Erreur lors du chargement des transformations:', error);
+
+      // Désactiver le flag de chargement même en cas d'erreur
+      this.isLoadingData = false;
 
       // Afficher un message d'erreur dans la popup existante
       if (this.modal) {
@@ -580,20 +585,20 @@ class TransformationPopup {
         `;
       }
 
-      // Activer le bouton de sauvegarde
-      const saveBtn = this.modal.querySelector('#save-btn');
-      if (saveBtn) {
-        saveBtn.disabled = false;
-      }
+      // Désactiver le flag de chargement après le chargement des transformations
+      this.isLoadingData = false;
 
-      // Attacher les listeners
+      // Attacher les listeners (qui va appeler updateSaveButtonState)
       this.attachEventListeners();
     } catch (error) {
       console.error('Erreur lors du chargement des transformations:', error);
 
+      // Désactiver le flag de chargement même en cas d'erreur
+      this.isLoadingData = false;
+
       // Afficher un message d'erreur
       const loadingDiv =
-        this.modal.querySelector('.animate-spin').parentElement.parentElement;
+        this.modal.querySelector('.animate-spin')?.parentElement?.parentElement;
       if (loadingDiv) {
         loadingDiv.innerHTML = `
           <div class="text-red-600 text-sm">
@@ -644,11 +649,12 @@ class TransformationPopup {
         window.transformationTypes[selectedType].requiredKey;
       const hasKeys = this.selectedKeys.length > 0;
 
-      // NOUVELLE LOGIQUE : Permettre la suppression du dernier tag
-      // Le bouton "Enregistrer" est désactivé seulement si :
-      // 1. Aucun type sélectionné OU
-      // 2. Type avec requiredKey=true ET aucun tag sélectionné
-      const isValid = !isDropdownEmpty && (!isRequiredKey || hasKeys);
+      // Le bouton "Enregistrer" est désactivé si :
+      // 1. Chargement en cours des données API OU
+      // 2. Aucun type sélectionné OU
+      // 3. Type avec requiredKey=true ET aucun tag sélectionné
+      const isValid =
+        !this.isLoadingData && !isDropdownEmpty && (!isRequiredKey || hasKeys);
 
       saveBtn.disabled = !isValid;
       saveBtn.className = isValid
@@ -673,6 +679,10 @@ class TransformationPopup {
         const bubbleId = newType.replace('dynamic_transfo_', '');
         console.log('Transformation dynamique sélectionnée:', bubbleId);
 
+        // Activer le flag de chargement
+        this.isLoadingData = true;
+        updateSaveButtonState();
+
         // Masquer les keys pour les transformations dynamiques
         const keysContainer = this.modal.querySelector('#transfo-keys');
         if (keysContainer) {
@@ -693,10 +703,9 @@ class TransformationPopup {
           transfoDescription.style.display = 'none';
         }
 
-        // Afficher le tableau des détails
+        // Afficher le tableau des détails (qui désactivera le flag de chargement)
         this.displayDynamicTransfoDetails(bubbleId);
         // Pour les transformations dynamiques, ne pas vérifier les paramètres
-        updateSaveButtonState();
         return;
       } else {
         // Afficher les keys pour les transformations statiques
@@ -1186,6 +1195,31 @@ class TransformationPopup {
         "Erreur lors de l'affichage des détails de transformation:",
         error
       );
+    } finally {
+      // Désactiver le flag de chargement dans tous les cas
+      this.isLoadingData = false;
+
+      // Mettre à jour l'état du bouton (si attachEventListeners a déjà été appelé)
+      const saveBtn = this.modal?.querySelector('#save-btn');
+      const transfoTypeSelect = this.modal?.querySelector('#transfo-type');
+      if (saveBtn && transfoTypeSelect) {
+        const selectedType = transfoTypeSelect.value;
+        const isDropdownEmpty = !selectedType;
+        const isRequiredKey =
+          window.transformationTypes &&
+          window.transformationTypes[selectedType] &&
+          window.transformationTypes[selectedType].requiredKey;
+        const hasKeys = this.selectedKeys.length > 0;
+        const isValid =
+          !this.isLoadingData &&
+          !isDropdownEmpty &&
+          (!isRequiredKey || hasKeys);
+
+        saveBtn.disabled = !isValid;
+        saveBtn.className = isValid
+          ? 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
+          : 'px-4 py-2 bg-gray-400 text-gray-200 rounded cursor-not-allowed';
+      }
     }
   }
 
