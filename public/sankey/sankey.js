@@ -3042,24 +3042,27 @@ function applyScenario(
     }
     const coproductNodeId = `${idGenObj.id++}`;
     let coproductPath;
+
+    // Si pathArr se termine par 'transformations', coproduct_scenario est au même niveau
     if (
-      pathArr.length >= 2 &&
-      pathArr[pathArr.length - 2] === 'transformations' &&
-      typeof pathArr[pathArr.length - 1] === 'number'
+      pathArr.length >= 1 &&
+      pathArr[pathArr.length - 1] === 'transformations'
     ) {
-      // On est dans une transformation du scénario principal ou d'un sous-scenario
+      // Retirer 'transformations' et ajouter 'coproduct_scenario', 'transformations'
+      const parentPath = pathArr.slice(0, -1);
+      coproductPath = [...parentPath, 'coproduct_scenario', 'transformations'];
+    } else if (isRoot) {
+      // Cas racine pur (pas de transformations encore)
+      coproductPath = ['coproduct_scenario', 'transformations'];
+    } else {
+      // pathArr se termine par un INDEX (number)
+      // Ajouter 'scenario' puis 'coproduct_scenario', 'transformations'
       coproductPath = [
         ...pathArr,
         'scenario',
         'coproduct_scenario',
         'transformations',
       ];
-    } else if (isRoot) {
-      // Vrai coproduit racine
-      coproductPath = ['coproduct_scenario', 'transformations'];
-    } else {
-      // Fallback (devrait être rare)
-      coproductPath = [...pathArr, 'coproduct_scenario', 'transformations'];
     }
     resteLot.id = coproductNodeId;
     resteLot._path = coproductPath;
@@ -3101,7 +3104,6 @@ function applyScenario(
       scenario.coproduct_scenario.transformations &&
       scenario.coproduct_scenario.transformations.length > 0
     ) {
-      const coproPath = [...pathArr, 'coproduct_scenario', 'transformations'];
       applyScenario(
         resteLot,
         scenario.coproduct_scenario,
