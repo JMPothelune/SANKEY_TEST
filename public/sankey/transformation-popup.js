@@ -1175,6 +1175,29 @@ class TransformationPopup {
 
   // Fonction pour afficher le tableau des détails de transformation
   async displayDynamicTransfoDetails(bubbleId) {
+    // Afficher le spinner pendant le chargement
+    const transfoTypeSelect = this.modal.querySelector('#transfo-type');
+    if (transfoTypeSelect) {
+      // Supprimer l'ancien tableau/spinner/erreur s'il existe
+      const existingContent = this.modal.querySelector(
+        '#transfo-details-table, #transfo-loading-spinner, #transfo-error-message'
+      );
+      if (existingContent) {
+        existingContent.remove();
+      }
+
+      // Insérer le spinner après le select
+      const spinnerHTML = `
+        <div id="transfo-loading-spinner" class="mt-3 flex items-center justify-center py-8 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+            <p class="text-sm text-gray-600">Chargement des détails...</p>
+          </div>
+        </div>
+      `;
+      transfoTypeSelect.insertAdjacentHTML('afterend', spinnerHTML);
+    }
+
     try {
       // Récupérer les détails de la transformation
       const transfoDetails =
@@ -1182,11 +1205,21 @@ class TransformationPopup {
 
       if (!transfoDetails) {
         console.warn('Impossible de charger les détails de la transformation');
+        // Afficher un message d'avertissement
+        this.showTransfoDetailsError(
+          'Impossible de charger les détails de la transformation'
+        );
         return;
       }
 
       // Extraire les données pour le tableau
       const tableData = await this.extractTableDataFromTransfo(transfoDetails);
+
+      // Supprimer le spinner
+      const spinner = this.modal.querySelector('#transfo-loading-spinner');
+      if (spinner) {
+        spinner.remove();
+      }
 
       // Créer et afficher le tableau
       this.renderTransfoDetailsTable(tableData);
@@ -1194,6 +1227,10 @@ class TransformationPopup {
       console.error(
         "Erreur lors de l'affichage des détails de transformation:",
         error
+      );
+      // Afficher un message d'erreur
+      this.showTransfoDetailsError(
+        'Erreur lors du chargement des détails. Veuillez réessayer.'
       );
     } finally {
       // Désactiver le flag de chargement dans tous les cas
@@ -1223,6 +1260,32 @@ class TransformationPopup {
     }
   }
 
+  // Fonction helper pour afficher les erreurs de chargement
+  showTransfoDetailsError(message) {
+    // Supprimer le spinner s'il existe
+    const spinner = this.modal.querySelector('#transfo-loading-spinner');
+    if (spinner) {
+      spinner.remove();
+    }
+
+    // Supprimer l'ancien message d'erreur s'il existe
+    const existingError = this.modal.querySelector('#transfo-error-message');
+    if (existingError) {
+      existingError.remove();
+    }
+
+    // Afficher le message d'erreur
+    const transfoTypeSelect = this.modal.querySelector('#transfo-type');
+    if (transfoTypeSelect) {
+      const errorHTML = `
+        <div id="transfo-error-message" class="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm text-red-600">${message}</p>
+        </div>
+      `;
+      transfoTypeSelect.insertAdjacentHTML('afterend', errorHTML);
+    }
+  }
+
   // Fonction pour créer et afficher le tableau HTML
   renderTransfoDetailsTable(data) {
     if (data.length === 0) {
@@ -1230,31 +1293,34 @@ class TransformationPopup {
       return;
     }
 
-    // Créer le HTML du tableau (version compacte et élégante)
+    // Créer le HTML du tableau (version compacte et élégante avec collapse)
     const tableHTML = `
       <div id="transfo-details-table" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+        <div id="table-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
           <h4 class="text-sm font-medium text-gray-900">Détails de la transformation</h4>
+          <svg id="collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
         </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead class="bg-white">
+        <div id="table-body" class="overflow-x-auto max-h-64 overflow-y-auto">
+          <table class="min-w-full text-xs">
+            <thead class="bg-white sticky top-0 z-10">
               <tr>
-                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Dimension</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Input Target</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Target Lot</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Co-product Lot</th>
+                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Dimension</th>
+                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Input Target</th>
+                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Target Lot</th>
+                <th class="px-2 py-1.5 text-left font-medium text-gray-500 uppercase tracking-wider">Co-product Lot</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-white divide-y divide-gray-100">
               ${data
                 .map(
                   row => `
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 font-medium text-gray-900">${row.dimension}</td>
-                  <td class="px-4 py-3 text-gray-700">${row.inputTarget}</td>
-                  <td class="px-4 py-3 text-gray-700">${row.targetLot}</td>
-                  <td class="px-4 py-3 text-gray-700">${row.coProductLot}</td>
+                  <td class="px-2 py-1.5 font-medium text-gray-900">${row.dimension}</td>
+                  <td class="px-2 py-1.5 text-gray-700">${row.inputTarget}</td>
+                  <td class="px-2 py-1.5 text-gray-700">${row.targetLot}</td>
+                  <td class="px-2 py-1.5 text-gray-700">${row.coProductLot}</td>
                 </tr>
               `
                 )
@@ -1275,6 +1341,27 @@ class TransformationPopup {
     const transfoTypeSelect = this.modal.querySelector('#transfo-type');
     if (transfoTypeSelect) {
       transfoTypeSelect.insertAdjacentHTML('afterend', tableHTML);
+
+      // Ajouter le listener pour le collapse/expand
+      const tableHeader = this.modal.querySelector('#table-header');
+      const tableBody = this.modal.querySelector('#table-body');
+      const collapseIcon = this.modal.querySelector('#collapse-icon');
+
+      if (tableHeader && tableBody && collapseIcon) {
+        tableHeader.addEventListener('click', () => {
+          const isCollapsed = tableBody.style.display === 'none';
+
+          if (isCollapsed) {
+            // Expand
+            tableBody.style.display = 'block';
+            collapseIcon.style.transform = 'rotate(0deg)';
+          } else {
+            // Collapse
+            tableBody.style.display = 'none';
+            collapseIcon.style.transform = 'rotate(-90deg)';
+          }
+        });
+      }
     } else {
       console.warn(
         'Impossible de trouver le select de type de transformation pour insérer le tableau'
