@@ -33,10 +33,10 @@ function selectByFormat(lot, selectedFormats) {
     );
 
     if (isSelected) {
-      selected[key] = { ...value };
+      selected[key] = JSON.parse(JSON.stringify(value));
       selectedPct += pourcentage;
     } else {
-      rest[key] = { ...value };
+      rest[key] = JSON.parse(JSON.stringify(value));
       restPct += pourcentage;
     }
   });

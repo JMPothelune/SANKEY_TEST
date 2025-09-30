@@ -149,18 +149,18 @@ const pattern = defs
   .append('pattern')
   .attr('id', 'dashed-bg')
   .attr('patternUnits', 'userSpaceOnUse')
-  .attr('width', 8)
-  .attr('height', 8);
+  .attr('width', 5)
+  .attr('height', 5);
 pattern
   .append('rect')
-  .attr('width', 8)
-  .attr('height', 8)
+  .attr('width', 5)
+  .attr('height', 5)
   .attr('fill', '#f5f5f5');
 pattern
   .append('path')
-  .attr('d', 'M0,0 l8,8')
+  .attr('d', 'M0,0 l5,5 M-1,4 l2,2 M4,-1 l2,2')
   .attr('stroke', '#bbb')
-  .attr('stroke-width', 2);
+  .attr('stroke-width', 1.5);
 
 // Création du tooltip
 const tooltip = d3
@@ -268,6 +268,16 @@ function createStackbarSegments(
   component,
   sum
 ) {
+  // Vérifier que nodeHeight est un nombre valide
+  if (isNaN(nodeHeight) || nodeHeight === null || nodeHeight === undefined) {
+    console.warn(
+      'nodeHeight invalide détecté:',
+      nodeHeight,
+      'utilisation de 100 par défaut'
+    );
+    nodeHeight = 100;
+  }
+
   let yOffset = 0;
 
   sortedEntries.forEach(([key, value]) => {
@@ -382,7 +392,9 @@ function createStackbarSegments(
     const fillColorStr = color + (color.length === 7 ? '99' : ''); // Opacité 60% si hex, sinon rgba déjà
     const strokeColorStr = color;
     const isUnknown =
-      key.toLowerCase() === 'inconnu' || key.toLowerCase() === 'autre';
+      key.toLowerCase() === 'inconnu' ||
+      key.toLowerCase() === 'autre' ||
+      key.toLowerCase() === 'n/a';
     nodeGroup
       .append('rect')
       .attr('x', 0)
@@ -585,12 +597,10 @@ const stackbarComponents = {
           values[k] = (values[k] / totalWithType) * 100;
         });
       }
-      // Optionnel : indiquer la part sans type (rare, mais pour homogénéité)
-      values._missing = 100 - (totalWithType > 0 ? 100 : 0);
 
       // Conserver les couleurs des types
       Object.keys(values).forEach(key => {
-        if (key !== '_missing') {
+        if (key !== 'N/A') {
           // Chercher la couleur dans la structure originale
           let foundColor = null;
           Object.values(lot.formats).forEach(formatObj => {
@@ -621,36 +631,46 @@ const stackbarComponents = {
     getStackValues: lot => {
       if (!lot.formats) return {};
       const values = {};
+      let totalLot = 0;
+      let totalSansMatiere = 0;
       Object.values(lot.formats).forEach(formatObj => {
+        const pctFormat =
+          typeof formatObj.pourcentage === 'number'
+            ? formatObj.pourcentage
+            : 100;
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
-            if (typeObj.matieres) {
+            const poidsType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
+            totalLot += poidsType;
+            if (typeObj.matieres && Object.keys(typeObj.matieres).length > 0) {
+              let sumMatiere = 0;
               Object.entries(typeObj.matieres).forEach(
                 ([matiere, matiereObj]) => {
-                  // On accepte aussi les objets { pourcentage: ... } ou nombre direct
                   let pctMatiere =
                     typeof matiereObj === 'object' && matiereObj !== null
                       ? matiereObj.pourcentage !== undefined
                         ? matiereObj.pourcentage
                         : 0
                       : matiereObj;
-                  let pctType =
-                    typeof typeObj.pourcentage === 'number'
-                      ? typeObj.pourcentage
-                      : 100;
-                  let pctFormat =
-                    typeof formatObj.pourcentage === 'number'
-                      ? formatObj.pourcentage
-                      : 100;
-                  // Pondération par le pourcentage du type et du format
-                  const pct = pctMatiere * (pctType / 100) * (pctFormat / 100);
-                  values[matiere] = (values[matiere] || 0) + pct;
+                  values[matiere] =
+                    (values[matiere] || 0) + (pctMatiere / 100) * poidsType;
+                  sumMatiere += (pctMatiere / 100) * poidsType;
                 }
               );
+              if (sumMatiere < poidsType) {
+                totalSansMatiere += poidsType - sumMatiere;
+              }
+            } else {
+              // Pas de matière renseignée pour ce type
+              totalSansMatiere += poidsType;
             }
           });
         }
       });
+      // Ajouter la part sans matière AVANT normalisation
+      if (totalSansMatiere > 0 && totalLot > 0) {
+        values['N/A'] = (totalSansMatiere / totalLot) * 100;
+      }
       // Normalisation pour que la somme fasse 100%
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
       if (sum > 0) {
@@ -658,7 +678,6 @@ const stackbarComponents = {
           values[k] = (values[k] / sum) * 100;
         });
       }
-      values._missing = 100 - (sum > 0 ? 100 : 0);
 
       // Conserver les couleurs des matières
       Object.keys(values).forEach(key => {
@@ -737,12 +756,29 @@ const stackbarComponents = {
     getStackValues: lot => {
       if (!lot.formats) return {};
       const values = {};
+      let totalLot = 0;
+      let totalSansFibre = 0;
       Object.values(lot.formats).forEach(formatObj => {
+        const pctFormat =
+          typeof formatObj.pourcentage === 'number'
+            ? formatObj.pourcentage
+            : 100;
         if (formatObj.types) {
           Object.values(formatObj.types).forEach(typeObj => {
-            if (typeObj.matieres) {
+            const poidsType = (pctFormat * (typeObj.pourcentage || 100)) / 100;
+            totalLot += poidsType;
+            if (typeObj.matieres && Object.keys(typeObj.matieres).length > 0) {
               Object.values(typeObj.matieres).forEach(matiereObj => {
-                if (matiereObj.fibres) {
+                const pctMatiere =
+                  typeof matiereObj.pourcentage === 'number'
+                    ? matiereObj.pourcentage
+                    : 100;
+                const poidsMatiere = (poidsType * pctMatiere) / 100;
+                if (
+                  matiereObj.fibres &&
+                  Object.keys(matiereObj.fibres).length > 0
+                ) {
+                  let sumFibre = 0;
                   Object.entries(matiereObj.fibres).forEach(([fibre, val]) => {
                     let pctFibre =
                       typeof val === 'object' && val !== null
@@ -752,21 +788,29 @@ const stackbarComponents = {
                             ? val.masse
                             : 0
                         : val;
-                    // Pondération par tous les pourcentages
-                    const pct =
-                      (pctFibre / 100) *
-                      (matiereObj.pourcentage / 100) *
-                      (typeObj.pourcentage / 100) *
-                      (formatObj.pourcentage / 100) *
-                      100;
-                    values[fibre] = (values[fibre] || 0) + pct;
+                    values[fibre] =
+                      (values[fibre] || 0) + (pctFibre / 100) * poidsMatiere;
+                    sumFibre += (pctFibre / 100) * poidsMatiere;
                   });
+                  if (sumFibre < poidsMatiere) {
+                    totalSansFibre += poidsMatiere - sumFibre;
+                  }
+                } else {
+                  // Pas de fibre renseignée pour cette matière
+                  totalSansFibre += poidsMatiere;
                 }
               });
+            } else {
+              // Pas de matière renseignée pour ce type
+              totalSansFibre += poidsType;
             }
           });
         }
       });
+      // Ajouter la part sans fibre AVANT normalisation
+      if (totalSansFibre > 0 && totalLot > 0) {
+        values['N/A'] = (totalSansFibre / totalLot) * 100;
+      }
       // Normalisation pour que la somme fasse 100%
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
       if (sum > 0) {
@@ -774,7 +818,6 @@ const stackbarComponents = {
           values[k] = (values[k] / sum) * 100;
         });
       }
-      values._missing = 100 - (sum > 0 ? 100 : 0);
 
       // Conserver les couleurs des fibres
       Object.keys(values).forEach(key => {
@@ -859,7 +902,7 @@ const stackbarComponents = {
       });
       // Ajouter la part sans couleur AVANT normalisation
       if (totalSansCouleur > 0 && totalLot > 0) {
-        values['inconnu'] = (totalSansCouleur / totalLot) * 100;
+        values['N/A'] = (totalSansCouleur / totalLot) * 100;
       }
       // Normalisation pour que la somme fasse 100%
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
@@ -871,7 +914,7 @@ const stackbarComponents = {
 
       // Conserver les couleurs des couleurs
       Object.keys(values).forEach(key => {
-        if (key !== 'inconnu') {
+        if (key !== 'N/A') {
           // Chercher la couleur dans la structure originale
           let foundColor = null;
           Object.values(lot.formats).forEach(formatObj => {
@@ -987,7 +1030,7 @@ const stackbarComponents = {
       });
       // Ajouter la part sans perturbateur AVANT normalisation
       if (totalSansPerturbateur > 0 && totalLot > 0) {
-        values['inconnu'] = (totalSansPerturbateur / totalLot) * 100;
+        values['N/A'] = (totalSansPerturbateur / totalLot) * 100;
       }
       // Normalisation pour que la somme fasse 100%
       const sum = Object.values(values).reduce((a, b) => a + b, 0);
@@ -1531,7 +1574,8 @@ function updateSankey(dimension) {
   // Ajout des rectangles pour les nœuds avec stackbars
   node.each(function (d) {
     const nodeGroup = d3.select(this);
-    const nodeHeight = d.y1 - d.y0;
+    const nodeHeight =
+      d.y1 !== undefined && d.y0 !== undefined ? d.y1 - d.y0 : 100;
 
     // Stackbar (à gauche du nœud)
     nodeGroup
@@ -1601,6 +1645,9 @@ function updateSankey(dimension) {
       .style('stroke-width', '1px')
       .style('opacity', 1)
       .on('mouseover', function (event) {
+        // Debug : afficher le JSON du lot dans la console
+        console.log('[Tooltip Node] Lot:', d.lot);
+
         const component = stackbarComponents[dimension];
         // Vérifier si c'est un nœud target
         if (d.isTarget) {
@@ -2682,8 +2729,6 @@ window.addTransformation = function (scenario, path, transformation) {
   }
   if (Array.isArray(arr)) {
     arr.push(transformation);
-    console.log('Transformation added to array. Array length now:', arr.length);
-    console.log('Scenario after adding:', JSON.stringify(scenario, null, 2));
   } else {
     console.error(
       "Impossible d'ajouter la transformation, chemin invalide",
