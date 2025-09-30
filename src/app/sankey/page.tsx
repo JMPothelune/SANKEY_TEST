@@ -189,7 +189,12 @@ export default function SankeyPage() {
             key={iframeKey}
             src={iframeSrc}
             className="w-full border-0"
-            style={{ minHeight: 400, height: iframeHeight }}
+            style={{
+              minHeight: 400,
+              height: iframeHeight,
+              display: 'block',
+              overflow: 'hidden',
+            }}
             title="Visualisation Sankey"
           />
         </div>

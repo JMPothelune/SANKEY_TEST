@@ -1,10 +1,8 @@
 // Configuration
 const margin = { top: 20, right: 40, bottom: 20, left: 0 };
 let width = window.innerWidth - margin.left - margin.right;
-let height =
-  document.getElementById('sankey-container').offsetHeight -
-  margin.top -
-  margin.bottom;
+// Hauteur initiale par défaut (sera recalculée dynamiquement selon le contenu)
+let height = 500;
 
 // Attendre qu'i18next soit prêt
 function waitForI18next() {
@@ -1266,13 +1264,24 @@ function updateSankey(dimension) {
     // Cas spécial : un seul nœud => affichage manuel
     // (on saute la logique D3 Sankey)
     if (nodes.length === 1) {
-      const nodeHeight = Math.max(100, height * 0.8);
+      const nodeHeight = Math.max(400, Math.min(500, 400));
       const nodeGroup = renderNode(
         nodes[0],
         { x: HORIZONTAL_PADDING, y: 40 },
         true,
         dimension
       );
+
+      // Mettre à jour la hauteur du SVG et du container pour un seul node
+      const totalHeight = nodeHeight + 80; // +80 pour les marges
+      const svgElement = d3.select('#sankey-container svg');
+      svgElement.attr('height', totalHeight + margin.top + margin.bottom);
+
+      const container = document.getElementById('sankey-container');
+      if (container) {
+        container.style.height =
+          totalHeight + margin.top + margin.bottom + 'px';
+      }
 
       // Titre du lot (seulement si ce n'est pas le premier nœud)
       if (nodes[0].id !== '0') {
@@ -1468,7 +1477,27 @@ function updateSankey(dimension) {
   const requiredWidth =
     HORIZONTAL_PADDING + maxDepth * columnStep + nodeW + HORIZONTAL_PADDING;
   const effectiveWidth = Math.max(width, requiredWidth);
-  svg.attr('width', effectiveWidth);
+
+  // Calculer la hauteur requise selon le contenu (max de y1 parmi tous les nodes)
+  const maxY =
+    sankeyNodes.length > 0
+      ? Math.max(...sankeyNodes.map(n => n.y1 || 0))
+      : height;
+  const requiredHeight = Math.max(
+    400,
+    Math.min(maxY + margin.bottom + 40, 1000)
+  );
+
+  // Mettre à jour la hauteur du SVG et du container
+  const svgElement = d3.select('#sankey-container svg');
+  svgElement.attr('width', effectiveWidth);
+  svgElement.attr('height', requiredHeight + margin.top + margin.bottom);
+
+  // Mettre à jour le container
+  const container = document.getElementById('sankey-container');
+  if (container) {
+    container.style.height = requiredHeight + margin.top + margin.bottom + 'px';
+  }
 
   // Calcul des totaux par target
   const targetTotals = {};
@@ -2425,6 +2454,22 @@ function updateSankey(dimension) {
     const costsData = calculateCosts(nodes, links);
     displayCostsTable(costsData);
   }
+
+  // Notifier le parent de la nouvelle hauteur après le rendu
+  if (window.parent && typeof window.parent.postMessage === 'function') {
+    setTimeout(() => {
+      const body = document.body;
+      const html = document.documentElement;
+      const height = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        html.clientHeight,
+        html.scrollHeight,
+        html.offsetHeight
+      );
+      window.parent.postMessage({ type: 'IFRAME_HEIGHT', height }, '*');
+    }, 50); // Petit délai pour s'assurer que le DOM est complètement mis à jour
+  }
 }
 
 // Gestion du changement de dimension
@@ -2438,13 +2483,7 @@ function updateSankey(dimension) {
 // Gestion du redimensionnement
 window.addEventListener('resize', function () {
   width = window.innerWidth - margin.left - margin.right;
-  height =
-    document.getElementById('sankey-container').offsetHeight -
-    margin.top -
-    margin.bottom;
-  svg
-    .attr('width', width + margin.left + margin.right)
-    .attr('height', height + margin.top + margin.bottom);
+  // Ne pas recalculer height depuis le container, elle sera recalculée dans updateSankey
   updateSankey(window.currentDimension);
 });
 

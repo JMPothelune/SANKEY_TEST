@@ -650,38 +650,38 @@
 
         // Fonction pour envoyer la hauteur au parent
         function sendHeightToParent() {
-          // Utiliser la hauteur du contenu réel plutôt que scrollHeight
-          const container = document.getElementById('sankey-container');
-          const header = document.querySelector('.bg-white.px-4.py-3');
-          const saveBtn = document.getElementById('save-btn-container');
+          // Mesurer la hauteur RÉELLE du contenu
+          const body = document.body;
+          const html = document.documentElement;
 
-          let height = 400; // Hauteur minimale
-          if (container) {
-            height = Math.max(height, container.scrollHeight + 100); // +100 pour le header et marges
-          }
-          if (header) {
-            height += header.offsetHeight;
-          }
-          if (saveBtn) {
-            height += saveBtn.offsetHeight;
-          }
+          // Prendre le max de toutes les mesures possibles pour être sûr
+          const height = Math.max(
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
+            html.offsetHeight
+          );
 
-          // Limiter la hauteur maximale
-          height = Math.min(height, 1200);
-
+          // Pas de limite arbitraire - laisser le contenu dicter la hauteur
           window.parent.postMessage({ type: 'IFRAME_HEIGHT', height }, '*');
         }
         window.addEventListener('load', sendHeightToParent);
         window.addEventListener('resize', sendHeightToParent);
-        // Appelle aussi après chaque modification de l'UI si besoin
-        // Hook sur les mutations du DOM pour resize auto
+
+        // Hook sur les mutations du DOM pour resize auto avec debounce
+        let resizeTimeout;
         const observer = new MutationObserver(() => {
-          sendHeightToParent();
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(() => {
+            sendHeightToParent();
+          }, 100); // Debounce de 100ms pour éviter trop d'appels
         });
         observer.observe(document.body, {
           childList: true,
           subtree: true,
           attributes: true,
+          attributeFilter: ['style'], // Seulement les changements de style
         });
       });
     </script>
