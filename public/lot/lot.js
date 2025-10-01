@@ -81,6 +81,10 @@ let cheminSelection = [];
 let lotCourant = {};
 window.lotCourant = lotCourant;
 
+// --- Variable globale pour les labels des dimensions ---
+let dimensionsLabels = null;
+window.dimensionsLabels = null;
+
 // --- Variables globales pour compatibilité Bubble/local ---
 let rootContainer = null;
 
@@ -112,6 +116,50 @@ function getIconSVG(name, className = '') {
 function masquerSkeleton(container) {
   console.log('Masquage du skeleton loading');
   // Le skeleton sera remplacé par le vrai contenu
+}
+
+// --- Fonction utilitaire pour obtenir le titre traduit ---
+function getTitreAffiche(key, obj) {
+  // Récupère le paramètre de langue
+  const params = getUrlParams();
+
+  console.log('[getTitreAffiche]', {
+    key,
+    obj,
+    lang: params.lang,
+    en_gb: obj?.en_gb,
+  });
+
+  // Si la langue est en_gb ET que l'objet a une clé en_gb non vide
+  if (params.lang === 'en_gb' && obj && obj.en_gb && obj.en_gb.trim() !== '') {
+    return obj.en_gb;
+  }
+
+  // Sinon, retourne la clé originale
+  return key;
+}
+
+// --- Fonction utilitaire pour obtenir le label traduit d'une dimension ---
+function getDimensionLabel(dimKey) {
+  // Si les dimensions ne sont pas encore chargées, fallback sur la clé formatée
+  if (!dimensionsLabels || !dimensionsLabels[dimKey]) {
+    return dimKey.charAt(0).toUpperCase() + dimKey.slice(1).toLowerCase();
+  }
+
+  // Récupère le paramètre de langue
+  const params = getUrlParams();
+  const lang = params.lang || 'fr_fr';
+
+  // Retourne le label dans la langue appropriée
+  if (
+    dimensionsLabels[dimKey][lang] &&
+    dimensionsLabels[dimKey][lang].trim() !== ''
+  ) {
+    return dimensionsLabels[dimKey][lang];
+  }
+
+  // Fallback sur la clé formatée
+  return dimKey.charAt(0).toUpperCase() + dimKey.slice(1).toLowerCase();
 }
 
 // --- Fonction utilitaire pour obtenir les dimensions accessibles à partir d'un nœud (hors pourcentage, total, title)
@@ -378,15 +426,18 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
 
   const valeur = niveauCourant.valeur || '';
   let nom = '';
+  let nomCle = ''; // La clé originale (pour l'édition)
+  let itemObj = null; // L'objet complet de l'item (pour avoir accès à en_gb)
   let pct = 100;
   let kg = 0;
   if (niveau === 0) {
     nom = lot.title || 'Lot';
+    nomCle = nom;
     pct = 100;
     kg = lot.total || 0;
   } else {
-    nom = cheminSelection[niveau - 1]?.valeur || '';
-    // Calcul du pourcentage local
+    nomCle = cheminSelection[niveau - 1]?.valeur || '';
+    // Récupérer l'objet complet de l'item pour avoir accès aux traductions
     let nodeParent2 = lot;
     for (let i = 0; i < niveau - 1; i++) {
       const { dimension, valeur } = cheminSelection[i];
@@ -410,12 +461,16 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
       nodeParent2[parent.dimension][parent.valeur]
     ) {
       const valNode = nodeParent2[parent.dimension][parent.valeur];
+      itemObj = valNode;
       if (typeof valNode === 'object' && valNode.pourcentage !== undefined) {
         pct = valNode.pourcentage;
       } else if (typeof valNode === 'number') {
         pct = valNode;
       }
     }
+    // Utiliser la traduction pour l'affichage
+    nom = getTitreAffiche(nomCle, itemObj);
+
     // Calcul du poids réel
     let totalKg = lot.total || 0;
     let pctCumul = 100;
@@ -433,7 +488,7 @@ function getInfosHeader({ lot, cheminSelection, niveau }) {
     }
     kg = (totalKg * pctCumul) / 100;
   }
-  return { nodeParent, dimension, valeur, nom, pct, kg };
+  return { nodeParent, dimension, valeur, nom, nomCle, itemObj, pct, kg };
 }
 
 // --- Fonction unique d'affichage d'un header ---
@@ -443,11 +498,13 @@ function afficherHeaderNiveau({
   dimension,
   valeur,
   nom,
+  nomCle,
+  itemObj,
   pct,
   kg,
   container,
 }) {
-  const titre = creerTitreStackbar(niveau, nom, pct, kg);
+  const titre = creerTitreStackbar(niveau, nom, nomCle, itemObj, pct, kg);
   container.appendChild(titre);
   // Attache les handlers après l'insertion dans le DOM
   setTimeout(() => {
@@ -637,6 +694,10 @@ async function lancerLotUI(container, lotInitial) {
   await waitForI18next();
   console.log("[Lot] i18next est prêt, lancement de l'UI...");
 
+  // Charger les labels des dimensions depuis l'API
+  dimensionsLabels = await chargerDimensionsAPI();
+  window.dimensionsLabels = dimensionsLabels;
+
   // Initialiser depuis les paramètres URL
   const params = initializeFromUrl();
 
@@ -670,9 +731,27 @@ function renderStackbar(
       const seg = stackbar.querySelector(`.stackbar-segment[data-idx='${i}']`);
       if (seg) seg.style.width = repartitionState[i].percent + '%';
       const label = seg.querySelector('.stackbar-label');
+
+      // Récupérer l'objet complet depuis le lot pour obtenir les traductions
+      let node = lotCourant;
+      for (let j = 0; j < cheminSelection.length; j++) {
+        const { dimension: dim, valeur } = cheminSelection[j];
+        if (dim === dimension) break;
+        if (!node[dim] || !valeur || !node[dim][valeur]) {
+          node = null;
+          break;
+        }
+        node = node[dim][valeur];
+      }
+      const itemObj =
+        node && node[dimension]
+          ? node[dimension][repartitionState[i].name]
+          : null;
+      const titreAffiche = getTitreAffiche(repartitionState[i].name, itemObj);
+
       if (label)
         label.innerHTML = `
-        <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${repartitionState[i].name}">${repartitionState[i].name}</span>
+        <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${titreAffiche}">${titreAffiche}</span>
         <span class="text-black font-normal text-xs leading-tight truncate w-full">${repartitionState[i].percent.toFixed(1)}%</span>
       `;
     }
@@ -766,12 +845,27 @@ function renderStackbar(
     } else {
       segment.style.opacity = '1';
     }
+
+    // Récupérer l'objet complet depuis le lot pour obtenir les traductions
+    let node = lotCourant;
+    for (let j = 0; j < cheminSelection.length; j++) {
+      const { dimension: dim, valeur } = cheminSelection[j];
+      if (dim === dimension) break;
+      if (!node[dim] || !valeur || !node[dim][valeur]) {
+        node = null;
+        break;
+      }
+      node = node[dim][valeur];
+    }
+    const itemObj = node && node[dimension] ? node[dimension][item.name] : null;
+    const titreAffiche = getTitreAffiche(item.name, itemObj);
+
     // Label
     const label = document.createElement('div');
     label.className =
       'stackbar-label w-full h-full text-center px-1 flex flex-col items-center justify-center overflow-hidden';
     label.innerHTML = `
-      <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${item.name}">${item.name}</span>
+      <span class="text-black font-medium text-xs leading-tight truncate w-full" title="${titreAffiche}">${titreAffiche}</span>
       <span class="text-black font-normal text-xs leading-tight truncate w-full">${item.percent.toFixed(1)}%</span>
     `;
     segment.appendChild(label);
@@ -950,10 +1044,13 @@ function supprimerNoeudEtRepartir(niveau) {
 }
 
 // --- Fonction utilitaire pour créer le titre de stackbar avec les icônes ---
-function creerTitreStackbar(niveau, nom, pct, kg) {
+function creerTitreStackbar(niveau, nom, nomCle, itemObj, pct, kg) {
   const titre = document.createElement('div');
   titre.className = `stackbar-parent-title font-bold mt-2 mb-4 flex items-center justify-between`;
   titre.dataset.niveau = niveau;
+  // Stocker la clé originale et l'objet pour l'édition
+  titre.dataset.nomCle = nomCle || nom;
+  titre.dataset.hasTranslation = itemObj && itemObj.en_gb ? 'true' : 'false';
 
   // On veut le nœud parent du niveau courant
 
@@ -979,7 +1076,7 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         <button
           class="nav-button h-10 min-w-[90px] px-4 text-base font-semibold focus:outline-none ${isSelected ? 'bg-blue-50 text-blue-600 border-blue-200 shadow' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'} ${idx > 0 ? 'border-l border-gray-200' : ''}"
           style="border-radius:0;"
-        >${dim.charAt(0).toUpperCase() + dim.slice(1).toLowerCase()}</button>
+        >${getDimensionLabel(dim)}</button>
       `;
     });
     btnGroupDims += '</div>';
@@ -1058,10 +1155,13 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
     if (spanNom) {
       spanNom.addEventListener('click', () => {
         if (window.isEditable === false) return; // Empêche édition si non éditable
-        const oldName = spanNom.textContent;
+        const oldDisplayName = spanNom.textContent;
+        const originalKey = titre.dataset.nomCle;
+        const params = getUrlParams();
+
         const input = document.createElement('input');
         input.type = 'text';
-        input.value = oldName;
+        input.value = oldDisplayName;
         input.className =
           'border-l border-gray-300 px-4 h-full font-bold text-base flex items-center outline-none';
         input.style.width = '8rem';
@@ -1070,9 +1170,10 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
         spanNom.replaceWith(input);
         input.focus();
         input.select();
+
         function saveEdit() {
           const newName = input.value.trim();
-          if (newName && newName !== oldName) {
+          if (newName && newName !== oldDisplayName) {
             if (niveau === 0) {
               lotCourant.title = newName;
               window.lotCourant = lotCourant;
@@ -1094,35 +1195,61 @@ function creerTitreStackbar(niveau, nom, pct, kg) {
               }
               const dim = cheminSelection[niveau - 1]?.dimension;
               const val = cheminSelection[niveau - 1]?.valeur;
+
+              // Si on est en en_gb et que l'objet a une traduction, on modifie seulement en_gb
               if (
+                params.lang === 'en_gb' &&
                 nodeParent &&
                 dim &&
-                val &&
                 nodeParent[dim] &&
-                nodeParent[dim][oldName] &&
-                !nodeParent[dim][newName]
+                nodeParent[dim][originalKey]
               ) {
-                // Conserve l'ordre
-                const entries = Object.entries(nodeParent[dim]);
-                const idx = entries.findIndex(([k]) => k === oldName);
-                if (idx !== -1) {
-                  const newEntries = [
-                    ...entries.slice(0, idx),
-                    [newName, nodeParent[dim][oldName]],
-                    ...entries.slice(idx + 1),
-                  ];
-                  const newObj = {};
-                  newEntries.forEach(([k, v]) => {
-                    newObj[k] = v;
-                  });
-                  nodeParent[dim] = newObj;
-                  // Met à jour cheminSelection si besoin
-                  if (cheminSelection[niveau - 1].valeur === oldName) {
-                    cheminSelection[niveau - 1].valeur = newName;
+                const itemObj = nodeParent[dim][originalKey];
+                if (
+                  typeof itemObj === 'object' &&
+                  itemObj.en_gb !== undefined
+                ) {
+                  itemObj.en_gb = newName;
+                  console.log('[Édition] Mise à jour de en_gb:', newName);
+                }
+              } else {
+                // Sinon, on renomme la clé (mode fr_fr ou pas de traduction)
+                if (
+                  nodeParent &&
+                  dim &&
+                  val &&
+                  nodeParent[dim] &&
+                  nodeParent[dim][originalKey] &&
+                  !nodeParent[dim][newName]
+                ) {
+                  // Conserve l'ordre
+                  const entries = Object.entries(nodeParent[dim]);
+                  const idx = entries.findIndex(([k]) => k === originalKey);
+                  if (idx !== -1) {
+                    const newEntries = [
+                      ...entries.slice(0, idx),
+                      [newName, nodeParent[dim][originalKey]],
+                      ...entries.slice(idx + 1),
+                    ];
+                    const newObj = {};
+                    newEntries.forEach(([k, v]) => {
+                      newObj[k] = v;
+                    });
+                    nodeParent[dim] = newObj;
+                    // Met à jour cheminSelection si besoin
+                    if (cheminSelection[niveau - 1].valeur === originalKey) {
+                      cheminSelection[niveau - 1].valeur = newName;
+                    }
+                    console.log(
+                      '[Édition] Renommage de la clé:',
+                      originalKey,
+                      '→',
+                      newName
+                    );
                   }
-                  window.lotCourant = lotCourant;
                 }
               }
+              window.lotCourant = lotCourant;
             }
             // Notifier que le lot a été modifié
             if (window.onLotChange) window.onLotChange(lotCourant);
@@ -1379,6 +1506,31 @@ async function chargerDonneesBaseAPI(dimension) {
   }
 }
 
+// Fonction pour charger les labels des dimensions depuis l'API
+async function chargerDimensionsAPI() {
+  try {
+    const urlParams = getUrlParams();
+
+    const response = await fetch('/api/bubble', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: 'dimensions',
+        params: { isLive: urlParams.isLive },
+        method: 'GET',
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+    const data = await response.json();
+    console.log("[Lot] Labels des dimensions chargés depuis l'API:", data);
+    return data;
+  } catch (error) {
+    console.error('[Lot] Erreur lors du chargement des dimensions:', error);
+    return null; // Retourne null en cas d'erreur, le fallback sera utilisé
+  }
+}
+
 // Fonction pour afficher la modal d'ajout
 async function afficherModalAjout(niveau, dimension) {
   if (!dimension) return;
@@ -1429,8 +1581,9 @@ async function afficherModalAjout(niveau, dimension) {
   // Header de la modal
   const header = document.createElement('div');
   header.className = 'flex items-center justify-between p-4 border-b';
+  const dimensionTraduite = getDimensionLabel(dimension).toLowerCase();
   header.innerHTML = `
-    <h3 class="text-lg font-semibold text-gray-900">${i18next.t('addItem', { dimension })}</h3>
+    <h3 class="text-lg font-semibold text-gray-900">${i18next.t('addItem', { dimension: dimensionTraduite })}</h3>
           <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" aria-label="${i18next.t('close')}">
       ${getIconSVG('x', 'w-5 h-5')}
     </button>
@@ -1447,11 +1600,12 @@ async function afficherModalAjout(niveau, dimension) {
           <select id="element" class="block w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer">
             <option value="" class="text-gray-500">${i18next.t('selectElement')}</option>
             ${elementsDisponibles
-              .map(
-                elem => `
-              <option value="${donneesBase[elem].bubble_id || elem}" class="py-1">${elem}</option>
-            `
-              )
+              .map(elem => {
+                const titreAffiche = getTitreAffiche(elem, donneesBase[elem]);
+                return `
+              <option value="${donneesBase[elem].bubble_id || elem}" class="py-1">${titreAffiche}</option>
+            `;
+              })
               .join('')}
           </select>
           <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
