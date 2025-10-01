@@ -988,6 +988,7 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
 const transformationTypes = {
   selectByFormat: {
     label: 'Tri par format',
+    en_gb: 'Sort by format',
     description:
       'Sélectionne les articles selon leur format (vêtements, chaussures, etc.)',
     keyList: 'formats',
@@ -996,6 +997,7 @@ const transformationTypes = {
   },
   selectByType: {
     label: 'Tri par type',
+    en_gb: 'Sort by type',
     description: 'Sélectionne les articles selon leur type (après format)',
     keyList: 'types',
     requiredKey: true,
@@ -1003,6 +1005,7 @@ const transformationTypes = {
   },
   selectByMatiere: {
     label: 'Tri par matière',
+    en_gb: 'Sort by material',
     description: 'Sélectionne les articles selon leur matière',
     keyList: 'matieres',
     requiredKey: true,
@@ -1010,6 +1013,7 @@ const transformationTypes = {
   },
   selectByQualite: {
     label: 'Tri par qualité',
+    en_gb: 'Sort by quality',
     description: 'Sélectionne les articles selon leur qualité',
     keyList: 'qualite',
     requiredKey: true,
@@ -1017,6 +1021,7 @@ const transformationTypes = {
   },
   selectByCouleur: {
     label: 'Tri par couleur',
+    en_gb: 'Sort by color',
     description: 'Sélectionne les articles selon leur couleur',
     keyList: 'couleurs',
     requiredKey: true,
@@ -1024,6 +1029,7 @@ const transformationTypes = {
   },
   selectByFibre: {
     label: 'Tri par fibre',
+    en_gb: 'Sort by fiber',
     description: 'Sélectionne les articles selon leur composition en fibres',
     keyList: 'fibres',
     requiredKey: true,
@@ -1031,13 +1037,15 @@ const transformationTypes = {
   },
   selectByProprete: {
     label: 'Tri par propreté',
+    en_gb: 'Sort by cleanliness',
     description: 'Sélectionne les articles selon leur propreté',
     keyList: 'proprete',
     requiredKey: true,
     step: 'sorting',
   },
   selectByPerturbateur: {
-    label: 'Tri par perturbateur',
+    label: 'Tri par nievau de perturbation',
+    en_gb: 'Sort by level of perturbation',
     description: 'Sélectionne les articles selon la présence de perturbateurs',
     keyList: 'perturbateurs',
     requiredKey: true,
@@ -1268,8 +1276,16 @@ async function getDetailedTransfo(bubbleId, isLive) {
 
 const transformationUtils = {
   getTransformationLabel(type) {
+    // Récupérer la langue depuis les paramètres URL
+    const params = getUrlParams();
+    const lang = params.lang || 'fr_fr';
+
     // Vérifier d'abord les transformations statiques
     if (transformationTypes[type]) {
+      // Retourner le label en fonction de la langue
+      if (lang === 'en_gb' && transformationTypes[type].en_gb) {
+        return transformationTypes[type].en_gb;
+      }
       return transformationTypes[type].label;
     }
 
@@ -1305,6 +1321,7 @@ const transformationUtils = {
       ([value, info]) => ({
         value,
         label: info.label,
+        en_gb: info.en_gb,
         description: info.description,
         isStatic: true,
       })

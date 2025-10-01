@@ -109,6 +109,7 @@ export const translations = {
       stackbarSum: 'Somme des % stackbar :',
       distribution: 'Répartition :',
       parameters: 'Paramètres',
+      reste: 'Reste',
     },
   },
   en_gb: {
@@ -217,6 +218,7 @@ export const translations = {
       stackbarSum: 'Stackbar sum :',
       distribution: 'Distribution :',
       parameters: 'Parameters',
+      reste: 'Remainder',
     },
   },
   es_es: {
@@ -326,6 +328,7 @@ export const translations = {
       stackbarSum: 'Suma de la barra de pila :',
       distribution: 'Distribución :',
       parameters: 'Parámetros',
+      reste: 'Resto',
     },
   },
   de_de: {
@@ -436,6 +439,7 @@ export const translations = {
       stackbarSum: 'Stackbar summe :',
       distribution: 'Verteilung :',
       parameters: 'Parameter',
+      reste: 'Rest',
     },
   },
 };

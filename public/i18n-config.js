@@ -80,6 +80,7 @@ window.i18nConfig = {
         stackbarSum: 'Somme des % stackbar :',
         distribution: 'Répartition :',
         parameters: 'Paramètres',
+        reste: 'Reste',
       },
     },
     en_gb: {
@@ -159,6 +160,7 @@ window.i18nConfig = {
         stackbarSum: 'Stackbar sum :',
         distribution: 'Distribution :',
         parameters: 'Parameters',
+        reste: 'Remainder',
       },
     },
     es_es: {
@@ -239,6 +241,7 @@ window.i18nConfig = {
         stackbarSum: 'Suma de la barra de pila :',
         distribution: 'Distribución :',
         parameters: 'Parámetros',
+        reste: 'Resto',
       },
     },
     de_de: {
@@ -320,6 +323,7 @@ window.i18nConfig = {
         stackbarSum: 'Stackbar summe :',
         distribution: 'Verteilung :',
         parameters: 'Parameter',
+        reste: 'Rest',
       },
     },
   },

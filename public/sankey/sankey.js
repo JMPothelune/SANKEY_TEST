@@ -1295,9 +1295,7 @@ function updateSankey(dimension) {
   // Cas spécial : Sankey vide (aucune transformation appliquée, que des nœuds target ou Reste sans transformation)
   const onlyInitialAndTargets =
     nodes.length > 1 &&
-    nodes
-      .slice(1)
-      .every(n => n.isTarget || (n.name && n.name.startsWith('Reste'))) &&
+    nodes.slice(1).every(n => n.isTarget || n.isCoproduct) &&
     links.every(l => !l.transformation);
 
   if (onlyInitialAndTargets) {
@@ -1694,8 +1692,8 @@ function updateSankey(dimension) {
             tooltipTitle = d.name;
           } else if (d.id === '0') {
             tooltipTitle = d.lot && d.lot.title ? d.lot.title : d.name;
-          } else if (d.name && d.name.startsWith('Reste')) {
-            tooltipTitle = 'Reste';
+          } else if (d.isCoproduct) {
+            tooltipTitle = i18next.t('reste');
           } else {
             // Pour les nœuds de transformation, afficher le nom français de la transformation
             const incomingLink = sankeyLinks.find(l => l.target.id === d.id);
@@ -1803,7 +1801,7 @@ function updateSankey(dimension) {
 
     // 1. Icônes pour les liens sortants (fork)
     const outgoingLinks = sankeyLinks.filter(
-      l => l.source.id === d.id && !l.target.name.startsWith('Reste')
+      l => l.source.id === d.id && !l.target.isCoproduct
     );
     if (!(d.lot && d.lot.target) && !d.isTarget) {
       outgoingLinks.forEach(link => {
@@ -2253,7 +2251,7 @@ function updateSankey(dimension) {
 
     // 2. Icône + sur le lien "Reste" (coproduit)
     const resteLinks = sankeyLinks.filter(
-      l => l.source.id === d.id && l.target.name.startsWith('Reste')
+      l => l.source.id === d.id && l.target.isCoproduct
     );
     resteLinks.forEach(link => {
       const linkY = link.y0 - d.y0;
@@ -2432,9 +2430,9 @@ function updateSankey(dimension) {
     if (d.isTarget) {
       // Pour les nœuds target, afficher le nom du target
       displayTitle = d.name;
-    } else if (d.name && d.name.startsWith('Reste')) {
-      // Pour les nœuds co-produits (reste), afficher "Reste"
-      displayTitle = 'Reste';
+    } else if (d.isCoproduct) {
+      // Pour les nœuds co-produits (reste), afficher "Reste" traduit
+      displayTitle = i18next.t('reste');
     } else {
       // Pour les autres nœuds, afficher le nom de la transformation en français
       // Chercher la transformation qui a créé ce nœud
@@ -3118,6 +3116,7 @@ function applyScenario(
       lot: resteLot,
       transformations_appliquees: transformations_appliquees,
       _path: coproductPath, // Ajouté ici aussi pour accès direct côté Sankey
+      isCoproduct: true, // Flag pour identifier les nœuds de coproduit
     });
     // On annote la première transformation du coproduit si elle existe
     if (
@@ -3198,8 +3197,8 @@ function getPathForNewTransformation(node) {
       lastTransfo._path &&
       typeof lastTransfo._index === 'number'
     ) {
-      // Si c'est un coproduit (nom commence par "Reste"), pointer vers le coproduit
-      if (node.name && node.name.startsWith('Reste')) {
+      // Si c'est un coproduit (flag isCoproduct), pointer vers le coproduit
+      if (node.isCoproduct) {
         return [
           ...lastTransfo._path,
           lastTransfo._index,
@@ -3218,10 +3217,9 @@ function getPathForNewTransformation(node) {
     }
   }
 
-  // Cas spécial : coproduit racine (nœud "Reste" sans transformations_appliquees)
+  // Cas spécial : coproduit racine (nœud avec flag isCoproduct sans transformations_appliquees)
   if (
-    node.name &&
-    node.name.startsWith('Reste') &&
+    node.isCoproduct &&
     (!node.transformations_appliquees ||
       node.transformations_appliquees.length === 0)
   ) {

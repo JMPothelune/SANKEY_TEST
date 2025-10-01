@@ -320,12 +320,19 @@ class TransformationPopup {
 
     // Utiliser directement les transformations passées en paramètre
     if (transformations && transformations.length > 0) {
+      // Récupérer la langue depuis les paramètres URL
+      const params = getUrlParams();
+      const lang = params.lang || 'fr';
+
       transformations.forEach(transfo => {
         if (transfo.isSeparator) {
           options += `<option value="" disabled>${transfo.label}</option>`;
         } else {
           const selected = lastType === transfo.value ? 'selected' : '';
-          options += `<option value="${transfo.value}" ${selected}>${transfo.label}</option>`;
+          // Utiliser la langue appropriée
+          const displayLabel =
+            lang === 'en_gb' && transfo.en_gb ? transfo.en_gb : transfo.label;
+          options += `<option value="${transfo.value}" ${selected}>${displayLabel}</option>`;
         }
       });
     } else {
@@ -440,12 +447,19 @@ class TransformationPopup {
         options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
       }
 
+      // Récupérer la langue depuis les paramètres URL
+      const params = getUrlParams();
+      const lang = params.lang || 'fr';
+
       transformations.forEach(transfo => {
         if (transfo.isSeparator) {
           options += `<option value="" disabled>${transfo.label}</option>`;
         } else {
           const selected = lastType === transfo.value ? 'selected' : '';
-          options += `<option value="${transfo.value}" ${selected}>${transfo.label}</option>`;
+          // Utiliser la langue appropriée
+          const displayLabel =
+            lang === 'en_gb' && transfo.en_gb ? transfo.en_gb : transfo.label;
+          options += `<option value="${transfo.value}" ${selected}>${displayLabel}</option>`;
         }
       });
 
@@ -525,12 +539,19 @@ class TransformationPopup {
         options += `<option value="" disabled selected>${i18next.t('selectTransformation')}</option>`;
       }
 
+      // Récupérer la langue depuis les paramètres URL
+      const params = getUrlParams();
+      const lang = params.lang || 'fr_fr';
+
       transformations.forEach(transfo => {
         if (transfo.isSeparator) {
           options += `<option value="" disabled>${transfo.label}</option>`;
         } else {
           const selected = lastType === transfo.value ? 'selected' : '';
-          options += `<option value="${transfo.value}" ${selected}>${transfo.label}</option>`;
+          // Utiliser la langue appropriée
+          const displayLabel =
+            lang === 'en_gb' && transfo.en_gb ? transfo.en_gb : transfo.label;
+          options += `<option value="${transfo.value}" ${selected}>${displayLabel}</option>`;
         }
       });
 
