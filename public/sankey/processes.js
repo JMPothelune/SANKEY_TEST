@@ -155,7 +155,7 @@ function selectByType(lot, selectedTypes) {
     } else {
       // Le format n'a aucun type sélectionné, tout va au co-produit
       coProductLot.formats[formatKey].types = rest;
-      coProductLot.formats[formatKey].pourcentage = formatObj.pourcentage;
+      coProductLot.formats[formatKey].pourcentage = formatMass; // Stocker la masse, pas le pourcentage
 
       // Supprimer le format du lot cible
       delete targetLot.formats[formatKey];
@@ -301,22 +301,50 @@ function selectByMatiere(lot, selectedMatieres) {
           (typeMassesSelected[typeKey] / formatSelectedMass) * 100;
       });
       targetLot.formats[formatKey].types = selectedTypes;
+      targetLot.formats[formatKey].pourcentage = formatSelectedMass;
+      selectedMassTotal += formatSelectedMass;
+    } else {
+      // Aucune matière sélectionnée dans ce format, le supprimer du target
+      delete targetLot.formats[formatKey];
     }
+
     if (formatRestMass > 0) {
       Object.keys(restTypes).forEach(typeKey => {
         restTypes[typeKey].pourcentage =
           (typeMassesRest[typeKey] / formatRestMass) * 100;
       });
       coProductLot.formats[formatKey].types = restTypes;
+      coProductLot.formats[formatKey].pourcentage = formatRestMass;
+      restMassTotal += formatRestMass;
+    } else if (formatSelectedMass === 0) {
+      // Le format n'a ni matières sélectionnées ni matières restantes, tout va au reste
+      const formatMass = lot.total * (formatObj.pourcentage / 100);
+      coProductLot.formats[formatKey].pourcentage = formatMass;
+      restMassTotal += formatMass;
+    } else {
+      // Toutes les matières sont sélectionnées, supprimer du coproduit
+      delete coProductLot.formats[formatKey];
     }
-
-    selectedMassTotal += formatSelectedMass;
-    restMassTotal += formatRestMass;
   });
 
   // Mise à jour des totaux
   targetLot.total = selectedMassTotal;
   coProductLot.total = restMassTotal;
+
+  // Normalisation des pourcentages des formats pour qu'ils fassent 100%
+  if (selectedMassTotal > 0) {
+    Object.keys(targetLot.formats).forEach(formatKey => {
+      targetLot.formats[formatKey].pourcentage =
+        (targetLot.formats[formatKey].pourcentage / selectedMassTotal) * 100;
+    });
+  }
+
+  if (restMassTotal > 0) {
+    Object.keys(coProductLot.formats).forEach(formatKey => {
+      coProductLot.formats[formatKey].pourcentage =
+        (coProductLot.formats[formatKey].pourcentage / restMassTotal) * 100;
+    });
+  }
 
   // Vérification adaptée pour les transformations enchaînées
   const totalResult = targetLot.total + coProductLot.total;
@@ -429,10 +457,6 @@ function selectByCouleur(lot, selectedCouleurs) {
   let selectedMassTotal = 0;
   let restMassTotal = 0;
 
-  // Initialiser les formats vides
-  targetLot.formats = {};
-  coProductLot.formats = {};
-
   Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
     const typesObj = formatObj.types;
     let selectedTypes = {};
@@ -527,36 +551,30 @@ function selectByCouleur(lot, selectedCouleurs) {
         selectedTypes[typeKey].pourcentage =
           (typeMassesSelected[typeKey] / formatSelectedMass) * 100;
       });
-      targetLot.formats[formatKey] = {
-        ...formatObj,
-        types: selectedTypes,
-        pourcentage: formatSelectedMass,
-      };
+      targetLot.formats[formatKey].types = selectedTypes;
+      targetLot.formats[formatKey].pourcentage = formatSelectedMass;
+      selectedMassTotal += formatSelectedMass;
+    } else {
+      // Aucune couleur sélectionnée dans ce format, le supprimer du target
+      delete targetLot.formats[formatKey];
     }
+
     if (formatRestMass > 0) {
       Object.keys(restTypes).forEach(typeKey => {
         restTypes[typeKey].pourcentage =
           (typeMassesRest[typeKey] / formatRestMass) * 100;
       });
-      coProductLot.formats[formatKey] = {
-        ...formatObj,
-        types: restTypes,
-        pourcentage: formatRestMass,
-      };
-    }
-
-    // Si le format n'a pas de types avec couleurs, l'ajouter au reste
-    if (formatSelectedMass === 0 && formatRestMass === 0) {
+      coProductLot.formats[formatKey].types = restTypes;
+      coProductLot.formats[formatKey].pourcentage = formatRestMass;
+      restMassTotal += formatRestMass;
+    } else if (formatSelectedMass === 0) {
+      // Le format n'a ni couleurs sélectionnées ni couleurs restantes, tout va au reste
       const formatMass = lot.total * (formatObj.pourcentage / 100);
-      coProductLot.formats[formatKey] = {
-        ...formatObj,
-        types: typesObj, // Garder tous les types
-        pourcentage: (formatMass / lot.total) * 100,
-      };
+      coProductLot.formats[formatKey].pourcentage = formatMass;
       restMassTotal += formatMass;
     } else {
-      selectedMassTotal += formatSelectedMass;
-      restMassTotal += formatRestMass;
+      // Toutes les couleurs sont sélectionnées, supprimer du coproduit
+      delete coProductLot.formats[formatKey];
     }
   });
 
@@ -625,11 +643,33 @@ function selectByFibre(
       let selectedPct = 0;
       let restPct = 0;
 
+      // Si le type n'a pas de matières, le traiter comme un type "reste"
+      if (Object.keys(matieresObj).length === 0) {
+        restTypes[typeKey] = JSON.parse(JSON.stringify(typeObj));
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        const typeMass =
+          lot.total *
+          (formatObj.pourcentage / 100) *
+          (typeObj.pourcentage / 100);
+        typeMassesRest[typeKey] = typeMass;
+        formatRestMass += typeMass;
+        return; // Passer au type suivant
+      }
+
       Object.entries(matieresObj).forEach(([nom, matiere]) => {
+        const fibresObj = matiere.fibres || {};
+
+        // Si la matière n'a pas de fibres, la traiter comme "reste"
+        if (Object.keys(fibresObj).length === 0) {
+          restMatieresObj[nom] = JSON.parse(JSON.stringify(matiere));
+          if (matiere.color) restMatieresObj[nom].color = matiere.color;
+          restPct += matiere.pourcentage;
+          return; // Passer à la matière suivante
+        }
+
         // On vérifie la présence d'une fibre sélectionnée dans la matière
-        const hasSelectedFibre =
-          matiere.fibres &&
-          Object.entries(matiere.fibres).some(([fibre, fibreObj]) => {
+        const hasSelectedFibre = Object.entries(fibresObj).some(
+          ([fibre, fibreObj]) => {
             const pctFibre =
               typeof fibreObj === 'object' && fibreObj !== null
                 ? fibreObj.pourcentage !== undefined
@@ -644,7 +684,9 @@ function selectByFibre(
               return false;
             }
             return true;
-          });
+          }
+        );
+
         if (hasSelectedFibre) {
           selectedMatieresObj[nom] = JSON.parse(JSON.stringify(matiere));
           if (matiere.color) selectedMatieresObj[nom].color = matiere.color;
@@ -687,6 +729,14 @@ function selectByFibre(
         typeMassesRest[typeKey] = restMass;
         formatRestMass += restMass;
       }
+
+      // Si le type n'a ni matières sélectionnées ni matières restantes, l'ajouter au reste
+      if (selectedPct === 0 && restPct === 0) {
+        restTypes[typeKey] = JSON.parse(JSON.stringify(typeObj));
+        if (typeObj.color) restTypes[typeKey].color = typeObj.color;
+        typeMassesRest[typeKey] = typeMass;
+        formatRestMass += typeMass;
+      }
     });
 
     // Recalcul des pourcentages des types dans chaque format
@@ -695,26 +745,31 @@ function selectByFibre(
         selectedTypes[typeKey].pourcentage =
           (typeMassesSelected[typeKey] / formatSelectedMass) * 100;
       });
-      targetLot.formats[formatKey] = {
-        ...formatObj,
-        types: selectedTypes,
-        pourcentage: formatSelectedMass,
-      };
+      targetLot.formats[formatKey].types = selectedTypes;
+      targetLot.formats[formatKey].pourcentage = formatSelectedMass;
+      selectedMassTotal += formatSelectedMass;
+    } else {
+      // Aucune fibre sélectionnée dans ce format, le supprimer du target
+      delete targetLot.formats[formatKey];
     }
+
     if (formatRestMass > 0) {
       Object.keys(restTypes).forEach(typeKey => {
         restTypes[typeKey].pourcentage =
           (typeMassesRest[typeKey] / formatRestMass) * 100;
       });
-      coProductLot.formats[formatKey] = {
-        ...formatObj,
-        types: restTypes,
-        pourcentage: formatRestMass,
-      };
+      coProductLot.formats[formatKey].types = restTypes;
+      coProductLot.formats[formatKey].pourcentage = formatRestMass;
+      restMassTotal += formatRestMass;
+    } else if (formatSelectedMass === 0) {
+      // Le format n'a ni fibres sélectionnées ni fibres restantes, tout va au reste
+      const formatMass = lot.total * (formatObj.pourcentage / 100);
+      coProductLot.formats[formatKey].pourcentage = formatMass;
+      restMassTotal += formatMass;
+    } else {
+      // Toutes les fibres sont sélectionnées, supprimer du coproduit
+      delete coProductLot.formats[formatKey];
     }
-
-    selectedMassTotal += formatSelectedMass;
-    restMassTotal += formatRestMass;
   });
 
   // Mise à jour des totaux
@@ -839,10 +894,6 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
   let selectedMassTotal = 0;
   let restMassTotal = 0;
 
-  // Initialiser les formats vides
-  targetLot.formats = {};
-  coProductLot.formats = {};
-
   Object.entries(lot.formats).forEach(([formatKey, formatObj]) => {
     const typesObj = formatObj.types;
     let selectedTypes = {};
@@ -924,26 +975,36 @@ function selectByPerturbateur(lot, selectedPerturbateurs) {
       }
     });
 
-    // Mise à jour des formats dans les deux lots
-    if (Object.keys(selectedTypes).length > 0) {
-      targetLot.formats[formatKey] = {
-        ...formatObj,
-        types: selectedTypes,
-        pourcentage: formatSelectedMass,
-      };
-      if (formatObj.color) targetLot.formats[formatKey].color = formatObj.color;
+    // Recalcul des pourcentages des types dans chaque format
+    if (formatSelectedMass > 0) {
+      Object.keys(selectedTypes).forEach(typeKey => {
+        selectedTypes[typeKey].pourcentage =
+          (typeMassesSelected[typeKey] / formatSelectedMass) * 100;
+      });
+      targetLot.formats[formatKey].types = selectedTypes;
+      targetLot.formats[formatKey].pourcentage = formatSelectedMass;
       selectedMassTotal += formatSelectedMass;
+    } else {
+      // Aucun perturbateur sélectionné dans ce format, le supprimer du target
+      delete targetLot.formats[formatKey];
     }
 
-    if (Object.keys(restTypes).length > 0) {
-      coProductLot.formats[formatKey] = {
-        ...formatObj,
-        types: restTypes,
-        pourcentage: formatRestMass,
-      };
-      if (formatObj.color)
-        coProductLot.formats[formatKey].color = formatObj.color;
+    if (formatRestMass > 0) {
+      Object.keys(restTypes).forEach(typeKey => {
+        restTypes[typeKey].pourcentage =
+          (typeMassesRest[typeKey] / formatRestMass) * 100;
+      });
+      coProductLot.formats[formatKey].types = restTypes;
+      coProductLot.formats[formatKey].pourcentage = formatRestMass;
       restMassTotal += formatRestMass;
+    } else if (formatSelectedMass === 0) {
+      // Le format n'a ni perturbateurs sélectionnés ni perturbateurs restants, tout va au reste
+      const formatMass = lot.total * (formatObj.pourcentage / 100);
+      coProductLot.formats[formatKey].pourcentage = formatMass;
+      restMassTotal += formatMass;
+    } else {
+      // Tous les perturbateurs sont sélectionnés, supprimer du coproduit
+      delete coProductLot.formats[formatKey];
     }
   });
 
