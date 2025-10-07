@@ -825,7 +825,11 @@ class TransformationPopup {
       } else {
         // ← EXISTANT : Logique pour les transformations statiques
         const selectedIds = this.selectedKeys.map(k => k.id);
-        const selectedNames = this.selectedKeys.map(k => k.name);
+        const selectedNames = this.selectedKeys.map(k => {
+          // Utiliser la traduction selon la langue courante
+          // Les données complètes sont déjà dans selectedKeys
+          return this.getTitreAffiche(k.name, k.data);
+        });
 
         transformation = {
           type: [selectedType],
@@ -1029,7 +1033,7 @@ class TransformationPopup {
                     const itemData = keyListData[name];
                     const translatedName = this.getTitreAffiche(name, itemData);
 
-                    this.selectedKeys.push({ name, id });
+                    this.selectedKeys.push({ name, id, data: itemData });
 
                     // Ajouter le pill visuellement avec le nom traduit
                     const pill = document.createElement('span');
