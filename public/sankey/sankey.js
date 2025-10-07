@@ -32,6 +32,20 @@ window.currentLotId = '';
 window.stepsMeta = window.stepsMeta || null;
 window.stepsMetaPromise = window.stepsMetaPromise || null;
 
+// --- Fonction utilitaire pour obtenir le titre traduit ---
+function getTitreAffiche(key, obj) {
+  // Récupère le paramètre de langue
+  const params = getUrlParams();
+
+  // Si la langue est en_gb ET que l'objet a une clé en_gb non vide
+  if (params.lang === 'en_gb' && obj && obj.en_gb && obj.en_gb.trim() !== '') {
+    return obj.en_gb;
+  }
+
+  // Sinon, retourne la clé originale
+  return key;
+}
+
 // Fonction pour gérer l'état du bouton Enregistrer (exposée globalement)
 window.setScenarioModifie = function (modifie) {
   const saveBtn = document.getElementById('save-scenario-btn');
@@ -266,7 +280,8 @@ function createStackbarSegments(
   nodeHeight,
   stackbarWidth,
   component,
-  sum
+  sum,
+  dimensionValues
 ) {
   // Vérifier que nodeHeight est un nombre valide
   if (isNaN(nodeHeight) || nodeHeight === null || nodeHeight === undefined) {
@@ -416,8 +431,84 @@ function createStackbarSegments(
           typeof value === 'object' && value !== null
             ? value.pourcentage
             : value;
+        // Récupérer l'objet complet pour avoir accès aux traductions
+        // Il faut récupérer depuis le lot original, pas depuis dimensionValues transformé
+        let fullObject = null;
+        if (dimension === 'formats' && d.lot.formats && d.lot.formats[key]) {
+          fullObject = d.lot.formats[key];
+        } else if (dimension === 'types' && d.lot.formats) {
+          // Pour types, il faut chercher dans tous les formats
+          Object.values(d.lot.formats).forEach(format => {
+            if (format.types && format.types[key]) {
+              fullObject = format.types[key];
+            }
+          });
+        } else if (dimension === 'matieres' && d.lot.formats) {
+          // Pour matieres, il faut chercher dans tous les formats/types
+          Object.values(d.lot.formats).forEach(format => {
+            if (format.types) {
+              Object.values(format.types).forEach(type => {
+                if (type.matieres && type.matieres[key]) {
+                  fullObject = type.matieres[key];
+                }
+              });
+            }
+          });
+        } else if (dimension === 'fibres' && d.lot.formats) {
+          // Pour fibres, il faut chercher dans tous les formats/types/matieres
+          Object.values(d.lot.formats).forEach(format => {
+            if (format.types) {
+              Object.values(format.types).forEach(type => {
+                if (type.matieres) {
+                  Object.values(type.matieres).forEach(matiere => {
+                    if (matiere.fibres && matiere.fibres[key]) {
+                      fullObject = matiere.fibres[key];
+                    }
+                  });
+                }
+              });
+            }
+          });
+        } else if (dimension === 'couleurs' && d.lot.formats) {
+          // Pour couleurs, chercher dans tous les formats/types/matieres
+          Object.values(d.lot.formats).forEach(format => {
+            if (format.types) {
+              Object.values(format.types).forEach(type => {
+                if (type.matieres) {
+                  Object.values(type.matieres).forEach(matiere => {
+                    if (matiere.couleurs && matiere.couleurs[key]) {
+                      fullObject = matiere.couleurs[key];
+                    }
+                  });
+                }
+              });
+            }
+          });
+        } else if (
+          dimension === 'qualite' &&
+          d.lot.qualite &&
+          d.lot.qualite[key]
+        ) {
+          fullObject = d.lot.qualite[key];
+        } else if (
+          dimension === 'proprete' &&
+          d.lot.proprete &&
+          d.lot.proprete[key]
+        ) {
+          fullObject = d.lot.proprete[key];
+        } else if (dimension === 'perturbateurs') {
+          // Pour perturbateurs, c'est plus complexe car calculé
+          fullObject = dimensionValues[key]; // Fallback sur dimensionValues
+        }
+
         let tooltipContent = component
-          ? component.getTooltipContent(d.lot, key, tooltipValue, d.lot.total)
+          ? component.getTooltipContent(
+              d.lot,
+              key,
+              tooltipValue,
+              d.lot.total,
+              fullObject
+            )
           : '';
         tooltip.transition().duration(200).style('opacity', 0.9);
         // ===== TOOLTIP DES ÉLÉMENTS DE STACKBAR (NON-TRANSFO) - VRAI =====
@@ -567,8 +658,9 @@ const stackbarComponents = {
       });
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
+      return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   types: {
@@ -623,8 +715,9 @@ const stackbarComponents = {
 
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
+      return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   matieres: {
@@ -708,7 +801,8 @@ const stackbarComponents = {
 
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
       // Trouver la matière dans le lot courant
       let fibresDistrib = {};
       Object.values(lot.formats).forEach(formatObj => {
@@ -749,7 +843,7 @@ const stackbarComponents = {
             .map(([f, pct]) => `${f} : ${Number(pct).toFixed(1)}%`)
             .join('<br/>');
       }
-      return `<strong>${key}</strong><br/>Pourcentage : ${Number(value).toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg${fibresStr}`;
+      return `<strong>${titre}</strong><br/>Pourcentage : ${Number(value).toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg${fibresStr}`;
     },
   },
   fibres: {
@@ -852,8 +946,9 @@ const stackbarComponents = {
 
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
+      return `<strong>${titre}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
   couleurs: {
@@ -941,8 +1036,9 @@ const stackbarComponents = {
 
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
+      return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   qualite: {
@@ -960,8 +1056,9 @@ const stackbarComponents = {
       });
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
+      return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   proprete: {
@@ -979,8 +1076,9 @@ const stackbarComponents = {
       });
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
+      return `<strong>${titre}</strong><br/>Pourcentage : ${value.toFixed(1)}%<br/>Poids : ${Math.round((total * value) / 100)} kg`;
     },
   },
   perturbateurs: {
@@ -1041,8 +1139,9 @@ const stackbarComponents = {
       }
       return values;
     },
-    getTooltipContent: (lot, key, value, total) => {
-      return `<strong>${key}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
+    getTooltipContent: (lot, key, value, total, fullObject) => {
+      const titre = getTitreAffiche(key, fullObject);
+      return `<strong>${titre}</strong><table class="tooltip-table"><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('percentage')}</span> <span class="tooltip-value">${value.toFixed(1)}%</span></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('weight')}</span> <span class="tooltip-value">${Math.round((total * value) / 100)} kg</span></td></tr></table>`;
     },
   },
   // Ajoute ici d'autres dimensions si besoin
@@ -1237,7 +1336,8 @@ function renderNode(node, position, isStandalone, dimension) {
     nodeHeight,
     STACKBAR_WIDTH,
     component,
-    sum
+    sum,
+    dimensionValues
   );
 
   // Bloc à droite de la stackbar
@@ -1626,7 +1726,8 @@ function updateSankey(dimension) {
       nodeHeight,
       STACKBAR_WIDTH,
       component,
-      sum
+      sum,
+      dimensionValues
     );
 
     // Bloc à droite de la stackbar
@@ -1755,7 +1856,19 @@ function updateSankey(dimension) {
               typeof value === 'object' && value !== null
                 ? value.pourcentage
                 : value;
-            distributionRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${key}</span> <span class="tooltip-value">${pourcentage.toFixed(1)}%</span></td></tr>`;
+
+            // Récupérer l'objet complet pour la traduction
+            let fullObject = null;
+            if (
+              d.lot &&
+              d.lot[currentDimension] &&
+              d.lot[currentDimension][key]
+            ) {
+              fullObject = d.lot[currentDimension][key];
+            }
+
+            const translatedKey = getTitreAffiche(key, fullObject);
+            distributionRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${translatedKey}</span> <span class="tooltip-value">${pourcentage.toFixed(1)}%</span></td></tr>`;
           });
 
           tooltip

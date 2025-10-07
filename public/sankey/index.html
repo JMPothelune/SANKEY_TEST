@@ -185,9 +185,14 @@
               }));
             } else {
               // Si c'est un objet avec des clés, convertir en array
+              const params = getUrlParams();
+              const lang = params.lang || 'fr_fr';
               dimensions = Object.keys(bubbleDimensions).map(key => ({
                 value: key,
-                label: bubbleDimensions[key].fr_fr || key, // Utiliser la traduction française
+                label:
+                  bubbleDimensions[key][lang] ||
+                  bubbleDimensions[key].fr_fr ||
+                  key, // Utiliser la traduction selon la langue
               }));
             }
 
@@ -222,10 +227,16 @@
         select.innerHTML = '';
 
         // Ajouter les nouvelles options
+        const params = getUrlParams();
+        const lang = params.lang || 'fr_fr';
         dimensions.forEach(dim => {
           const option = document.createElement('option');
           option.value = dim.value;
-          option.textContent = dim.label;
+          // Si dim.label est un objet avec traductions, utiliser la langue appropriée
+          option.textContent =
+            typeof dim.label === 'object'
+              ? dim.label[lang] || dim.label.fr_fr || dim.value
+              : dim.label;
           select.appendChild(option);
         });
 
