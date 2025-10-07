@@ -387,12 +387,16 @@ function selectByQualite(lot, selectedQualites) {
       selected[key] = {
         pourcentage: pct,
       };
+      // Préserver bubble_id pour les traitements suivants
+      if (value.bubble_id) selected[key].bubble_id = value.bubble_id;
       if (value.color) selected[key].color = value.color;
       selectedPct += pct;
     } else {
       rest[key] = {
         pourcentage: pct,
       };
+      // Préserver bubble_id pour les traitements suivants
+      if (value.bubble_id) rest[key].bubble_id = value.bubble_id;
       if (value.color) rest[key].color = value.color;
       restPct += pct;
     }

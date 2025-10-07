@@ -228,6 +228,8 @@ function updateTransformation(scenario, path, index, newTransformation) {
   const newType = getType(newTransformation);
 
   const cleanedBase = { ...oldTransformation };
+  // Ne jamais persister _nodeId dans le scénario (métadonnée d'affichage uniquement)
+  delete cleanedBase._nodeId;
   if (newType === 'dynamic_transfo') {
     // On passe à une transfo dynamique: retirer les clés propres aux statiques
     delete cleanedBase.keys;
@@ -250,6 +252,8 @@ function updateTransformation(scenario, path, index, newTransformation) {
     _index: index, // Garder l'index
     _path: path, // Garder le path nettoyé
   };
+  // Assurer qu'on ne réintroduit pas _nodeId via newTransformation
+  delete arr[index]._nodeId;
   console.log('Transformation updated successfully');
 }
 

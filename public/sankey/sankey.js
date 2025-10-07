@@ -1488,9 +1488,21 @@ function updateSankey(dimension) {
           icon: 'plus',
           label: i18next.t('addTransfo'),
           onClick: () => {
-            const path = getPathForNewTransformation(nodes[0]);
+            // Contexte scénario vide: utiliser explicitement le nœud courant (nodes[0])
+            const currentNode = nodes && nodes.length ? nodes[0] : null;
+            if (!currentNode) {
+              console.error(
+                'Aucun nœud disponible pour ajouter une transformation'
+              );
+              return;
+            }
+            const path = getPathForNewTransformation(currentNode);
+            // Si le nœud courant est l'id racine '0', associer l'ajout à l'id '1' (premier nœud logique)
+            const nodeIdForAdd = String(
+              currentNode && currentNode.id === '0' ? '1' : currentNode.id
+            );
             const ref = {
-              nodeId: nodes[0].id,
+              nodeId: nodeIdForAdd,
               dimension: dimension,
               path: path,
             };
@@ -2748,7 +2760,6 @@ window.onTransformationSave = (nodeId, transformation) => {
     // Mettre à jour la transformation en gardant les métadonnées
     window.updateTransformation(scenario, path, index, {
       ...transformation,
-      _nodeId: nodeId, // Garder le nodeId
     });
 
     // Relancer le Sankey
@@ -2794,7 +2805,6 @@ window.onTransformationAdd = (nodeId, transformation) => {
   console.log('Calling addTransformation...');
   window.addTransformation(scenario, path, {
     ...transformation,
-    _nodeId: nodeId,
   });
 
   // Relancer le Sankey
@@ -3133,9 +3143,11 @@ function applyScenario(
       } else {
         // Pour les transformations statiques, utiliser keys comme avant
         const keysArray = Array.isArray(keys) ? keys : [];
+        // Préfixer le nom avec un titre unique (ex: 1.2) pour garantir l’unicité visuelle
+        const base = `${type}: ${keysArray.join(' + ')}`;
         nodeName = targetLot.target
-          ? `${type}: ${keysArray.join(' + ')} → ${targetLot.target}`
-          : `${type}: ${keysArray.join(' + ')}`;
+          ? `${titre} — ${base} → ${targetLot.target}`
+          : `${titre} — ${base}`;
       }
       targetLot.id = nodeId;
 
