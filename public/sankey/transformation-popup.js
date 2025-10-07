@@ -982,10 +982,11 @@ class TransformationPopup {
 
               if (filtered.length > 0) {
                 keyDropdown.innerHTML = filtered
-                  .map(
-                    ([name, itemData]) =>
-                      `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${name}</div>`
-                  )
+                  .map(([name, itemData]) => {
+                    // Utiliser la traduction pour l'affichage
+                    const translatedName = this.getTitreAffiche(name, itemData);
+                    return `<div class="px-3 py-2 hover:bg-blue-100 cursor-pointer" data-name="${name}" data-id="${itemData.bubble_id}">${translatedName}</div>`;
+                  })
                   .join('');
                 keyDropdown.classList.remove('hidden');
               } else {
@@ -1024,11 +1025,15 @@ class TransformationPopup {
                   if (
                     !this.selectedKeys.some(k => k.name === name && k.id === id)
                   ) {
+                    // Récupérer l'objet complet pour la traduction
+                    const itemData = keyListData[name];
+                    const translatedName = this.getTitreAffiche(name, itemData);
+
                     this.selectedKeys.push({ name, id });
 
-                    // Ajouter le pill visuellement
+                    // Ajouter le pill visuellement avec le nom traduit
                     const pill = document.createElement('span');
-                    pill.innerHTML = `${name}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${this.selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+                    pill.innerHTML = `${translatedName}<button type="button" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" data-key-index="${this.selectedKeys.length - 1}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
                     pill.className =
                       'inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm mr-2 mb-2';
 
@@ -1133,6 +1138,8 @@ class TransformationPopup {
   // Fonction pour convertir les bubble_id en noms d'affichage
   async getBubbleIdsAsNames(bubbleIdObjects) {
     const names = [];
+    const params = getUrlParams();
+    const lang = params.lang || 'fr_fr';
 
     for (const [key, obj] of Object.entries(bubbleIdObjects)) {
       const bubbleId = obj.bubble_id;
@@ -1142,7 +1149,8 @@ class TransformationPopup {
         // Utiliser la fonction existante depuis lot.js (adaptée pour le contexte sankey)
         const elementComplet = await this.recupererElementComplet(bubbleId);
         if (elementComplet) {
-          const nomReel = Object.keys(elementComplet)[0];
+          // Utiliser la traduction selon la langue
+          const nomReel = this.getTitreAffiche(key, elementComplet[key]);
           names.push(`${nomReel}${percent}`);
         } else {
           names.push(`${key}${percent}`);
@@ -1154,6 +1162,20 @@ class TransformationPopup {
     }
 
     return names.join(', ');
+  }
+
+  // Fonction utilitaire pour obtenir le titre traduit (copiée depuis lot.js)
+  getTitreAffiche(key, obj) {
+    const params = getUrlParams();
+    const lang = params.lang || 'fr_fr';
+
+    // Si la langue est en_gb ET que l'objet a une clé en_gb non vide
+    if (lang === 'en_gb' && obj && obj.en_gb && obj.en_gb.trim() !== '') {
+      return obj.en_gb;
+    }
+
+    // Sinon, retourne la clé originale
+    return key;
   }
 
   // Fonction pour extraire les données du tableau à partir des détails de transformation
