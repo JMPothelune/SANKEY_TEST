@@ -412,21 +412,14 @@ function selectByQualite(lot, selectedQualites) {
     }
   });
 
-  // Création des deux lots
-  let targetLot = null;
-  let coProductLot = null;
+  // Création des deux lots (toujours créer les lots, même vides, comme selectByFormat)
+  const targetLot = JSON.parse(JSON.stringify(lot));
+  targetLot.qualite = selected;
+  targetLot.total = lot.total * (selectedPct / 100);
 
-  if (selectedPct > 0) {
-    targetLot = JSON.parse(JSON.stringify(lot));
-    targetLot.qualite = selected;
-    targetLot.total = lot.total * (selectedPct / 100);
-  }
-
-  if (restPct > 0) {
-    coProductLot = JSON.parse(JSON.stringify(lot));
-    coProductLot.qualite = rest;
-    coProductLot.total = lot.total * (restPct / 100);
-  }
+  const coProductLot = JSON.parse(JSON.stringify(lot));
+  coProductLot.qualite = rest;
+  coProductLot.total = lot.total * (restPct / 100);
 
   if (
     Math.abs(

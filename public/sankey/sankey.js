@@ -1685,13 +1685,19 @@ function updateSankey(dimension) {
   // Ajout des rectangles pour les nœuds avec stackbars
   node.each(function (d) {
     const nodeGroup = d3.select(this);
-    const nodeHeight =
+    const originalHeight =
       d.y1 !== undefined && d.y0 !== undefined ? d.y1 - d.y0 : 100;
+    const nodeHeight = Math.max(2, originalHeight);
+
+    // Centrer le nœud si sa hauteur a été forcée à 2px
+    const nodeOffset =
+      originalHeight < 2 ? (originalHeight - nodeHeight) / 2 : 0;
 
     // Stackbar (à gauche du nœud)
     nodeGroup
       .append('rect')
       .attr('x', 0)
+      .attr('y', nodeOffset)
       .attr('height', nodeHeight)
       .attr('width', STACKBAR_WIDTH)
       .style('fill', '#e0e0e0')
@@ -1720,7 +1726,7 @@ function updateSankey(dimension) {
       nodeGroup
         .append('rect')
         .attr('x', 0)
-        .attr('y', 0)
+        .attr('y', nodeOffset)
         .attr('height', nodeHeight)
         .attr('width', STACKBAR_WIDTH)
         .attr('rx', 4)
@@ -1747,7 +1753,7 @@ function updateSankey(dimension) {
     nodeGroup
       .append('rect')
       .attr('x', STACKBAR_WIDTH)
-      .attr('y', 0)
+      .attr('y', nodeOffset)
       .attr('width', EXTRA_BLOCK_WIDTH)
       .attr('height', nodeHeight)
       .attr('rx', 4)
@@ -1757,9 +1763,6 @@ function updateSankey(dimension) {
       .style('stroke-width', '1px')
       .style('opacity', 1)
       .on('mouseover', function (event) {
-        // Debug : afficher le JSON du lot dans la console
-        console.log('[Tooltip Node] Lot:', d.lot);
-
         const component = stackbarComponents[dimension];
         // Vérifier si c'est un nœud target
         if (d.isTarget) {
