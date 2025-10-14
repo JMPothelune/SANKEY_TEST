@@ -110,6 +110,12 @@ export const translations = {
       distribution: 'Répartition :',
       parameters: 'Paramètres',
       reste: 'Reste',
+      viewLot: 'Visualiser le lot',
+      transformationDetails: 'Détails de la transformation',
+      cannotLoadTransformationDetails:
+        'Impossible de charger les détails de la transformation',
+      errorLoadingTransformationDetails:
+        'Erreur lors du chargement des détails de la transformation',
     },
   },
   en_gb: {
@@ -219,6 +225,10 @@ export const translations = {
       distribution: 'Distribution :',
       parameters: 'Parameters',
       reste: 'Remainder',
+      viewLot: 'View lot',
+      transformationDetails: 'Transformation details',
+      cannotLoadTransformationDetails: 'Cannot load transformation details',
+      errorLoadingTransformationDetails: 'Error loading transformation details',
     },
   },
   es_es: {
@@ -329,6 +339,12 @@ export const translations = {
       distribution: 'Distribución :',
       parameters: 'Parámetros',
       reste: 'Resto',
+      viewLot: 'Ver lote',
+      transformationDetails: 'Detalles de la transformación',
+      cannotLoadTransformationDetails:
+        'No se pueden cargar los detalles de la transformación',
+      errorLoadingTransformationDetails:
+        'Error al cargar los detalles de la transformación',
     },
   },
   de_de: {
@@ -440,6 +456,12 @@ export const translations = {
       distribution: 'Verteilung :',
       parameters: 'Parameter',
       reste: 'Rest',
+      viewLot: 'Los anzeigen',
+      transformationDetails: 'Transformationsdetails',
+      cannotLoadTransformationDetails:
+        'Transformationsdetails können nicht geladen werden',
+      errorLoadingTransformationDetails:
+        'Fehler beim Laden der Transformationsdetails',
     },
   },
 };

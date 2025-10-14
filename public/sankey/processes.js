@@ -384,20 +384,14 @@ function selectByQualite(lot, selectedQualites) {
 
     // Comparer avec les bubble_id au lieu des noms
     if (selectedQualites.includes(value.bubble_id)) {
-      selected[key] = {
-        pourcentage: pct,
-      };
-      // Préserver bubble_id pour les traitements suivants
-      if (value.bubble_id) selected[key].bubble_id = value.bubble_id;
-      if (value.color) selected[key].color = value.color;
+      // Préserver toutes les propriétés comme dans selectByFormat
+      selected[key] = JSON.parse(JSON.stringify(value));
+      selected[key].pourcentage = pct;
       selectedPct += pct;
     } else {
-      rest[key] = {
-        pourcentage: pct,
-      };
-      // Préserver bubble_id pour les traitements suivants
-      if (value.bubble_id) rest[key].bubble_id = value.bubble_id;
-      if (value.color) rest[key].color = value.color;
+      // Préserver toutes les propriétés comme dans selectByFormat
+      rest[key] = JSON.parse(JSON.stringify(value));
+      rest[key].pourcentage = pct;
       restPct += pct;
     }
   });
@@ -847,10 +841,10 @@ function selectByProprete(lot, selectedProprete) {
     Object.entries(lot.proprete).forEach(([prop, pct]) => {
       // Comparer avec les bubble_id au lieu des noms
       if (selectedArray.includes(pct.bubble_id)) {
-        targetProprete[prop] = {
-          pourcentage: (pct.pourcentage * lot.total) / targetMass,
-        };
-        if (pct.color) targetProprete[prop].color = pct.color;
+        // Préserver toutes les propriétés comme dans selectByFormat
+        targetProprete[prop] = JSON.parse(JSON.stringify(pct));
+        targetProprete[prop].pourcentage =
+          (pct.pourcentage * lot.total) / targetMass;
       }
     });
     targetLot.proprete = targetProprete;
@@ -861,10 +855,10 @@ function selectByProprete(lot, selectedProprete) {
     Object.entries(lot.proprete).forEach(([prop, pct]) => {
       // Comparer avec les bubble_id au lieu des noms
       if (!selectedArray.includes(pct.bubble_id)) {
-        coProductProprete[prop] = {
-          pourcentage: (pct.pourcentage * lot.total) / coProductMass,
-        };
-        if (pct.color) coProductProprete[prop].color = pct.color;
+        // Préserver toutes les propriétés comme dans selectByFormat
+        coProductProprete[prop] = JSON.parse(JSON.stringify(pct));
+        coProductProprete[prop].pourcentage =
+          (pct.pourcentage * lot.total) / coProductMass;
       }
     });
     coProductLot.proprete = coProductProprete;
@@ -1417,7 +1411,8 @@ const transformationUtils = {
         isDynamic: true,
         bubbleId: transfo.bubble_id,
         version: transfo.version,
-      }));
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label)); // Tri alphabétique par titre
 
     // Retourner avec séparateur
     return [
@@ -1468,10 +1463,7 @@ const transformationUtils = {
 
       return data;
     } catch (error) {
-      console.error(
-        'Erreur lors du chargement des détails de la transformation:',
-        error
-      );
+      console.error(i18next.t('errorLoadingTransformationDetails'), error);
       return null;
     }
   },

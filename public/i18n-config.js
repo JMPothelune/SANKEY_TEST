@@ -70,7 +70,7 @@ window.i18nConfig = {
         target: 'Cible :',
         step: 'Étape :',
         yield: 'Rendement :',
-        inputWeight: 'Poids du lot :',
+        inputWeight: "Poids d'entrée :",
         usefulTime: 'Temps utile :',
         consumption: 'Conso élec :',
         total: 'Total :',
@@ -81,6 +81,12 @@ window.i18nConfig = {
         distribution: 'Répartition :',
         parameters: 'Paramètres',
         reste: 'Reste',
+        viewLot: 'Visualiser le lot',
+        transformationDetails: 'Détails de la transformation',
+        cannotLoadTransformationDetails:
+          'Impossible de charger les détails de la transformation',
+        errorLoadingTransformationDetails:
+          'Erreur lors du chargement des détails de la transformation',
       },
     },
     en_gb: {
@@ -150,7 +156,7 @@ window.i18nConfig = {
         target: 'Target :',
         step: 'Step :',
         yield: 'Yield :',
-        inputWeight: 'Batch Weight :',
+        inputWeight: 'Input Weight :',
         usefulTime: 'Useful Time :',
         consumption: 'Consumption :',
         total: 'Total :',
@@ -161,6 +167,11 @@ window.i18nConfig = {
         distribution: 'Distribution :',
         parameters: 'Parameters',
         reste: 'Remainder',
+        viewLot: 'View lot',
+        transformationDetails: 'Transformation details',
+        cannotLoadTransformationDetails: 'Cannot load transformation details',
+        errorLoadingTransformationDetails:
+          'Error loading transformation details',
       },
     },
     es_es: {
@@ -231,7 +242,7 @@ window.i18nConfig = {
         target: 'Objetivo :',
         step: 'Paso :',
         yield: 'Rendimiento :',
-        inputWeight: 'Peso del lote :',
+        inputWeight: 'Peso de entrada :',
         usefulTime: 'Tiempo útil :',
         consumption: 'Consumo :',
         total: 'Total :',
@@ -242,6 +253,12 @@ window.i18nConfig = {
         distribution: 'Distribución :',
         parameters: 'Parámetros',
         reste: 'Resto',
+        viewLot: 'Ver lote',
+        transformationDetails: 'Detalles de la transformación',
+        cannotLoadTransformationDetails:
+          'No se pueden cargar los detalles de la transformación',
+        errorLoadingTransformationDetails:
+          'Error al cargar los detalles de la transformación',
       },
     },
     de_de: {
@@ -313,7 +330,7 @@ window.i18nConfig = {
         target: 'Ziel :',
         step: 'Schritt :',
         yield: 'Ertrag :',
-        inputWeight: 'Lotegewicht :',
+        inputWeight: 'Eingabewicht :',
         usefulTime: 'Nützliche Zeit :',
         consumption: 'Verbrauch :',
         total: 'Gesamt :',
@@ -324,6 +341,12 @@ window.i18nConfig = {
         distribution: 'Verteilung :',
         parameters: 'Parameter',
         reste: 'Rest',
+        viewLot: 'Los anzeigen',
+        transformationDetails: 'Transformationsdetails',
+        cannotLoadTransformationDetails:
+          'Transformationsdetails können nicht geladen werden',
+        errorLoadingTransformationDetails:
+          'Fehler beim Laden der Transformationsdetails',
       },
     },
   },

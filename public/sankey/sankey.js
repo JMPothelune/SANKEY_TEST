@@ -2203,7 +2203,7 @@ function updateSankey(dimension) {
           dropdownMenu.innerHTML = `
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit"><i class="ph ph-pencil-simple text-base align-middle mr-2"></i>${i18next.t('edit')}</button>
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="tools"><i class="ph ph-gear text-base align-middle mr-2"></i>${i18next.t('tools')}</button>
-            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="view"><i class="ph ph-eye text-base align-middle mr-2"></i>Visualiser le lot</button>
+            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="view"><i class="ph ph-eye text-base align-middle mr-2"></i>${i18next.t('viewLot')}</button>
             <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}><i class="ph ph-arrow-up text-base align-middle mr-2"></i>${i18next.t('moveUp')}</button>
             <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}><i class="ph ph-arrow-down text-base align-middle mr-2"></i>${i18next.t('moveDown')}</button>
             <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete"><i class="ph ph-trash text-base align-middle mr-2"></i>${i18next.t('delete')}</button>
@@ -2435,7 +2435,7 @@ function updateSankey(dimension) {
         },
         {
           icon: 'eye',
-          label: 'Visualiser le lot',
+          label: i18next.t('viewLot'),
           onClick: () => {
             const lotJson = JSON.stringify(d.lot, null, 2);
             window.parent.postMessage(
@@ -2497,7 +2497,7 @@ function updateSankey(dimension) {
         },
         {
           icon: 'eye',
-          label: 'Visualiser le lot',
+          label: i18next.t('viewLot'),
           onClick: () => {
             const lotJson = JSON.stringify(d.lot, null, 2);
             window.parent.postMessage(
@@ -3397,9 +3397,19 @@ function getPathForNewTransformation(node) {
     }
     // Pour les nœuds normaux, pointer vers le sous-scénario
     else {
-      const result = [...node._path, 'transformations'];
-      console.log('✅ Nœud normal avec path étendu:', result);
-      return result;
+      // Vérifier si le path se termine déjà par 'transformations'
+      if (node._path[node._path.length - 1] === 'transformations') {
+        const result = [...node._path];
+        console.log(
+          '✅ Nœud normal avec path déjà terminé par transformations:',
+          result
+        );
+        return result;
+      } else {
+        const result = [...node._path, 'transformations'];
+        console.log('✅ Nœud normal avec path étendu:', result);
+        return result;
+      }
     }
   }
 

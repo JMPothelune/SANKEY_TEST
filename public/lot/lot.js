@@ -1567,6 +1567,13 @@ async function afficherModalAjout(niveau, dimension) {
     key => !elementsExistants.includes(key)
   );
 
+  // Trier les éléments par ordre alphabétique selon la langue
+  elementsDisponibles.sort((a, b) => {
+    const titreA = getTitreAffiche(a, donneesBase[a]);
+    const titreB = getTitreAffiche(b, donneesBase[b]);
+    return titreA.localeCompare(titreB);
+  });
+
   // Créer le backdrop
   const backdrop = document.createElement('div');
   backdrop.className = 'fixed inset-0 flex items-center justify-center z-50';

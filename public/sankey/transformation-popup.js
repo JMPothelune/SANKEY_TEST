@@ -1182,6 +1182,29 @@ class TransformationPopup {
     return key;
   }
 
+  // Fonction pour obtenir le label de dimension selon la langue
+  getDimensionLabel(dimension) {
+    const params = getUrlParams();
+    const lang = params.lang || 'fr_fr';
+
+    // Utiliser la variable dimensions de index.html (ligne 139)
+    if (typeof dimensions !== 'undefined' && Array.isArray(dimensions)) {
+      const dimObj = dimensions.find(d => d.value === dimension);
+
+      if (dimObj && dimObj.label) {
+        // Utiliser exactement la même logique que le dropdown (lignes 236-240 dans index.html)
+        const result =
+          typeof dimObj.label === 'object'
+            ? dimObj.label[lang] || dimObj.label.fr_fr || dimObj.value
+            : dimObj.label;
+        return result;
+      }
+    }
+
+    // Fallback simple
+    return dimension;
+  }
+
   // Fonction pour extraire les données du tableau à partir des détails de transformation
   async extractTableDataFromTransfo(transfoDetails) {
     const rows = [];
@@ -1208,8 +1231,7 @@ class TransformationPopup {
           : '-';
 
         rows.push({
-          dimension:
-            window.DIMENSION_HIERARCHY[dimension]?.description || dimension,
+          dimension: this.getDimensionLabel(dimension),
           inputTarget: inputTarget,
           targetLot: targetLot,
           coProductLot: coProductLot,
@@ -1251,10 +1273,10 @@ class TransformationPopup {
         await window.transformationUtils.getDynamicTransfoDetails(bubbleId);
 
       if (!transfoDetails) {
-        console.warn('Impossible de charger les détails de la transformation');
+        console.warn(i18next.t('cannotLoadTransformationDetails'));
         // Afficher un message d'avertissement
         this.showTransfoDetailsError(
-          'Impossible de charger les détails de la transformation'
+          i18next.t('cannotLoadTransformationDetails')
         );
         return;
       }
@@ -1344,7 +1366,7 @@ class TransformationPopup {
     const tableHTML = `
       <div id="transfo-details-table" class="mt-3 bg-white rounded-lg border border-gray-200 shadow-sm">
         <div id="table-header" class="px-3 py-2 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
-          <h4 class="text-sm font-medium text-gray-900">Détails de la transformation</h4>
+          <h4 class="text-sm font-medium text-gray-900">${i18next.t('transformationDetails')}</h4>
           <svg id="collapse-icon" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
           </svg>
