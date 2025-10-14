@@ -1160,6 +1160,7 @@ function getIconSVG(name, className = '') {
     'pencil-simple': 'ph-pencil-simple',
     'arrow-up': 'ph-arrow-up',
     'arrow-down': 'ph-arrow-down',
+    eye: 'ph-eye',
     'sign-out': 'ph-sign-out',
     // Icônes pour les steps
     't-shirt': 'ph-t-shirt',
@@ -2202,6 +2203,7 @@ function updateSankey(dimension) {
           dropdownMenu.innerHTML = `
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="edit"><i class="ph ph-pencil-simple text-base align-middle mr-2"></i>${i18next.t('edit')}</button>
             <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="tools"><i class="ph ph-gear text-base align-middle mr-2"></i>${i18next.t('tools')}</button>
+            <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50" data-action="view"><i class="ph ph-eye text-base align-middle mr-2"></i>Visualiser le lot</button>
             <button class="w-full text-left px-4 py-2 text-sm ${isFirst ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="up" ${isFirst ? 'disabled' : ''}><i class="ph ph-arrow-up text-base align-middle mr-2"></i>${i18next.t('moveUp')}</button>
             <button class="w-full text-left px-4 py-2 text-sm ${isLast ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-blue-50'}" data-action="down" ${isLast ? 'disabled' : ''}><i class="ph ph-arrow-down text-base align-middle mr-2"></i>${i18next.t('moveDown')}</button>
             <button class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50" data-action="delete"><i class="ph ph-trash text-base align-middle mr-2"></i>${i18next.t('delete')}</button>
@@ -2273,6 +2275,26 @@ function updateSankey(dimension) {
               };
               if (window.afficherPopupTransfo)
                 window.afficherPopupTransfo(ref, 'edit');
+            };
+          // Handler pour Visualiser le lot
+          dropdownMenu.querySelector('[data-action="view"]').onclick =
+            function (e) {
+              e.stopPropagation();
+              closeDropdown();
+              const lotJson = JSON.stringify(link.target.lot, null, 2);
+              window.parent.postMessage(
+                {
+                  id: 'sankey-lot-visualization',
+                  type: 'showLotDetails',
+                  payload: {
+                    nodeId: link.target.id,
+                    nodeName: link.target.name,
+                    lotData: lotJson,
+                    timestamp: new Date().toISOString(),
+                  },
+                },
+                '*'
+              );
             };
           // Handler pour Effacer
           dropdownMenu.querySelector('[data-action="delete"]').onclick =
@@ -2412,6 +2434,22 @@ function updateSankey(dimension) {
           },
         },
         {
+          icon: 'eye',
+          label: 'Visualiser le lot',
+          onClick: () => {
+            const lotJson = JSON.stringify(d.lot, null, 2);
+            window.parent.postMessage(
+              {
+                type: 'showLotDetails',
+                lotData: lotJson,
+                nodeId: d.id,
+                nodeName: d.name,
+              },
+              '*'
+            );
+          },
+        },
+        {
           icon: 'sign-out',
           label: i18next.t('link'),
           disabled: true,
@@ -2455,6 +2493,22 @@ function updateSankey(dimension) {
             };
             if (window.afficherPopupTransfo)
               window.afficherPopupTransfo(ref, 'add');
+          },
+        },
+        {
+          icon: 'eye',
+          label: 'Visualiser le lot',
+          onClick: () => {
+            const lotJson = JSON.stringify(d.lot, null, 2);
+            window.parent.postMessage(
+              {
+                type: 'showLotDetails',
+                lotData: lotJson,
+                nodeId: d.id,
+                nodeName: d.name,
+              },
+              '*'
+            );
           },
         },
         {
@@ -3308,7 +3362,48 @@ window.applyScenario = applyScenario;
 
 // Fonction utilitaire pour construire le path de manière simple
 function getPathForNewTransformation(node) {
-  // Si le nœud a des transformations appliquées, prendre la dernière (transformation parente)
+  // NOUVELLE LOGIQUE : Utiliser le _path du nœud lui-même comme base
+  // Cela permet de distinguer les différents niveaux de coproduits
+
+  console.log('🔍 getPathForNewTransformation called for node:', {
+    id: node.id,
+    name: node.name,
+    isCoproduct: node.isCoproduct,
+    _path: node._path,
+    transformations_appliquees_length:
+      node.transformations_appliquees?.length || 0,
+  });
+
+  if (node._path && Array.isArray(node._path)) {
+    // Si le nœud a un _path défini, l'utiliser comme base
+    // Pour les coproduits, on veut pointer vers leurs propres transformations
+    if (node.isCoproduct) {
+      // Le nœud coproduit doit pointer vers ses propres transformations
+      // Si le _path se termine par 'transformations', on reste au même niveau
+      if (node._path[node._path.length - 1] === 'transformations') {
+        const result = [...node._path];
+        console.log(
+          '✅ Coproduit avec path se terminant par transformations:',
+          result
+        );
+        return result;
+      }
+      // Sinon, on ajoute 'transformations' à la fin
+      else {
+        const result = [...node._path, 'transformations'];
+        console.log('✅ Coproduit avec path étendu:', result);
+        return result;
+      }
+    }
+    // Pour les nœuds normaux, pointer vers le sous-scénario
+    else {
+      const result = [...node._path, 'transformations'];
+      console.log('✅ Nœud normal avec path étendu:', result);
+      return result;
+    }
+  }
+
+  // Fallback : utiliser la logique basée sur transformations_appliquees
   if (
     node.transformations_appliquees &&
     node.transformations_appliquees.length > 0
@@ -3322,23 +3417,35 @@ function getPathForNewTransformation(node) {
       lastTransfo._path &&
       typeof lastTransfo._index === 'number'
     ) {
-      // Si c'est un coproduit (flag isCoproduct), pointer vers le coproduit
+      // Si c'est un coproduit, pointer vers le coproduit
       if (node.isCoproduct) {
-        return [
+        const result = [
           ...lastTransfo._path,
           lastTransfo._index,
           'scenario',
           'coproduct_scenario',
           'transformations',
         ];
+        console.log(
+          '🔄 Fallback coproduit basé sur transformations_appliquees:',
+          result
+        );
+        return result;
       }
       // Sinon, pointer vers le sous-scénario
-      return [
-        ...lastTransfo._path,
-        lastTransfo._index,
-        'scenario',
-        'transformations',
-      ];
+      else {
+        const result = [
+          ...lastTransfo._path,
+          lastTransfo._index,
+          'scenario',
+          'transformations',
+        ];
+        console.log(
+          '🔄 Fallback nœud normal basé sur transformations_appliquees:',
+          result
+        );
+        return result;
+      }
     }
   }
 
@@ -3348,10 +3455,12 @@ function getPathForNewTransformation(node) {
     (!node.transformations_appliquees ||
       node.transformations_appliquees.length === 0)
   ) {
+    console.log('🏠 Coproduit racine sans transformations_appliquees');
     return ['coproduct_scenario', 'transformations'];
   }
 
   // Fallback : racine
+  console.log('🏠 Fallback racine');
   return ['transformations'];
 }
 

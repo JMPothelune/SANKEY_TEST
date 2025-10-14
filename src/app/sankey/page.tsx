@@ -66,6 +66,30 @@ export default function SankeyPage() {
     return () => window.removeEventListener('message', handleResizeMessage);
   }, []);
 
+  // Gérer les messages de l'iframe pour visualiser les lots
+  useEffect(() => {
+    function handleLotMessage(event: MessageEvent) {
+      // Vérifier que le message provient bien de l'iframe Sankey
+      if (
+        event.data.id === 'sankey-lot-visualization' &&
+        event.data.type === 'showLotDetails'
+      ) {
+        console.log("Message reçu depuis l'iframe Sankey:", event.data);
+        console.log('Détails du lot:', {
+          nodeId: event.data.payload.nodeId,
+          nodeName: event.data.payload.nodeName,
+          lotData: event.data.payload.lotData,
+          timestamp: event.data.payload.timestamp,
+        });
+
+        // TODO: Intégrer avec Bubble pour afficher le popup de visualisation du lot
+        // Exemple: window.bubbleAPI.showLotDetails(event.data.payload);
+      }
+    }
+    window.addEventListener('message', handleLotMessage);
+    return () => window.removeEventListener('message', handleLotMessage);
+  }, []);
+
   // Construire l'URL de l'iframe avec tous les paramètres (sans dimension)
   const iframeSrc = `/sankey/index.html?lang=${selectedLanguage}&scenarioIdx=${scenarioIdx}&isEditable=${isEditable ? 'yes' : 'no'}&lotId=${selectedLot?.bubbleId || ''}&scenarioId=${selectedScenario?.bubbleId || ''}&teamId=${selectedTeam?.bubbleId || ''}&isLive=${selectedLot?.isLive || false}`;
 
