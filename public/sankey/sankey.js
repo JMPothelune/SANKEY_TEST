@@ -2,7 +2,8 @@
 const margin = { top: 20, right: 40, bottom: 20, left: 0 };
 let width = window.innerWidth - margin.left - margin.right;
 // Hauteur initiale par défaut (sera recalculée dynamiquement selon le contenu)
-let height = 500;
+const FIRST_NODE_MIN_HEIGHT_PX = 800;
+let height = FIRST_NODE_MIN_HEIGHT_PX;
 
 // Attendre qu'i18next soit prêt
 function waitForI18next() {
@@ -1387,6 +1388,9 @@ function updateSankey(dimension) {
     ...n,
     id: String(n.id),
   }));
+
+  // Définir la hauteur du Sankey
+  height = FIRST_NODE_MIN_HEIGHT_PX;
   let links = window.sankeyScenario.links.map(l => ({
     ...l,
     source: String(l.source),
@@ -1406,7 +1410,7 @@ function updateSankey(dimension) {
     // Cas spécial : un seul nœud => affichage manuel
     // (on saute la logique D3 Sankey)
     if (nodes.length === 1) {
-      const nodeHeight = Math.max(400, Math.min(500, 400));
+      const nodeHeight = FIRST_NODE_MIN_HEIGHT_PX;
       const nodeGroup = renderNode(
         nodes[0],
         { x: HORIZONTAL_PADDING, y: 40 },
@@ -1590,7 +1594,7 @@ function updateSankey(dimension) {
   const sankey = d3
     .sankey()
     .nodeWidth(STACKBAR_WIDTH + EXTRA_BLOCK_WIDTH)
-    .nodePadding(10)
+    .nodePadding(25) // 28px d'espacement entre nœuds pour éviter l'overlap des boutons
     .extent([
       [HORIZONTAL_PADDING, 0],
       [width - HORIZONTAL_PADDING, height],
