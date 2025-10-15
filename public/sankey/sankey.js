@@ -2453,7 +2453,6 @@ function updateSankey(dimension) {
                   nodeId: d.id,
                   nodeName: d.name,
                   lotData: lotJson,
-                  timestamp: new Date().toISOString(),
                 },
               },
               '*'
@@ -2519,7 +2518,6 @@ function updateSankey(dimension) {
                   nodeId: d.id,
                   nodeName: d.name,
                   lotData: lotJson,
-                  timestamp: new Date().toISOString(),
                 },
               },
               '*'
