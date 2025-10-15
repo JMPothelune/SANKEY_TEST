@@ -2,7 +2,7 @@
 const margin = { top: 20, right: 40, bottom: 20, left: 0 };
 let width = window.innerWidth - margin.left - margin.right;
 // Hauteur initiale par défaut (sera recalculée dynamiquement selon le contenu)
-const FIRST_NODE_MIN_HEIGHT_PX = 800;
+const FIRST_NODE_MIN_HEIGHT_PX = 600;
 let height = FIRST_NODE_MIN_HEIGHT_PX;
 
 // Attendre qu'i18next soit prêt
@@ -1293,7 +1293,10 @@ function createExtraBlock(
 
 // Fonction commune pour rendre un nœud
 function renderNode(node, position, isStandalone, dimension) {
-  const nodeHeight = Math.max(100, height * 0.8);
+  // Utiliser une hauteur fixe pour le premier nœud pour maintenir la cohérence
+  const nodeHeight = isStandalone
+    ? FIRST_NODE_MIN_HEIGHT_PX
+    : Math.max(100, height * 0.8);
   const nodeGroup = svg
     .append('g')
     .attr('transform', `translate(${position.x},${position.y})`);
@@ -1471,7 +1474,9 @@ function updateSankey(dimension) {
       }
 
       // Bouton + pour ajouter une transformation (même logique que dans la boucle node.each)
-      const yPlus = nodeHeight / 2 - 14;
+      // Utiliser la même hauteur que celle calculée dans renderNode pour un centrage correct
+      const actualNodeHeight = FIRST_NODE_MIN_HEIGHT_PX;
+      const yPlus = actualNodeHeight / 2 - 14;
       const fo = nodeGroup
         .append('foreignObject')
         .attr('x', STACKBAR_WIDTH + (EXTRA_BLOCK_WIDTH - 28) / 2)
