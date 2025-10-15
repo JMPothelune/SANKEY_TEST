@@ -2444,7 +2444,9 @@ function updateSankey(dimension) {
           icon: 'eye',
           label: i18next.t('viewLot'),
           onClick: () => {
-            const lotJson = JSON.stringify(d.lot, null, 2);
+            // Utiliser le lot du nœud qui représente le lot après toutes les transformations
+            const lotToShow = d.lot;
+            const lotJson = JSON.stringify(lotToShow, null, 2);
             window.parent.postMessage(
               {
                 id: 'sankey-lot-visualization',
@@ -2509,7 +2511,9 @@ function updateSankey(dimension) {
           icon: 'eye',
           label: i18next.t('viewLot'),
           onClick: () => {
-            const lotJson = JSON.stringify(d.lot, null, 2);
+            // Utiliser le lot du nœud qui représente le lot après toutes les transformations
+            const lotToShow = d.lot;
+            const lotJson = JSON.stringify(lotToShow, null, 2);
             window.parent.postMessage(
               {
                 id: 'sankey-lot-visualization',
