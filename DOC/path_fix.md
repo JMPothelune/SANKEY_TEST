@@ -113,79 +113,99 @@ function getPathFromNodeId(scenario, nodeId) {
 **Solution** : Passer le `_nodeId` du nœud parent à la popup.
 
 ```javascript
+// Dans sankey.js - Fonction pour calculer le path d'une nouvelle transformation
+function calculatePathForNewTransformation(parentNodeId, actionType, scenario) {
+  // ✅ Cas spécial : nœud racine (pas de nodeId)
+  if (!parentNodeId || parentNodeId === 'root') {
+    return ['transformations'];
+  }
+
+  const parentNodeInfo = findTransformationByNodeId(scenario, parentNodeId);
+  if (!parentNodeInfo) {
+    console.error('Parent node not found:', parentNodeId);
+    return null;
+  }
+
+  if (actionType === 'add_to_coproduct') {
+    // Ajouter au coproduit du nœud parent
+    return [
+      ...parentNodeInfo.path.slice(0, -2),
+      'coproduct_scenario',
+      'transformations',
+    ];
+  } else {
+    // Ajouter au nœud (cas normal)
+    return [...parentNodeInfo.path, 'scenario', 'transformations'];
+  }
+}
+
 // Dans sankey.js - Gestion du clic sur le bouton "+"
 function handleAddTransformationClick(node) {
-  const popup = new TransformationPopup();
+  const parentNodeId = node._nodeId || node.id;
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+  const path = calculatePathForNewTransformation(
+    parentNodeId,
+    'add_to_node',
+    scenario
+  );
 
+  const popup = new TransformationPopup();
   popup.show('add', {
-    nodeId: node._nodeId || node.id, // ID du nœud parent
-    actionType: 'add_to_node', // ✅ Ajouter au nœud
-    node: node, // Nœud complet pour contexte
+    nodeId: parentNodeId,
+    path: path, // ✅ Path calculé à l'avance
+    node: node,
   });
 }
 
 // Dans sankey.js - Gestion du clic sur le bouton "+" du coproduit
 function handleAddCoproductTransformationClick(parentNode) {
-  const popup = new TransformationPopup();
+  const parentNodeId = parentNode._nodeId || parentNode.id;
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+  const path = calculatePathForNewTransformation(
+    parentNodeId,
+    'add_to_coproduct',
+    scenario
+  );
 
+  const popup = new TransformationPopup();
   popup.show('add', {
-    nodeId: parentNode._nodeId || parentNode.id, // ID du nœud parent
-    actionType: 'add_to_coproduct', // ✅ Ajouter au coproduit
-    node: parentNode, // Nœud parent
+    nodeId: parentNodeId,
+    path: path, // ✅ Path calculé à l'avance
+    node: parentNode,
   });
 }
 
 // Dans sankey.js - Gestion du clic sur "edit"
 function handleEditTransformationClick(node) {
-  const popup = new TransformationPopup();
+  const nodeId = node._nodeId || node.id;
+  const nodeInfo = findTransformationByNodeId(
+    window.scenarios[window.currentScenarioIdx].scenario,
+    nodeId
+  );
 
+  const popup = new TransformationPopup();
   popup.show('edit', {
-    nodeId: node._nodeId || node.id, // ✅ ID du nœud à modifier
-    node: node, // Nœud complet pour contexte
+    nodeId: nodeId,
+    path: nodeInfo?.path, // ✅ Path calculé à l'avance
+    node: node,
   });
 }
 
-// Dans transformation-popup.js - Sauvegarde
+// Dans transformation-popup.js - Sauvegarde (SIMPLIFIÉE)
 function saveTransformation(transformation) {
   if (this.mode === 'add') {
-    const actionType = this.currentRef.actionType;
-    const parentNodeId = this.currentRef.nodeId;
+    // ✅ Mode add : utiliser le path fourni
+    const path = this.currentRef.path;
+    const scenario = window.scenarios[window.currentScenarioIdx].scenario;
 
-    if (actionType === 'add_to_node') {
-      // ✅ Cas 1 : Ajouter au nœud (dans scenario.transformations)
-      const parentNodeInfo = findTransformationByNodeId(
-        window.scenarios[window.currentScenarioIdx].scenario,
-        parentNodeId
-      );
-      if (parentNodeInfo) {
-        const path = [...parentNodeInfo.path, 'scenario', 'transformations'];
-        addTransformationToPath(
-          window.scenarios[window.currentScenarioIdx].scenario,
-          path,
-          transformation
-        );
-      }
-    } else if (actionType === 'add_to_coproduct') {
-      // ✅ Cas 2 : Ajouter au coproduit (dans coproduct_scenario.transformations)
-      const parentNodeInfo = findTransformationByNodeId(
-        window.scenarios[window.currentScenarioIdx].scenario,
-        parentNodeId
-      );
-      if (parentNodeInfo) {
-        const path = [
-          ...parentNodeInfo.path.slice(0, -2),
-          'coproduct_scenario',
-          'transformations',
-        ];
-        addTransformationToPath(
-          window.scenarios[window.currentScenarioIdx].scenario,
-          path,
-          transformation
-        );
-      }
+    if (path) {
+      addTransformationToPath(scenario, path, transformation);
+    } else {
+      console.error("Pas de path fourni pour l'ajout de transformation");
     }
   } else if (this.mode === 'edit') {
-    // ✅ Mode edit : modifier la transformation existante
+    // ✅ Mode edit : utiliser le path fourni
+    const path = this.currentRef.path;
     const nodeId = this.currentRef.nodeId;
     const nodeInfo = findTransformationByNodeId(
       window.scenarios[window.currentScenarioIdx].scenario,
@@ -229,6 +249,22 @@ function addTransformationToPath(scenario, parentPath, transformation) {
   // Générer un _nodeId UNE SEULE FOIS lors de la création
   if (!transformation._nodeId) {
     transformation._nodeId = generateStableNodeId();
+  }
+
+  // S'assurer que la transformation a la bonne structure
+  if (!transformation.type) {
+    console.error('Transformation manque le type');
+    return false;
+  }
+
+  // S'assurer que keys et _displayNames sont des tableaux
+  if (!Array.isArray(transformation.keys)) {
+    transformation.keys = [];
+  }
+  if (!transformation._displayNames) {
+    transformation._displayNames = [[]];
+  } else if (!Array.isArray(transformation._displayNames)) {
+    transformation._displayNames = [transformation._displayNames];
   }
 
   // Naviguer jusqu'au tableau de transformations parent
@@ -747,12 +783,19 @@ Il y a **DEUX types de boutons "+"** différents :
 ```javascript
 // Dans sankey.js - Gestion du clic sur le bouton "+" du nœud
 function handleAddTransformationClick(node) {
-  const popup = new TransformationPopup();
+  const parentNodeId = node._nodeId || node.id;
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+  const path = calculatePathForNewTransformation(
+    parentNodeId,
+    'add_to_node',
+    scenario
+  );
 
+  const popup = new TransformationPopup();
   popup.show('add', {
-    nodeId: node._nodeId || node.id, // ✅ ID du nœud (priorité à _nodeId)
-    actionType: 'add_to_node', // ✅ Type d'action : ajouter au nœud
-    node: node, // Nœud complet
+    nodeId: parentNodeId,
+    path: path, // ✅ Path calculé à l'avance
+    node: node,
   });
 }
 ```
@@ -762,12 +805,19 @@ function handleAddTransformationClick(node) {
 ```javascript
 // Dans sankey.js - Gestion du clic sur le bouton "+" du lien Reste
 function handleAddCoproductTransformationClick(parentNode) {
-  const popup = new TransformationPopup();
+  const parentNodeId = parentNode._nodeId || parentNode.id;
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+  const path = calculatePathForNewTransformation(
+    parentNodeId,
+    'add_to_coproduct',
+    scenario
+  );
 
+  const popup = new TransformationPopup();
   popup.show('add', {
-    nodeId: parentNode._nodeId || parentNode.id, // ✅ ID du nœud parent (priorité à _nodeId)
-    actionType: 'add_to_coproduct', // ✅ Type d'action : ajouter au coproduit
-    node: parentNode, // Nœud parent
+    nodeId: parentNodeId,
+    path: path, // ✅ Path calculé à l'avance
+    node: parentNode,
   });
 }
 ```
@@ -775,31 +825,17 @@ function handleAddCoproductTransformationClick(parentNode) {
 ### Logique dans la Popup
 
 ```javascript
-// Dans transformation-popup.js - Sauvegarde
+// Dans transformation-popup.js - Sauvegarde (SIMPLIFIÉE)
 function saveTransformation(transformation) {
   if (this.mode === 'add') {
-    const actionType = this.currentRef.actionType;
-    const parentNodeId = this.currentRef.nodeId;
+    // ✅ Mode add : utiliser le path fourni
+    const path = this.currentRef.path;
+    const scenario = window.scenarios[window.currentScenarioIdx].scenario;
 
-    if (actionType === 'add_to_node') {
-      // ✅ Cas 1 : Ajouter au nœud (dans scenario.transformations)
-      const parentNodeInfo = findTransformationByNodeId(scenario, parentNodeId);
-      if (parentNodeInfo) {
-        const path = [...parentNodeInfo.path, 'scenario', 'transformations'];
-        addTransformationToPath(scenario, path, transformation);
-      }
-    } else if (actionType === 'add_to_coproduct') {
-      // ✅ Cas 2 : Ajouter au coproduit (dans coproduct_scenario.transformations)
-      const parentNodeInfo = findTransformationByNodeId(scenario, parentNodeId);
-      if (parentNodeInfo) {
-        // Le coproduit est au même niveau que la transformation
-        const path = [
-          ...parentNodeInfo.path.slice(0, -2),
-          'coproduct_scenario',
-          'transformations',
-        ];
-        addTransformationToPath(scenario, path, transformation);
-      }
+    if (path) {
+      addTransformationToPath(scenario, path, transformation);
+    } else {
+      console.error("Pas de path fourni pour l'ajout de transformation");
     }
   }
 }
@@ -815,7 +851,8 @@ Lot Initial
 Transfo 1 (nodeId: '12345678') ← clic sur "+" du nœud
 ```
 
-**Action** : `actionType: 'add_to_node'`
+**Action** : `calculatePathForNewTransformation('12345678', 'add_to_node')`
+**Path calculé** : `['transformations', 0, 'scenario', 'transformations']`
 **Résultat** : Ajouter dans `transformations[0].scenario.transformations`
 
 #### **Exemple 2 : Bouton "+" sur le lien Reste**
@@ -828,7 +865,8 @@ Transfo 1 (nodeId: '12345678')
 Reste ← clic sur "+" du lien
 ```
 
-**Action** : `actionType: 'add_to_coproduct'`
+**Action** : `calculatePathForNewTransformation('12345678', 'add_to_coproduct')`
+**Path calculé** : `['transformations', 0, 'scenario', 'coproduct_scenario', 'transformations']`
 **Résultat** : Ajouter dans `transformations[0].scenario.coproduct_scenario.transformations`
 
 #### **Exemple 3 : Bouton "+" sur un coproduit**
@@ -841,45 +879,87 @@ Transfo 1 (nodeId: '12345678')
 Reste (nodeId: '44444444') ← clic sur "+" du nœud
 ```
 
-**Action** : `actionType: 'add_to_node'`
+**Action** : `calculatePathForNewTransformation('44444444', 'add_to_node')`
+**Path calculé** : `['coproduct_scenario', 'transformations', 0, 'scenario', 'transformations']`
 **Résultat** : Ajouter dans `coproduct_scenario.transformations[0].scenario.transformations`
 
-### Fonction de Génération de Path Mise à Jour
+### Fonction de Génération de Path
 
-```javascript
-// Fonction pour générer le path selon le type d'action
-function generatePathForNewTransformation(parentNodeId, actionType, scenario) {
-  if (actionType === 'add_to_coproduct') {
-    // Cas spécial : ajouter au coproduit du nœud parent
-    const parentNodeInfo = findTransformationByNodeId(scenario, parentNodeId);
-    if (parentNodeInfo) {
-      // Le coproduit est au même niveau que la transformation
-      return [
-        ...parentNodeInfo.path.slice(0, -2),
-        'coproduct_scenario',
-        'transformations',
-      ];
-    }
-  } else {
-    // Cas normal : ajouter au nœud (dans son scenario.transformations)
-    const parentNodeInfo = findTransformationByNodeId(scenario, parentNodeId);
-    if (parentNodeInfo) {
-      return [...parentNodeInfo.path, 'scenario', 'transformations'];
-    }
-  }
-
-  return null;
-}
-```
+**Note** : Cette fonction est déjà définie plus haut dans la section "Gestion de l'Ajout de Transformations".
 
 ### Points d'Attention
 
 1. **Le `actionType` est crucial** : Il détermine où ajouter la transformation
-2. **Le `parentNodeId` est le même** dans les deux cas (le nœud parent)
-3. **Seul le `actionType` change** : `'add_to_node'` vs `'add_to_coproduct'`
-4. **La popup doit recevoir cette information** pour faire le bon choix
+2. **Le path est calculé AVANT** l'appel de la popup
+3. **La popup reste simple** : Elle utilise le path fourni
+4. **Moins de modifications** : La popup change peu par rapport à l'existant
 
-Cette distinction est essentielle pour que le système fonctionne correctement !
+Cette approche est plus simple et plus maintenable !
+
+## Gestion des Keys et DisplayNames
+
+### Structure des Transformations
+
+Les transformations doivent avoir cette structure :
+
+```javascript
+{
+  type: ['selectByFormat'], // Tableau avec le type
+  keys: ['1x2', '3x4'], // IDs Bubble pour les calculs
+  _displayNames: [['T-shirt', 'Pantalon']], // Noms d'affichage français
+  _nodeId: '12345678', // ID stable généré une fois
+  _index: 0, // Index dans le tableau transformations
+  // Plus de _path stocké !
+}
+```
+
+### Validation dans `addTransformationToPath()`
+
+La fonction `addTransformationToPath()` doit s'assurer que :
+
+1. **`type`** : Tableau avec le type de transformation
+2. **`keys`** : Tableau des IDs Bubble (pour les calculs) - **peut être vide pour `dynamic_transfo`**
+3. **`_displayNames`** : Tableau de tableaux avec les noms d'affichage - **peut être vide pour `dynamic_transfo`**
+4. **`_nodeId`** : Généré automatiquement si absent
+5. **`_index`** : Calculé automatiquement
+
+### Cas Spéciaux
+
+#### **Transformations Dynamiques (`dynamic_transfo`)**
+
+```javascript
+{
+  type: ['dynamic_transfo'],
+  keys: [], // Peut être vide
+  _displayNames: [[]], // Peut être vide
+  bubble_id: '123x456', // ID Bubble de la transformation
+  title: 'Titre de la transformation',
+  // ... autres propriétés spécifiques
+}
+```
+
+#### **Transformations Statiques (selectBy\*)**
+
+```javascript
+{
+  type: ['selectByFormat'],
+  keys: ['1x2', '3x4'], // IDs des éléments sélectionnés
+  _displayNames: [['T-shirt', 'Pantalon']], // Noms d'affichage
+  // ... autres propriétés
+}
+```
+
+### Exemple de Transformation Valide
+
+```javascript
+const transformation = {
+  type: ['selectByFormat'],
+  keys: ['1x2', '3x4'],
+  _displayNames: [['T-shirt', 'Pantalon']],
+  // _nodeId sera généré automatiquement
+  // _index sera calculé automatiquement
+};
+```
 
 ## Correction de la Popup Tech
 
@@ -962,78 +1042,9 @@ function showTransfoTechPopup(nodeId, transformation) {
 const path = transformation._path || ['transformations'];
 ```
 
-### Solution : Utiliser `actionType` et `findTransformationByNodeId()`
+### Solution : Utiliser `calculatePathForNewTransformation()`
 
-```javascript
-// ✅ NOUVELLE LOGIQUE dans sankey.js
-window.onTransformationAdd = (nodeId, transformation, actionType) => {
-  console.log('onTransformationAdd called:', {
-    nodeId,
-    transformation,
-    actionType,
-  });
-
-  if (!window.scenarios) {
-    console.error('window.scenarios is not defined');
-    return;
-  }
-
-  const scenarioIdx = window.currentScenarioIdx;
-  const scenario = window.scenarios[scenarioIdx]?.scenario;
-
-  if (!scenario) {
-    console.error('No scenario found');
-    return;
-  }
-
-  // Générer le path selon l'actionType
-  let path;
-
-  // ✅ Cas spécial : nœud racine (pas de nodeId)
-  if (!nodeId || nodeId === 'root') {
-    path = ['transformations'];
-  } else if (actionType === 'add_to_coproduct') {
-    // Ajouter au coproduit du nœud parent
-    const parentNodeInfo = findTransformationByNodeId(scenario, nodeId);
-    if (parentNodeInfo) {
-      path = [
-        ...parentNodeInfo.path.slice(0, -2),
-        'coproduct_scenario',
-        'transformations',
-      ];
-    }
-  } else {
-    // Ajouter au nœud (cas normal)
-    const parentNodeInfo = findTransformationByNodeId(scenario, nodeId);
-    if (parentNodeInfo) {
-      path = [...parentNodeInfo.path, 'scenario', 'transformations'];
-    }
-  }
-
-  if (!path) {
-    console.error('Impossible de déterminer le path pour nodeId:', nodeId);
-    return;
-  }
-
-  // ✅ Passer le nodeId à la transformation pour la popup
-  transformation._parentNodeId = nodeId;
-
-  // Ajouter la transformation
-  window.addTransformation(scenario, path, transformation);
-
-  // Relancer le Sankey
-  const lot = window.lotType;
-  const dimension = window.currentDimension;
-  if (typeof runSankey === 'function') {
-    runSankey({
-      lot,
-      scenario,
-      containerId: 'sankey-container',
-      dimension,
-    });
-  }
-};
-```
+**Note** : La logique d'ajout est maintenant gérée dans les gestionnaires de clic (`handleAddTransformationClick` et `handleAddCoproductTransformationClick`) qui calculent le path et l'envoient à la popup. Plus besoin de `onTransformationAdd` complexe.
 
 ### Fonction `addTransformation` Simplifiée
 
@@ -1080,17 +1091,20 @@ window.addTransformation = function (scenario, path, transformation) {
 
 ### **Fonctions d'Ajout** :
 
-- ✅ `onTransformationAdd()` reçoit maintenant `actionType`
-- ✅ Utilise `findTransformationByNodeId()` pour calculer le path
-- ✅ `addTransformation()` génère automatiquement `_nodeId` et `_index`
+- ✅ `calculatePathForNewTransformation()` calcule le path selon l'`actionType`
+- ✅ Les gestionnaires de clic calculent le path AVANT d'appeler la popup
+- ✅ `addTransformationToPath()` génère automatiquement `_nodeId` et `_index`
+- ✅ `addTransformationToPath()` valide la structure des transformations (`keys`, `_displayNames`)
 - ✅ Plus de dépendance sur `transformation._path`
 - ✅ Gestion du cas nœud racine (sans `nodeId`)
-- ✅ Passage du `nodeId` via `transformation._parentNodeId`
+- ✅ Popup simplifiée qui utilise le path fourni
+- ✅ Support des transformations dynamiques (sans `keys` obligatoires)
 
 ### **Système Final Cohérent** :
 
 - ✅ `_nodeId` généré UNE SEULE FOIS lors de l'ajout
 - ✅ `_path` calculé dynamiquement avec `findTransformationByNodeId()`
-- ✅ `actionType` passé correctement pour distinguer les cas
-- ✅ `nodeId` passé via `transformation._parentNodeId` pour la popup
+- ✅ `actionType` utilisé pour calculer le bon path
+- ✅ Path calculé AVANT l'appel de la popup
 - ✅ Gestion complète du cas nœud racine
+- ✅ Popup modifiée minimalement (plus simple à maintenir)
