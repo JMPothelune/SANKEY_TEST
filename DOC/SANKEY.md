@@ -447,12 +447,16 @@ const scenario = {
                 coproduct_scenario: { transformations: [] },
               },
             },
+            {...},
+            {...}
           ],
           coproduct_scenario: { transformations: [] },
         },
         _path: ['main', 'transformations', 0],
         _index: 0,
       },
+      {...},
+      {...}
     ],
   },
   coproduct_scenario: {
@@ -477,7 +481,7 @@ Au chargement de la page, un objet `lotType` est généré automatiquement à pa
 
 Cet objet permet d'obtenir une structure hiérarchique complète : format > type > matière > fibres, avec la répartition des couleurs et la qualité.
 
-### Exemple de structure générée
+### Exemple de structure de lot (voir aussi data/lot_type.json)
 
 ```js
 {
@@ -485,13 +489,19 @@ Cet objet permet d'obtenir une structure hiérarchique complète : format > ty
   format: {
     "Vêtements": {
       pourcentage: 60,
+      en_gb: "name",
+      bubble_id: "xyz",
       types: {
         "T-shirt": {
           pourcentage: 40,
+          en_gb: "name",
+          bubble_id: "xyz",
           matieres: {
             "Coton": {
               pourcentage: 80,
-              fibres: { /* ... */ }
+              bubble_id: "xyz",
+              en_gb: "name"
+              "fibres": { /* ... */ }
             },
             // ...
           },
@@ -506,12 +516,11 @@ Cet objet permet d'obtenir une structure hiérarchique complète : format > ty
     // ...
   },
   qualite: {
-    "Neuf étiqueté": 5,
-    "Parfait état": 15,
-    "Bon état": 15,
-    "Usé": 25,
-    "Abîmé": 32,
-    "Inutilisable": 8
+    "Neuf étiqueté":
+      {pourcentage: 5},
+    "Parfait état":
+      {pourcentage: 15},
+    ...
   }
 }
 ```
@@ -519,6 +528,7 @@ Cet objet permet d'obtenir une structure hiérarchique complète : format > ty
 - Le champ `total` correspond à la masse totale de référence (exemple : 1000).
 - Le champ `format` contient tous les formats, chacun avec ses types, matières, fibres et couleurs.
 - Le champ `qualite` reprend la distribution qualité.
+- chaque clé a aussi un bubble_id sur lequel doivent se faire toutes les recherches
 
 ---
 
