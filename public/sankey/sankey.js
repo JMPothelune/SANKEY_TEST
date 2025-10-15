@@ -2447,10 +2447,14 @@ function updateSankey(dimension) {
             const lotJson = JSON.stringify(d.lot, null, 2);
             window.parent.postMessage(
               {
+                id: 'sankey-lot-visualization',
                 type: 'showLotDetails',
-                lotData: lotJson,
-                nodeId: d.id,
-                nodeName: d.name,
+                payload: {
+                  nodeId: d.id,
+                  nodeName: d.name,
+                  lotData: lotJson,
+                  timestamp: new Date().toISOString(),
+                },
               },
               '*'
             );
@@ -2509,10 +2513,14 @@ function updateSankey(dimension) {
             const lotJson = JSON.stringify(d.lot, null, 2);
             window.parent.postMessage(
               {
+                id: 'sankey-lot-visualization',
                 type: 'showLotDetails',
-                lotData: lotJson,
-                nodeId: d.id,
-                nodeName: d.name,
+                payload: {
+                  nodeId: d.id,
+                  nodeName: d.name,
+                  lotData: lotJson,
+                  timestamp: new Date().toISOString(),
+                },
               },
               '*'
             );
