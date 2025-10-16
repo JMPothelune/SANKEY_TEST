@@ -930,8 +930,6 @@ La fonction `addTransformationToPath()` doit s'assurer que :
 ```javascript
 {
   type: ['dynamic_transfo'],
-  keys: [], // Peut être vide
-  _displayNames: [[]], // Peut être vide
   bubble_id: '123x456', // ID Bubble de la transformation
   title: 'Titre de la transformation',
   // ... autres propriétés spécifiques

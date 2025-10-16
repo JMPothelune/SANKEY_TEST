@@ -57,6 +57,695 @@ window.setScenarioModifie = function (modifie) {
   }
 };
 
+// ===== FONCTIONS UTILITAIRES POUR LA GESTION DES NODEIDS ET PATHS =====
+
+// Fonction pour générer un ID stable unique (8 chiffres)
+function generateStableNodeId() {
+  return Math.floor(10000000 + Math.random() * 90000000).toString();
+}
+
+// Fonction pour trouver une transformation par son _nodeId et retourner son path
+function findTransformationByNodeId(scenario, nodeId) {
+  function searchRecursive(obj, currentPath = []) {
+    if (obj && typeof obj === 'object') {
+      if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+          if (obj[i]._nodeId === nodeId) {
+            return {
+              transformation: obj[i],
+              path: [...currentPath, i],
+              index: i,
+            };
+          }
+          // Chercher dans les sous-scénarios
+          if (obj[i].scenario) {
+            const result = searchRecursive(obj[i].scenario, [
+              ...currentPath,
+              i,
+              'scenario',
+            ]);
+            if (result) return result;
+          }
+          if (obj[i].scenario?.coproduct_scenario) {
+            const result = searchRecursive(obj[i].scenario.coproduct_scenario, [
+              ...currentPath,
+              i,
+              'scenario',
+              'coproduct_scenario',
+            ]);
+            if (result) return result;
+          }
+        }
+      } else {
+        for (const [key, value] of Object.entries(obj)) {
+          if (key === 'transformations' && Array.isArray(value)) {
+            const result = searchRecursive(value, [...currentPath, key]);
+            if (result) return result;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  return searchRecursive(scenario);
+}
+
+// Fonction pour obtenir le path d'un nœud par son _nodeId
+function getPathFromNodeId(scenario, nodeId) {
+  const result = findTransformationByNodeId(scenario, nodeId);
+  return result ? result.path : null;
+}
+
+// Fonction pour calculer le path d'une nouvelle transformation
+function calculatePathForNewTransformation(parentNodeId, actionType, scenario) {
+  // Cas spécial : nœud racine (pas de nodeId ou id "0")
+  if (!parentNodeId || parentNodeId === 'root' || parentNodeId === '0') {
+    return ['transformations'];
+  }
+
+  const parentNodeInfo = findTransformationByNodeId(scenario, parentNodeId);
+  if (!parentNodeInfo) {
+    // Cas spécial : coproduit qui n'a pas de _nodeId correspondant
+    if (actionType === 'add_to_coproduct') {
+      // Le coproduit appartient toujours à la première transformation
+      return ['transformations', 0, 'coproduct_scenario', 'transformations'];
+    }
+    console.error('Parent node not found:', parentNodeId);
+    return null;
+  }
+
+  if (actionType === 'add_to_coproduct') {
+    // Ajouter au coproduit du nœud parent
+    return [
+      ...parentNodeInfo.path.slice(0, -2),
+      'coproduct_scenario',
+      'transformations',
+    ];
+  } else {
+    // Ajouter dans le sous-scénario de la transformation sur laquelle on a cliqué
+    return [...parentNodeInfo.path, 'scenario', 'transformations'];
+  }
+}
+
+// Fonction pour ajouter une transformation à un path donné
+function addTransformationToPath(scenario, parentPath, transformation) {
+  // Générer un _nodeId UNE SEULE FOIS lors de la création
+  if (!transformation._nodeId) {
+    transformation._nodeId = generateStableNodeId();
+  }
+
+  // S'assurer que la transformation a la bonne structure
+  if (!transformation.type) {
+    console.error('Transformation manque le type');
+    return false;
+  }
+
+  // S'assurer que keys et _displayNames sont des tableaux
+  if (!Array.isArray(transformation.keys)) {
+    transformation.keys = [];
+  }
+  if (!transformation._displayNames) {
+    transformation._displayNames = [[]];
+  } else if (!Array.isArray(transformation._displayNames)) {
+    transformation._displayNames = [transformation._displayNames];
+  }
+
+  console.log('🔍 addTransformationToPath debug:', { parentPath });
+
+  // Gestion simple des paths
+  if (parentPath.length === 1 && parentPath[0] === 'transformations') {
+    // Ajouter à la racine
+    if (!scenario.transformations) scenario.transformations = [];
+    transformation._index = scenario.transformations.length;
+    scenario.transformations.push(transformation);
+    return true;
+  }
+
+  if (
+    parentPath.length === 2 &&
+    parentPath[0] === 'coproduct_scenario' &&
+    parentPath[1] === 'transformations'
+  ) {
+    // Ajouter au coproduit
+    if (!scenario.coproduct_scenario)
+      scenario.coproduct_scenario = { transformations: [] };
+    if (!scenario.coproduct_scenario.transformations)
+      scenario.coproduct_scenario.transformations = [];
+    transformation._index = scenario.coproduct_scenario.transformations.length;
+    scenario.coproduct_scenario.transformations.push(transformation);
+    return true;
+  }
+
+  if (
+    parentPath.length === 4 &&
+    parentPath[0] === 'transformations' &&
+    typeof parentPath[1] === 'number' &&
+    parentPath[2] === 'scenario' &&
+    parentPath[3] === 'transformations'
+  ) {
+    // Ajouter dans le sous-scénario d'une transformation
+    const index = parentPath[1];
+    if (!scenario.transformations[index]) return false;
+    if (!scenario.transformations[index].scenario) {
+      scenario.transformations[index].scenario = { transformations: [] };
+    }
+    if (!scenario.transformations[index].scenario.transformations) {
+      scenario.transformations[index].scenario.transformations = [];
+    }
+    transformation._index =
+      scenario.transformations[index].scenario.transformations.length;
+    scenario.transformations[index].scenario.transformations.push(
+      transformation
+    );
+    return true;
+  }
+
+  if (
+    parentPath.length === 4 &&
+    parentPath[0] === 'transformations' &&
+    typeof parentPath[1] === 'number' &&
+    parentPath[2] === 'coproduct_scenario' &&
+    parentPath[3] === 'transformations'
+  ) {
+    // Ajouter dans le coproduit d'une transformation
+    const index = parentPath[1];
+    if (!scenario.transformations[index]) return false;
+    if (!scenario.transformations[index].coproduct_scenario) {
+      scenario.transformations[index].coproduct_scenario = {
+        transformations: [],
+      };
+    }
+    if (!scenario.transformations[index].coproduct_scenario.transformations) {
+      scenario.transformations[index].coproduct_scenario.transformations = [];
+    }
+    transformation._index =
+      scenario.transformations[index].coproduct_scenario.transformations.length;
+    scenario.transformations[index].coproduct_scenario.transformations.push(
+      transformation
+    );
+    return true;
+  }
+
+  console.error('Path non supporté:', parentPath);
+  return false;
+}
+
+// Fonction pour supprimer une transformation par son _nodeId
+function removeTransformationByNodeId(scenario, nodeId) {
+  console.log('🗑️ removeTransformationByNodeId called:', { nodeId });
+
+  if (!nodeId) {
+    console.error('NodeId manquant pour la suppression');
+    return false;
+  }
+
+  // Fonction récursive pour parcourir et supprimer
+  function removeRecursive(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+
+    // Si c'est un tableau de transformations
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        if (obj[i] && obj[i]._nodeId === nodeId) {
+          console.log("🔍 Transformation trouvée et supprimée à l'index:", i);
+          obj.splice(i, 1);
+
+          // Mettre à jour les index des transformations restantes
+          for (let j = i; j < obj.length; j++) {
+            if (obj[j]._index !== undefined) {
+              obj[j]._index = j;
+            }
+          }
+
+          console.log('✅ Transformation supprimée avec succès');
+          return true;
+        }
+      }
+    }
+
+    // Parcourir récursivement toutes les propriétés
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && removeRecursive(obj[key])) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  const success = removeRecursive(scenario);
+
+  if (!success) {
+    console.error('Transformation non trouvée avec nodeId:', nodeId);
+    return false;
+  }
+
+  return true;
+}
+
+// Fonction pour déplacer une transformation vers le haut par son _nodeId
+function moveTransformationUpByNodeId(scenario, nodeId) {
+  console.log('⬆️ moveTransformationUpByNodeId called:', { nodeId });
+
+  if (!nodeId) {
+    console.error('NodeId manquant pour le déplacement');
+    return false;
+  }
+
+  // Trouver la transformation et son path
+  const transformationInfo = findTransformationByNodeId(scenario, nodeId);
+  if (!transformationInfo) {
+    console.error('Transformation non trouvée avec nodeId:', nodeId);
+    return false;
+  }
+
+  const { path, index } = transformationInfo;
+  console.log('🔍 Transformation trouvée:', { path, index });
+
+  // Le path contient l'index de la transformation, on doit enlever le dernier élément pour avoir le path vers le tableau
+  const arrayPath = path.slice(0, -1);
+  console.log('🔍 Path vers le tableau:', arrayPath);
+
+  // Naviguer jusqu'au tableau de transformations
+  let arr = scenario;
+  for (let i = 0; i < arrayPath.length; i++) {
+    const key = arrayPath[i];
+    if (Array.isArray(arr)) {
+      arr = arr[key];
+    } else if (arr && typeof arr === 'object') {
+      arr = arr[key];
+    }
+  }
+
+  if (!Array.isArray(arr)) {
+    console.error('Tableau de transformations non trouvé:', arrayPath);
+    return false;
+  }
+
+  if (index <= 0 || index >= arr.length) {
+    console.error(
+      'Impossible de déplacer vers le haut:',
+      index,
+      'Longueur:',
+      arr.length
+    );
+    return false;
+  }
+
+  // Échanger avec l'élément précédent
+  const temp = arr[index];
+  arr[index] = arr[index - 1];
+  arr[index - 1] = temp;
+
+  // Mettre à jour les index des transformations échangées
+  if (arr[index]._index !== undefined) arr[index]._index = index;
+  if (arr[index - 1]._index !== undefined) arr[index - 1]._index = index - 1;
+
+  console.log('✅ Transformation déplacée vers le haut avec succès');
+  return true;
+}
+
+// Fonction pour déplacer une transformation vers le bas par son _nodeId
+function moveTransformationDownByNodeId(scenario, nodeId) {
+  console.log('⬇️ moveTransformationDownByNodeId called:', { nodeId });
+
+  if (!nodeId) {
+    console.error('NodeId manquant pour le déplacement');
+    return false;
+  }
+
+  // Trouver la transformation et son path
+  const transformationInfo = findTransformationByNodeId(scenario, nodeId);
+  if (!transformationInfo) {
+    console.error('Transformation non trouvée avec nodeId:', nodeId);
+    return false;
+  }
+
+  const { path, index } = transformationInfo;
+  console.log('🔍 Transformation trouvée:', { path, index });
+
+  // Le path contient l'index de la transformation, on doit enlever le dernier élément pour avoir le path vers le tableau
+  const arrayPath = path.slice(0, -1);
+  console.log('🔍 Path vers le tableau:', arrayPath);
+
+  // Naviguer jusqu'au tableau de transformations
+  let arr = scenario;
+  for (let i = 0; i < arrayPath.length; i++) {
+    const key = arrayPath[i];
+    if (Array.isArray(arr)) {
+      arr = arr[key];
+    } else if (arr && typeof arr === 'object') {
+      arr = arr[key];
+    }
+  }
+
+  if (!Array.isArray(arr)) {
+    console.error('Tableau de transformations non trouvé:', arrayPath);
+    return false;
+  }
+
+  if (index < 0 || index >= arr.length - 1) {
+    console.error(
+      'Impossible de déplacer vers le bas:',
+      index,
+      'Longueur:',
+      arr.length
+    );
+    return false;
+  }
+
+  // Échanger avec l'élément suivant
+  const temp = arr[index];
+  arr[index] = arr[index + 1];
+  arr[index + 1] = temp;
+
+  // Mettre à jour les index des transformations échangées
+  if (arr[index]._index !== undefined) arr[index]._index = index;
+  if (arr[index + 1]._index !== undefined) arr[index + 1]._index = index + 1;
+
+  console.log('✅ Transformation déplacée vers le bas avec succès');
+  return true;
+}
+
+// Fonction pour mettre à jour une transformation par son _nodeId
+function updateTransformationByNodeId(scenario, nodeId, newTransformation) {
+  console.log('✏️ updateTransformationByNodeId called:', {
+    nodeId,
+    newTransformation,
+  });
+
+  if (!nodeId) {
+    console.error('NodeId manquant pour la mise à jour');
+    return false;
+  }
+
+  // Fonction récursive pour parcourir et mettre à jour
+  function updateRecursive(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+
+    // Si c'est un tableau de transformations
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        if (obj[i] && obj[i]._nodeId === nodeId) {
+          console.log("🔍 Transformation trouvée et mise à jour à l'index:", i);
+
+          // Préserver le _nodeId et _index existants
+          const existingNodeId = obj[i]._nodeId;
+          const existingIndex = obj[i]._index;
+
+          // Remplacer la transformation
+          obj[i] = {
+            ...newTransformation,
+            _nodeId: existingNodeId,
+            _index: existingIndex,
+          };
+
+          console.log('✅ Transformation mise à jour avec succès');
+          return true;
+        }
+      }
+    }
+
+    // Parcourir récursivement toutes les propriétés
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && updateRecursive(obj[key])) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  const success = updateRecursive(scenario);
+
+  if (!success) {
+    console.error('Transformation non trouvée avec nodeId:', nodeId);
+    return false;
+  }
+
+  return true;
+}
+
+// Fonction pour migrer un scénario existant
+function migrateExistingScenario(scenario) {
+  function migrateRecursive(obj) {
+    if (obj && typeof obj === 'object') {
+      if (Array.isArray(obj)) {
+        obj.forEach((transfo, index) => {
+          // Générer un _nodeId si pas déjà présent
+          if (!transfo._nodeId) {
+            transfo._nodeId = generateStableNodeId();
+          }
+
+          // Mettre à jour l'_index
+          transfo._index = index;
+
+          // Supprimer le _path s'il existe
+          delete transfo._path;
+
+          // Traiter les sous-scénarios
+          if (transfo.scenario) {
+            migrateRecursive(transfo.scenario);
+          }
+          if (transfo.scenario?.coproduct_scenario) {
+            migrateRecursive(transfo.scenario.coproduct_scenario);
+          }
+        });
+      } else {
+        for (const [key, value] of Object.entries(obj)) {
+          if (key === 'transformations' && Array.isArray(value)) {
+            migrateRecursive(value);
+          }
+        }
+      }
+    }
+  }
+
+  migrateRecursive(scenario);
+  return scenario;
+}
+
+// Fonction pour valider la structure d'un scénario
+function validateScenarioStructure(scenario) {
+  const nodeIds = new Set();
+  const errors = [];
+
+  function validateRecursive(obj, path = []) {
+    if (obj && typeof obj === 'object') {
+      if (Array.isArray(obj)) {
+        obj.forEach((transfo, index) => {
+          const currentPath = [...path, index];
+
+          // Vérifier _nodeId
+          if (!transfo._nodeId) {
+            errors.push(
+              `Transformation sans _nodeId à ${currentPath.join('.')}`
+            );
+          } else if (nodeIds.has(transfo._nodeId)) {
+            errors.push(
+              `_nodeId dupliqué: ${transfo._nodeId} à ${currentPath.join('.')}`
+            );
+          } else {
+            nodeIds.add(transfo._nodeId);
+          }
+
+          // Vérifier _index
+          if (typeof transfo._index !== 'number' || transfo._index !== index) {
+            errors.push(
+              `_index incorrect à ${currentPath.join('.')}: attendu ${index}, trouvé ${transfo._index}`
+            );
+          }
+
+          // Vérifier qu'il n'y a pas de _path
+          if (transfo._path) {
+            errors.push(
+              `_path trouvé à ${currentPath.join('.')} (devrait être supprimé)`
+            );
+          }
+
+          // Traiter les sous-scénarios
+          if (transfo.scenario) {
+            validateRecursive(transfo.scenario, [...currentPath, 'scenario']);
+          }
+          if (transfo.scenario?.coproduct_scenario) {
+            validateRecursive(transfo.scenario.coproduct_scenario, [
+              ...currentPath,
+              'scenario',
+              'coproduct_scenario',
+            ]);
+          }
+        });
+      } else {
+        for (const [key, value] of Object.entries(obj)) {
+          if (key === 'transformations' && Array.isArray(value)) {
+            validateRecursive(value, [...path, key]);
+          }
+        }
+      }
+    }
+  }
+
+  validateRecursive(scenario);
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors,
+    nodeIdCount: nodeIds.size,
+  };
+}
+
+// Fonction pour calculer les coûts d'un scénario complet
+function calculateScenarioCosts(scenario, lotType) {
+  let totalCost = 0;
+  const costBreakdown = [];
+
+  function processTransformation(transfo, inputVolume) {
+    if (transfo.tech && transfo.tech.details) {
+      const costs = calculateTransformationCosts(
+        {
+          ...transfo,
+          lot_input_volume: inputVolume,
+        },
+        transfo.tech.details,
+        window.teamData
+      );
+
+      if (costs) {
+        totalCost += costs.cout_total;
+        costBreakdown.push({
+          nodeId: transfo._nodeId,
+          transformation: transfo,
+          costs: costs,
+        });
+      }
+    }
+  }
+
+  // Parcourir toutes les transformations
+  function traverseScenario(scenario, inputVolume = lotType.total) {
+    if (scenario.transformations) {
+      scenario.transformations.forEach(transfo => {
+        processTransformation(transfo, inputVolume);
+
+        // Traiter les sous-scénarios
+        if (transfo.scenario) {
+          traverseScenario(
+            transfo.scenario,
+            (inputVolume * (transfo.yield || 100)) / 100
+          );
+        }
+
+        // Traiter les coproduits
+        if (scenario.coproduct_scenario) {
+          traverseScenario(
+            scenario.coproduct_scenario,
+            (inputVolume * (100 - (transfo.yield || 100))) / 100
+          );
+        }
+      });
+    }
+  }
+
+  traverseScenario(scenario);
+
+  return { totalCost, costBreakdown };
+}
+
+// ===== GESTIONNAIRES DE CLIC POUR LES TRANSFORMATIONS =====
+
+// Gestionnaire pour le clic sur le bouton "+" du nœud (ajouter au nœud)
+function handleAddTransformationClick(node) {
+  const parentNodeId = node._nodeId || node.id;
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+
+  console.log('🔍 Node details:', {
+    nodeId: node.id,
+    nodeIdType: typeof node.id,
+    nodeIdValue: node.id,
+    nodeId: node._nodeId,
+    nodeIdType: typeof node._nodeId,
+    nodeIdValue: node._nodeId,
+    parentNodeId,
+    parentNodeIdType: typeof parentNodeId,
+  });
+
+  console.log('🔍 handleAddTransformationClick called:', {
+    node,
+    parentNodeId,
+    scenarioIdx: window.currentScenarioIdx,
+    scenario: scenario,
+    scenarios: window.scenarios,
+  });
+
+  const path = calculatePathForNewTransformation(
+    parentNodeId,
+    'add_to_node',
+    scenario
+  );
+
+  console.log('🔍 Calculated path:', path);
+
+  if (!path) {
+    console.error('❌ Path calculation failed for node:', node);
+    return;
+  }
+
+  const popup = new TransformationPopup();
+  popup.show(
+    {
+      nodeId: parentNodeId,
+      path: path, // Path calculé à l'avance
+      node: node,
+    },
+    'add'
+  );
+}
+
+// Gestionnaire pour le clic sur le bouton "+" du coproduit (ajouter au coproduit)
+function handleAddCoproductTransformationClick(parentNode) {
+  const parentNodeId = parentNode._nodeId || parentNode.id;
+  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
+  const path = calculatePathForNewTransformation(
+    parentNodeId,
+    'add_to_coproduct',
+    scenario
+  );
+
+  const popup = new TransformationPopup();
+  popup.show(
+    {
+      nodeId: parentNodeId,
+      path: path, // Path calculé à l'avance
+      node: parentNode,
+    },
+    'add'
+  );
+}
+
+// Gestionnaire pour le clic sur "edit" d'une transformation
+function handleEditTransformationClick(node) {
+  const nodeId = node._nodeId || node.id;
+  const nodeInfo = findTransformationByNodeId(
+    window.scenarios[window.currentScenarioIdx].scenario,
+    nodeId
+  );
+
+  const popup = new TransformationPopup();
+  popup.show(
+    {
+      nodeId: nodeId,
+      path: nodeInfo?.path, // Path calculé à l'avance
+      node: node,
+    },
+    'edit'
+  );
+}
+
+// ===== FIN DES GESTIONNAIRES DE CLIC =====
+
+// ===== FIN DES FONCTIONS UTILITAIRES =====
+
 // Fonction utilitaire pour lire les paramètres d'URL
 function getUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -1498,6 +2187,7 @@ function updateSankey(dimension) {
           icon: 'plus',
           label: i18next.t('addTransfo'),
           onClick: () => {
+            console.log('🔍 BOUTON + SCÉNARIO VIDE CLICKED');
             // Contexte scénario vide: utiliser explicitement le nœud courant (nodes[0])
             const currentNode = nodes && nodes.length ? nodes[0] : null;
             if (!currentNode) {
@@ -1506,25 +2196,8 @@ function updateSankey(dimension) {
               );
               return;
             }
-            const path = getPathForNewTransformation(currentNode);
-            // Si le nœud courant est l'id racine '0', associer l'ajout à l'id '1' (premier nœud logique)
-            const nodeIdForAdd = String(
-              currentNode && currentNode.id === '0' ? '1' : currentNode.id
-            );
-            const ref = {
-              nodeId: nodeIdForAdd,
-              dimension: dimension,
-              path: path,
-            };
-            console.log(
-              'Click sur Ajouter transfo, window.afficherPopupTransfo:',
-              window.afficherPopupTransfo
-            );
-            if (window.afficherPopupTransfo) {
-              window.afficherPopupTransfo(ref, 'add');
-            } else {
-              console.error("window.afficherPopupTransfo n'est pas définie !");
-            }
+            // Utiliser le nouveau gestionnaire pour le nœud racine
+            handleAddTransformationClick(currentNode);
           },
         },
         {
@@ -1901,7 +2574,7 @@ function updateSankey(dimension) {
               `
                         <strong>${tooltipTitle}</strong>
                         <table class="tooltip-table">
-                          <tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${Math.round(d.lot.total)} kg</span></td></tr>
+                          <tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${Math.round((d.transformations_appliquees && d.transformations_appliquees.length > 0 ? d.transformations_appliquees[d.transformations_appliquees.length - 1].entryLot?.total : null) || d.lot.total)} kg</span></td></tr>
                           ${distributionRows ? `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('distribution')}</span></td></tr>${distributionRows}<tr><td class="tooltip-row"></td></tr><tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${sumPct.toFixed(1)}%</span></td></tr>` : `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('total')}</span> <span class="tooltip-value">${sumPct.toFixed(1)}%</span></td></tr>`}
                         </table>
                         ${missingInfo}
@@ -2036,8 +2709,9 @@ function updateSankey(dimension) {
               tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('yield')}</span> <span class="tooltip-value">${transfo.yield}%</span></td></tr>`;
             }
 
-            // Ajouter le poids du lot (toujours affiché)
-            const poids = d.lot.total; // kg
+            // Ajouter le poids du lot d'entrée de la transformation (toujours affiché)
+            // Utiliser directement la transformation depuis transformations_appliquees
+            const poids = transfo.entryLot?.total || d.lot.total; // Utiliser le lot d'entrée de la transformation
             const poidsFormate = poids.toFixed(2);
             tableRows += `<tr><td class="tooltip-row"><span class="tooltip-label">${i18next.t('inputWeight')}</span> <span class="tooltip-value">${poidsFormate} kg</span></td></tr>`;
 
@@ -2055,7 +2729,7 @@ function updateSankey(dimension) {
                 // Utiliser la fonction de calcul des coûts avec les données stockées
                 const transformationWithVolume = {
                   ...transfo,
-                  lot_input_volume: d.lot.total, // Ajouter le volume du lot
+                  lot_input_volume: transfo.entryLot?.total || d.lot.total, // Utiliser le lot d'entrée réel de la transformation
                 };
 
                 const couts = calculateTransformationCosts(
@@ -2115,7 +2789,7 @@ function updateSankey(dimension) {
                           const prix =
                             teamProfilData.pricerate * profilTempsUtile;
                           const prixFormate = prix.toFixed(2);
-                          tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span> <span class="tooltip-value">${profilTempsFormate} (${prixFormate}€)</span></td></tr>`;
+                          tableRows += `<tr><td class="tooltip-row profile"><span class="tooltip-label">${profilName} :</span><br/><span class="tooltip-value">${profilTempsFormate}</span><br/><span class="tooltip-value">${prixFormate}€</span></td></tr>`;
                         }
                       }
                     );
@@ -2169,6 +2843,9 @@ function updateSankey(dimension) {
           hideTooltip();
 
           if (!isFork) {
+            console.log(
+              '🔍 CLIC SIMPLE SUR LIEN - Appel direct de afficherPopupTransfo'
+            );
             // Comportement + classique
             const chemin = `${d.name} → ${link.target.name}`;
             const ref = {
@@ -2188,11 +2865,23 @@ function updateSankey(dimension) {
               },
               transformation: link.transformation || null,
             };
-            if (window.afficherPopupTransfo)
+            console.log(
+              '🔍 window.afficherPopupTransfo exists:',
+              typeof window.afficherPopupTransfo
+            );
+            if (window.afficherPopupTransfo) {
+              console.log(
+                '🔍 Calling window.afficherPopupTransfo with ref:',
+                ref
+              );
               window.afficherPopupTransfo(ref, 'add');
+            } else {
+              console.error('❌ window.afficherPopupTransfo not found!');
+            }
             return;
           }
           // Toggle dropdown
+          console.log('🔍 CRÉATION DROPDOWN - isFork:', isFork);
           if (dropdownOpen) {
             closeDropdown();
             return;
@@ -2265,11 +2954,42 @@ function updateSankey(dimension) {
           // Handler pour Modifier
           dropdownMenu.querySelector('[data-action="edit"]').onclick =
             function (e) {
+              console.log('✏️ EDIT HANDLER CALLED');
               e.stopPropagation();
               closeDropdown();
+
+              // Trouver le _nodeId de la transformation à éditer
+              let transformationNodeId =
+                link.transformation && link.transformation._nodeId;
+
+              if (!transformationNodeId) {
+                // Fallback : chercher dans les transformations appliquées
+                const lastTransfo =
+                  d.transformations_appliquees &&
+                  d.transformations_appliquees.length
+                    ? d.transformations_appliquees[
+                        d.transformations_appliquees.length - 1
+                      ]
+                    : null;
+
+                if (lastTransfo && lastTransfo._nodeId) {
+                  transformationNodeId = lastTransfo._nodeId;
+                } else {
+                  console.error(
+                    'Impossible de trouver le _nodeId de la transformation à éditer'
+                  );
+                  return;
+                }
+              }
+
+              console.log(
+                '🔍 Édition de la transformation avec nodeId:',
+                transformationNodeId
+              );
+
               const chemin = `${d.name} → ${link.target.name}`;
               const ref = {
-                nodeId: d.id,
+                nodeId: transformationNodeId, // Utiliser le _nodeId de la transformation, pas d.id
                 dimension: dimension,
                 lot: {
                   ...d.lot,
@@ -2313,14 +3033,22 @@ function updateSankey(dimension) {
             function (e) {
               e.stopPropagation();
               closeDropdown();
-              // Suppression immédiate, sans confirm
+              console.log('🗑️ BOUTON EFFACER CLICKED');
+
               // Trouver le scénario courant
               const scenarioIdx = window.currentScenarioIdx;
               const scenario = window.scenarios[scenarioIdx]?.scenario;
-              // Trouver le path et l'index de la transformation à supprimer
-              let path = link.transformation && link.transformation._path;
-              let index = link.transformation && link.transformation._index;
-              if (!path || typeof index !== 'number') {
+
+              if (!scenario) {
+                alert('Scénario non trouvé.');
+                return;
+              }
+
+              // Trouver le _nodeId de la transformation à supprimer
+              let nodeId = link.transformation && link.transformation._nodeId;
+
+              if (!nodeId) {
+                // Fallback : chercher dans les transformations appliquées
                 const lastTransfo =
                   d.transformations_appliquees &&
                   d.transformations_appliquees.length
@@ -2328,34 +3056,33 @@ function updateSankey(dimension) {
                         d.transformations_appliquees.length - 1
                       ]
                     : null;
-                if (
-                  lastTransfo &&
-                  lastTransfo._path &&
-                  typeof lastTransfo._index === 'number'
-                ) {
-                  path = lastTransfo._path;
-                  index = lastTransfo._index;
+
+                if (lastTransfo && lastTransfo._nodeId) {
+                  nodeId = lastTransfo._nodeId;
                 } else {
                   alert(
-                    'Impossible de retrouver la position de la transformation à supprimer.'
+                    'Impossible de retrouver la transformation à supprimer.'
                   );
                   return;
                 }
               }
-              if (!scenario || !path || typeof index !== 'number') {
-                alert(
-                  'Erreur lors de la suppression : informations manquantes.'
-                );
+
+              console.log(
+                '🔍 Suppression de la transformation avec nodeId:',
+                nodeId
+              );
+
+              // Utiliser la nouvelle fonction de suppression
+              const success = removeTransformationByNodeId(scenario, nodeId);
+
+              if (!success) {
+                alert('Erreur lors de la suppression de la transformation.');
                 return;
               }
-              if (typeof window.removeTransformation === 'function') {
-                window.removeTransformation(scenario, path, index);
-              } else if (typeof removeTransformation === 'function') {
-                removeTransformation(scenario, path, index);
-              } else {
-                alert('Fonction removeTransformation non trouvée.');
-                return;
-              }
+
+              // Publier le scénario après suppression
+              publishScenario(scenario, 'SUPPRESSION TRANSFORMATION');
+
               // Relancer le Sankey
               const lot = window.lotType;
               const dimension = window.currentDimension;
@@ -2379,8 +3106,40 @@ function updateSankey(dimension) {
           ) {
             e.stopPropagation();
             closeDropdown();
+
+            // Trouver le _nodeId de la transformation à déplacer
+            let transformationNodeId =
+              link.transformation && link.transformation._nodeId;
+
+            if (!transformationNodeId) {
+              // Fallback : chercher dans les transformations appliquées
+              const lastTransfo =
+                d.transformations_appliquees &&
+                d.transformations_appliquees.length
+                  ? d.transformations_appliquees[
+                      d.transformations_appliquees.length - 1
+                    ]
+                  : null;
+
+              if (lastTransfo && lastTransfo._nodeId) {
+                transformationNodeId = lastTransfo._nodeId;
+              } else {
+                console.error(
+                  'Impossible de trouver le _nodeId pour le déplacement vers le haut'
+                );
+                return;
+              }
+            }
+
+            console.log(
+              '🔍 Déplacement vers le haut avec nodeId:',
+              transformationNodeId
+            );
+
             if (typeof window.onTransformationMoveUp === 'function') {
-              window.onTransformationMoveUp(d.id, link.transformation);
+              window.onTransformationMoveUp(d.id, {
+                _nodeId: transformationNodeId,
+              });
             }
           };
           // Handler pour Descendre
@@ -2388,8 +3147,40 @@ function updateSankey(dimension) {
             function (e) {
               e.stopPropagation();
               closeDropdown();
+
+              // Trouver le _nodeId de la transformation à déplacer
+              let transformationNodeId =
+                link.transformation && link.transformation._nodeId;
+
+              if (!transformationNodeId) {
+                // Fallback : chercher dans les transformations appliquées
+                const lastTransfo =
+                  d.transformations_appliquees &&
+                  d.transformations_appliquees.length
+                    ? d.transformations_appliquees[
+                        d.transformations_appliquees.length - 1
+                      ]
+                    : null;
+
+                if (lastTransfo && lastTransfo._nodeId) {
+                  transformationNodeId = lastTransfo._nodeId;
+                } else {
+                  console.error(
+                    'Impossible de trouver le _nodeId pour le déplacement vers le bas'
+                  );
+                  return;
+                }
+              }
+
+              console.log(
+                '🔍 Déplacement vers le bas avec nodeId:',
+                transformationNodeId
+              );
+
               if (typeof window.onTransformationMoveDown === 'function') {
-                window.onTransformationMoveDown(d.id, link.transformation);
+                window.onTransformationMoveDown(d.id, {
+                  _nodeId: transformationNodeId,
+                });
               }
             };
           // Handler pour Outils
@@ -2435,14 +3226,22 @@ function updateSankey(dimension) {
           icon: 'plus',
           label: i18next.t('addTransfo'),
           onClick: () => {
-            const path = getPathForNewTransformation(d);
-            const ref = {
-              nodeId: d.id,
-              dimension: dimension,
-              path: path,
-            };
-            if (window.afficherPopupTransfo)
-              window.afficherPopupTransfo(ref, 'add');
+            console.log(
+              '🔍 BOUTON + NŒUD CLICKED - Node:',
+              d.name,
+              'NodeId:',
+              d.id,
+              'isCoproduct:',
+              d.isCoproduct
+            );
+            // Vérifier si c'est un coproduit
+            if (d.isCoproduct) {
+              console.log('🔍 → Appel handleAddCoproductTransformationClick');
+              handleAddCoproductTransformationClick(d);
+            } else {
+              console.log('🔍 → Appel handleAddTransformationClick');
+              handleAddTransformationClick(d);
+            }
           },
         },
         {
@@ -2502,14 +3301,22 @@ function updateSankey(dimension) {
           icon: 'plus',
           label: i18next.t('addTransfo'),
           onClick: () => {
-            const path = getPathForNewTransformation(d);
-            const ref = {
-              nodeId: d.id,
-              dimension: dimension,
-              path: path,
-            };
-            if (window.afficherPopupTransfo)
-              window.afficherPopupTransfo(ref, 'add');
+            console.log(
+              '🔍 BOUTON + NŒUD CLICKED - Node:',
+              d.name,
+              'NodeId:',
+              d.id,
+              'isCoproduct:',
+              d.isCoproduct
+            );
+            // Vérifier si c'est un coproduit
+            if (d.isCoproduct) {
+              console.log('🔍 → Appel handleAddCoproductTransformationClick');
+              handleAddCoproductTransformationClick(d);
+            } else {
+              console.log('🔍 → Appel handleAddTransformationClick');
+              handleAddTransformationClick(d);
+            }
           },
         },
         {
@@ -2736,6 +3543,24 @@ window.addEventListener('resize', function () {
 // Fonction principale pour lancer le Sankey depuis le HTML
 function runSankey({ lot, scenario, dimension = 'format' }) {
   // Stocker le lot globalement pour les callbacks
+  window.lotType = lot;
+
+  // Migrer le scénario s'il n'a pas encore été migré (ajouter _nodeId, supprimer _path)
+  if (scenario && !scenario._migrated) {
+    console.log('Migration du scénario...');
+    migrateExistingScenario(scenario);
+    scenario._migrated = true;
+
+    // Valider la structure après migration
+    const validation = validateScenarioStructure(scenario);
+    if (!validation.isValid) {
+      console.warn('Erreurs de validation après migration:', validation.errors);
+    } else {
+      console.log(
+        `Scénario migré avec succès: ${validation.nodeIdCount} transformations`
+      );
+    }
+  }
 
   // Appliquer le scénario au lot
   const sankeyScenario = applyScenario(lot, scenario);
@@ -2936,7 +3761,7 @@ window.addTransformation = function (scenario, path, transformation) {
 
 // Callback global pour monter une transformation
 window.onTransformationMoveUp = (nodeId, transformation) => {
-  console.log('onTransformationMoveUp called:', { nodeId, transformation });
+  console.log('⬆️ onTransformationMoveUp called:', { nodeId, transformation });
 
   // Vérifier que window.scenarios existe
   if (!window.scenarios) {
@@ -2952,17 +3777,38 @@ window.onTransformationMoveUp = (nodeId, transformation) => {
     return;
   }
 
-  // Utiliser le path et l'index de la transformation
-  const path = transformation._path;
-  const index = transformation._index;
+  // Trouver le _nodeId de la transformation à déplacer
+  let transformationNodeId = transformation && transformation._nodeId;
 
-  if (!path || typeof index !== 'number') {
-    console.error('Invalid path or index for move up');
+  console.log('🔍 Debug transformation object:', {
+    transformation,
+    hasNodeId: !!transformationNodeId,
+    transformationKeys: transformation
+      ? Object.keys(transformation)
+      : 'no transformation',
+  });
+
+  if (!transformationNodeId) {
+    console.error('NodeId manquant pour le déplacement vers le haut');
+    console.error('Objet transformation reçu:', transformation);
     return;
   }
 
-  // Déplacer la transformation
-  window.moveTransformationUp(scenario, path, index);
+  console.log(
+    '🔍 Déplacement vers le haut de la transformation avec nodeId:',
+    transformationNodeId
+  );
+
+  // Utiliser la nouvelle fonction de déplacement
+  const success = moveTransformationUpByNodeId(scenario, transformationNodeId);
+
+  if (!success) {
+    console.error('Erreur lors du déplacement vers le haut');
+    return;
+  }
+
+  // Publier le scénario après déplacement vers le haut
+  publishScenario(scenario, 'DÉPLACEMENT VERS LE HAUT');
 
   // Relancer le Sankey
   const lot = window.lotType;
@@ -2979,7 +3825,10 @@ window.onTransformationMoveUp = (nodeId, transformation) => {
 
 // Callback global pour descendre une transformation
 window.onTransformationMoveDown = (nodeId, transformation) => {
-  console.log('onTransformationMoveDown called:', { nodeId, transformation });
+  console.log('⬇️ onTransformationMoveDown called:', {
+    nodeId,
+    transformation,
+  });
 
   // Vérifier que window.scenarios existe
   if (!window.scenarios) {
@@ -2995,17 +3844,32 @@ window.onTransformationMoveDown = (nodeId, transformation) => {
     return;
   }
 
-  // Utiliser le path et l'index de la transformation
-  const path = transformation._path;
-  const index = transformation._index;
+  // Trouver le _nodeId de la transformation à déplacer
+  let transformationNodeId = transformation && transformation._nodeId;
 
-  if (!path || typeof index !== 'number') {
-    console.error('Invalid path or index for move down');
+  if (!transformationNodeId) {
+    console.error('NodeId manquant pour le déplacement vers le bas');
     return;
   }
 
-  // Déplacer la transformation
-  window.moveTransformationDown(scenario, path, index);
+  console.log(
+    '🔍 Déplacement vers le bas de la transformation avec nodeId:',
+    transformationNodeId
+  );
+
+  // Utiliser la nouvelle fonction de déplacement
+  const success = moveTransformationDownByNodeId(
+    scenario,
+    transformationNodeId
+  );
+
+  if (!success) {
+    console.error('Erreur lors du déplacement vers le bas');
+    return;
+  }
+
+  // Publier le scénario après déplacement vers le bas
+  publishScenario(scenario, 'DÉPLACEMENT VERS LE BAS');
 
   // Relancer le Sankey
   const lot = window.lotType;
@@ -3073,13 +3937,15 @@ function applyScenario(
 
   (scenario.main?.transformations || scenario.transformations || []).forEach(
     (transfo, idx) => {
+      // 🔑 CLÉ : Sauvegarder le lot d'entrée AVANT d'appliquer la transformation
+      const entryLotForThisTransfo = JSON.parse(JSON.stringify(resteLot));
+
       let result;
       // Support nouvelle structure : type et keys sont des tableaux
       const type = Array.isArray(transfo.type) ? transfo.type[0] : transfo.type;
       const keys = transfo.keys || [];
 
-      // --- Marquage du path et de l'index sur la transformation ---
-      if (!transfo._path) transfo._path = [...pathArr];
+      // --- Marquage de l'index sur la transformation ---
       if (typeof transfo._index !== 'number') transfo._index = idx;
 
       if (type === 'selectByFormat') {
@@ -3206,8 +4072,15 @@ function applyScenario(
       const titre = transfo.title || `${pathNum}.${idx + 1}`;
       if (!targetLot.title) targetLot.title = titre;
       const nodeId = `${idGenObj.id++}`;
-      // On pousse la référence réelle (pas de clone)
-      const newTransformations = [...transformations_appliquees, transfo];
+      // On pousse une copie enrichie avec entryLot (pas de clone direct du scénario)
+      const transfoWithEntryLot = {
+        ...transfo,
+        entryLot: entryLotForThisTransfo,
+      };
+      const newTransformations = [
+        ...transformations_appliquees,
+        transfoWithEntryLot,
+      ];
       // Gérer le cas où keys est undefined pour les transformations dynamiques
       let nodeName;
       if (type === 'dynamic_transfo') {
@@ -3228,7 +4101,7 @@ function applyScenario(
       targetLot.id = nodeId;
 
       // On crée d'abord le nœud
-      transfo._nodeId = nodeId;
+      // Note: _nodeId ne doit pas être généré ici, il doit être persistant
 
       const nodePath = [...pathArr, idx];
       nodes.push({
@@ -3237,6 +4110,7 @@ function applyScenario(
         lot: targetLot,
         transformations_appliquees: newTransformations,
         _path: nodePath, // Ajout explicite du path unique pour ce node
+        _nodeId: transfo._nodeId, // Ajouter le _nodeId de la transformation
       });
 
       // Puis le lien qui part du parent vers ce nœud
@@ -3309,7 +4183,7 @@ function applyScenario(
       ];
     }
     resteLot.id = coproductNodeId;
-    resteLot._path = coproductPath;
+    // Note: _path ne doit plus être stocké
     const nodeName = resteLot.target ? `Reste → ${resteLot.target}` : 'Reste';
     nodes.push({
       id: coproductNodeId,
@@ -3318,6 +4192,7 @@ function applyScenario(
       transformations_appliquees: transformations_appliquees,
       _path: coproductPath, // Ajouté ici aussi pour accès direct côté Sankey
       isCoproduct: true, // Flag pour identifier les nœuds de coproduit
+      _nodeId: scenario.coproduct_scenario?.transformations?.[0]?._nodeId, // Ajouter le _nodeId de la première transformation du coproduit
     });
     // On annote la première transformation du coproduit si elle existe
     if (
@@ -3327,13 +4202,9 @@ function applyScenario(
     ) {
       scenario.coproduct_scenario.transformations.forEach(
         (coproTransfo, cidx) => {
-          // Toujours mettre à jour le path et l'index pour s'assurer qu'ils sont corrects
-          coproTransfo._path = [...coproductPath];
+          // Toujours mettre à jour l'index pour s'assurer qu'il est correct
           coproTransfo._index = cidx;
-          // Chaque transformation dans le coproduit doit avoir son propre nodeId
-          if (!coproTransfo._nodeId) {
-            coproTransfo._nodeId = `${idGenObj.id++}`;
-          }
+          // Note: _nodeId et _path ne doivent plus être générés ici
         }
       );
     }
@@ -3382,8 +4253,9 @@ function applyScenario(
 }
 window.applyScenario = applyScenario;
 
-// Fonction utilitaire pour construire le path de manière simple
-function getPathForNewTransformation(node) {
+// Fonction obsolète supprimée : getPathForNewTransformation()
+// Remplacée par calculatePathForNewTransformation() qui utilise les _nodeId
+function getPathForNewTransformation_OBSOLETE(node) {
   // NOUVELLE LOGIQUE : Utiliser le _path du nœud lui-même comme base
   // Cela permet de distinguer les différents niveaux de coproduits
 
@@ -3500,9 +4372,19 @@ function getPathForNewTransformation(node) {
 function showTransfoTechPopup(nodeId, transformation) {
   // Utiliser la nouvelle popup des techs
   if (window.showTechPopup) {
-    // Créer un ref comme dans transformation-popup.js
+    // Trouver le _nodeId de la transformation
+    let transformationNodeId = transformation && transformation._nodeId;
+
+    if (!transformationNodeId) {
+      console.error('_nodeId manquant pour la popup tech');
+      return;
+    }
+
+    console.log('🔧 Ouverture popup tech avec nodeId:', transformationNodeId);
+
+    // Créer un ref avec le _nodeId de la transformation
     const ref = {
-      nodeId: nodeId,
+      nodeId: transformationNodeId, // Utiliser le _nodeId de la transformation, pas le nodeId du nœud
       transformation: transformation,
     };
 
@@ -3541,6 +4423,7 @@ function createDropdown(button, options, positionOffset = 0) {
   };
 
   const toggleDropdown = event => {
+    console.log('🔍 createDropdown toggleDropdown called!');
     event.stopPropagation();
 
     // Toggle dropdown
@@ -3588,6 +4471,12 @@ function createDropdown(button, options, positionOffset = 0) {
           `button:nth-child(${index + 1})`
         );
         optionButton.addEventListener('click', () => {
+          console.log(
+            '🔍 Dropdown option clicked:',
+            option.label,
+            'onClick exists:',
+            typeof option.onClick
+          );
           closeDropdown();
           option.onClick();
         });
@@ -3621,7 +4510,7 @@ function calculateCosts(nodes, links) {
   let totalEnergyCost = 0;
   let totalLaborCost = 0;
   let totalEnergyConsumption = 0;
-  let totalTimeRH = 0; // ← NOUVEAU : temps total des ressources humaines
+  let totalTimeRH = 0;
   let nodeCosts = [];
 
   // ← NOUVEAU : Validation des données de base
@@ -3638,74 +4527,85 @@ function calculateCosts(nodes, links) {
   }
 
   // Parcourir tous les nœuds pour trouver les transformations avec tech
+  const transformationsTraitees = new Set(); // Pour éviter de traiter 2x la même transformation
+
   nodes.forEach(node => {
     if (
       node.transformations_appliquees &&
       node.transformations_appliquees.length > 0
     ) {
-      // Prendre la dernière transformation appliquée (celle qui a créé ce nœud)
-      const lastTransformation =
-        node.transformations_appliquees[
-          node.transformations_appliquees.length - 1
-        ];
+      // Parcourir TOUTES les transformations du nœud, pas seulement la dernière
+      node.transformations_appliquees.forEach(transformation => {
+        if (
+          transformation &&
+          transformation.tech &&
+          transformation.tech.details &&
+          transformation._nodeId && // S'assurer qu'on a un _nodeId unique
+          !transformationsTraitees.has(transformation._nodeId) // Éviter les doublons
+        ) {
+          // Créer une transformation avec le volume du lot d'entrée correct
+          const transformationWithVolume = {
+            ...transformation,
+            lot_input_volume: transformation.entryLot?.total || 0,
+          };
 
-      if (
-        lastTransformation &&
-        lastTransformation.tech &&
-        lastTransformation.tech.details
-      ) {
-        // Créer une transformation avec le volume du lot
-        const transformationWithVolume = {
-          ...lastTransformation,
-          lot_input_volume: node.lot.total,
-        };
+          console.log('💰 Calcul coûts pour transformation:', {
+            nodeId: transformation._nodeId,
+            entryLotVolume: transformation.entryLot?.total,
+            transformationType: transformation.type,
+            volumeUtilise: transformationWithVolume.lot_input_volume,
+          });
 
-        // Calculer les coûts pour cette transformation
-        const costs = calculateTransformationCosts(
-          transformationWithVolume,
-          lastTransformation.tech.details,
-          window.teamData
-        );
+          // Calculer les coûts pour cette transformation
+          const costs = calculateTransformationCosts(
+            transformationWithVolume,
+            transformation.tech.details,
+            window.teamData
+          );
 
-        if (costs) {
-          totalCost += costs.cout_total;
-          totalEnergyCost += costs.cout_energie;
-          totalLaborCost += costs.couts_rh;
-          totalEnergyConsumption += costs.consommation_totale;
+          if (costs) {
+            totalCost += costs.cout_total;
+            totalEnergyCost += costs.cout_energie;
+            totalLaborCost += costs.couts_rh;
+            totalEnergyConsumption += costs.consommation_totale;
 
-          // ← NOUVEAU : Calculer le temps total RH pour cette transformation
-          let tempsRHTransfo = 0;
-          if (
-            lastTransformation.tech.details.profils &&
-            window.teamData.profils
-          ) {
-            // ← NOUVEAU : Vérifier que les profils de la tech existent dans la team
-            const profilsManquants = Object.keys(
-              lastTransformation.tech.details.profils
-            ).filter(profilName => !window.teamData.profils[profilName]);
-            if (profilsManquants.length > 0) {
-              console.warn(
-                `Profils RH manquants dans la team pour la transformation ${node.name}: ${profilsManquants.join(', ')}`
+            // ← NOUVEAU : Calculer le temps total RH pour cette transformation
+            let tempsRHTransfo = 0;
+            if (
+              transformation.tech.details.profils &&
+              window.teamData.profils
+            ) {
+              // ← NOUVEAU : Vérifier que les profils de la tech existent dans la team
+              const profilsManquants = Object.keys(
+                transformation.tech.details.profils
+              ).filter(profilName => !window.teamData.profils[profilName]);
+              if (profilsManquants.length > 0) {
+                console.warn(
+                  `Profils RH manquants dans la team pour la transformation ${transformation._nodeId}: ${profilsManquants.join(', ')}`
+                );
+              }
+
+              Object.entries(transformation.tech.details.profils).forEach(
+                ([profilName, profilData]) => {
+                  const profilTempsUtile = costs.temps_utile * profilData.timeh;
+                  tempsRHTransfo += profilTempsUtile;
+                }
               );
             }
+            totalTimeRH += tempsRHTransfo;
 
-            Object.entries(lastTransformation.tech.details.profils).forEach(
-              ([profilName, profilData]) => {
-                const profilTempsUtile = costs.temps_utile * profilData.timeh;
-                tempsRHTransfo += profilTempsUtile;
-              }
-            );
+            // Stocker les détails pour l'affichage
+            nodeCosts.push({
+              nodeName: transformation._nodeId,
+              transformation: transformation,
+              costs: costs,
+            });
+
+            // Marquer cette transformation comme traitée
+            transformationsTraitees.add(transformation._nodeId);
           }
-          totalTimeRH += tempsRHTransfo;
-
-          // Stocker les détails pour l'affichage
-          nodeCosts.push({
-            nodeName: node.name,
-            transformation: lastTransformation,
-            costs: costs,
-          });
         }
-      }
+      });
     }
   });
 
@@ -3793,7 +4693,7 @@ function displayCostsTable(costsData) {
           profilTempsFormate = '< 1min';
         }
 
-        profilsDetails += `<div class="flex justify-between items-center py-1"><span class="text-sm text-green-700">${profilName}</span><span class="text-sm font-medium text-green-800">${profilTempsFormate} (${details.coutTotal.toFixed(2)}€)</span></div>`;
+        profilsDetails += `<div class="py-1 flex justify-between"><span class="text-sm text-green-700 font-medium">${profilName}</span><div class="text-right"><div class="text-sm text-green-600">${profilTempsFormate}</div><div class="text-sm font-medium text-green-800">${details.coutTotal.toFixed(2)}€</div></div></div>`;
       });
       profilsDetails += '</div>';
     }
@@ -3838,6 +4738,16 @@ function displayCostsTable(costsData) {
   }
 }
 
+// Fonction pour publier le scénario dans la console
+function publishScenario(scenario, action = 'Modification') {
+  console.log(
+    `📋 SCÉNARIO COMPLET APRÈS ${action.toUpperCase()}:`,
+    JSON.stringify(scenario, null, 2)
+  );
+}
+
 // Exposer les fonctions globalement
 window.calculateCosts = calculateCosts;
+window.publishScenario = publishScenario;
 window.displayCostsTable = displayCostsTable;
+window.updateTransformationByNodeId = updateTransformationByNodeId;

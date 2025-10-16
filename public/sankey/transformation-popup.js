@@ -839,49 +839,104 @@ class TransformationPopup {
       }
 
       if (this.currentRef) {
-        if (
-          this.mode === 'add' &&
-          typeof window.onTransformationAdd === 'function'
-        ) {
-          // Injecter le path du node dans la transformation
-          transformation._path = this.currentRef.path || ['transformations'];
-          window.onTransformationAdd(this.currentRef.nodeId, transformation);
-        } else if (
-          this.mode === 'edit' &&
-          typeof window.onTransformationSave === 'function'
-        ) {
-          // Récupérer le path et l'index de la transformation existante
-          const existingTransfo = this.currentRef.transformation;
-          if (
-            existingTransfo &&
-            existingTransfo._path &&
-            typeof existingTransfo._index === 'number'
-          ) {
-            // Utiliser directement updateTransformation
-            const scenarioIdx = window.currentScenarioIdx;
-            const scenario = window.scenarios[scenarioIdx]?.scenario;
-            if (scenario) {
-              window.updateTransformation(
+        if (this.mode === 'add') {
+          // Mode add : utiliser le path fourni
+          const path = this.currentRef.path;
+          const scenario = window.scenarios[window.currentScenarioIdx].scenario;
+
+          console.log('🔍 Popup saveTransformation (add mode):', {
+            path,
+            scenario,
+            transformation,
+            currentRef: this.currentRef,
+          });
+
+          if (path) {
+            console.log('🔍 Calling addTransformationToPath...');
+            console.log(
+              '🔍 addTransformationToPath function exists:',
+              typeof addTransformationToPath
+            );
+
+            if (typeof addTransformationToPath === 'function') {
+              const result = addTransformationToPath(
                 scenario,
-                existingTransfo._path,
-                existingTransfo._index,
+                path,
                 transformation
               );
-              // Relancer le Sankey
-              const lot = window.lotType;
-              const dimension = window.currentDimension;
-              if (typeof runSankey === 'function') {
-                runSankey({
-                  lot,
-                  scenario,
-                  containerId: 'sankey-container',
-                  dimension,
-                });
-              }
+              console.log('🔍 addTransformationToPath result:', result);
+
+              // Afficher le scénario complet après ajout
+              window.publishScenario(scenario, 'AJOUT TRANSFORMATION');
+
+              console.log('🔍 Continuing after addTransformationToPath...');
+            } else {
+              console.error('❌ addTransformationToPath function not found!');
+              return;
+            }
+
+            // Relancer le Sankey
+            const lot = window.lotType;
+            const dimension = window.currentDimension;
+            if (typeof runSankey === 'function') {
+              runSankey({
+                lot,
+                scenario,
+                containerId: 'sankey-container',
+                dimension,
+              });
             }
           } else {
-            // Fallback sur l'ancien système si on n'a pas les métadonnées
-            window.onTransformationSave(this.currentRef.nodeId, transformation);
+            console.error("Pas de path fourni pour l'ajout de transformation");
+          }
+        } else if (this.mode === 'edit') {
+          // Mode edit : utiliser le path fourni
+          const path = this.currentRef.path;
+          const nodeId = this.currentRef.nodeId;
+          const nodeInfo = findTransformationByNodeId(
+            window.scenarios[window.currentScenarioIdx].scenario,
+            nodeId
+          );
+
+          if (nodeInfo) {
+            // Conserver l'ID existant
+            transformation._nodeId = nodeInfo.transformation._nodeId;
+            // Supprimer le _path s'il existe
+            delete transformation._path;
+
+            // Mettre à jour la transformation avec la nouvelle fonction
+            const success = window.updateTransformationByNodeId(
+              window.scenarios[window.currentScenarioIdx].scenario,
+              nodeId,
+              transformation
+            );
+
+            if (!success) {
+              console.error(
+                'Erreur lors de la mise à jour de la transformation'
+              );
+              return;
+            }
+
+            // Publier le scénario après édition
+            window.publishScenario(
+              window.scenarios[window.currentScenarioIdx].scenario,
+              'ÉDITION TRANSFORMATION'
+            );
+
+            // Relancer le Sankey
+            const lot = window.lotType;
+            const dimension = window.currentDimension;
+            if (typeof runSankey === 'function') {
+              runSankey({
+                lot,
+                scenario: window.scenarios[window.currentScenarioIdx].scenario,
+                containerId: 'sankey-container',
+                dimension,
+              });
+            }
+          } else {
+            console.error('Transformation non trouvée pour nodeId:', nodeId);
           }
         }
       }

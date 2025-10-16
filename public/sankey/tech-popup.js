@@ -417,6 +417,9 @@ class TechPopup {
     // Trouver le nœud dans le scénario et mettre à jour sa tech
     this.updateNodeTechInScenario(scenario, this.currentRef.nodeId, techData);
 
+    // Publier le scénario après ajout/édition d'outil
+    window.publishScenario(scenario, 'AJOUT/ÉDITION OUTIL');
+
     // Relancer le Sankey
     const lot = window.lotType;
     const dimension = window.currentDimension;
@@ -436,39 +439,34 @@ class TechPopup {
   }
 
   updateNodeTechInScenario(scenario, nodeId, techData) {
-    // Utiliser la transformation du ref
-    const lastTransfo = this.currentRef?.transformation || null;
+    // Trouver la transformation par son _nodeId
+    const nodeInfo = findTransformationByNodeId(scenario, nodeId);
 
-    if (!lastTransfo) {
-      console.error('Pas de transformation disponible');
-      return;
-    }
-
-    // Vérifier que la transformation a les métadonnées nécessaires
-    if (!lastTransfo._path || typeof lastTransfo._index !== 'number') {
-      console.error(
-        'Transformation sans métadonnées _path/_index:',
-        lastTransfo
-      );
+    if (!nodeInfo) {
+      console.error('Transformation non trouvée pour nodeId:', nodeId);
       return;
     }
 
     // Créer la nouvelle transformation avec la tech ajoutée
     const updatedTransformation = {
-      ...lastTransfo,
+      ...nodeInfo.transformation,
       tech: techData,
     };
 
-    // Utiliser updateTransformation pour mettre à jour
-    if (typeof window.updateTransformation === 'function') {
-      window.updateTransformation(
+    // Utiliser updateTransformationByNodeId avec le nodeId
+    if (typeof window.updateTransformationByNodeId === 'function') {
+      const success = window.updateTransformationByNodeId(
         scenario,
-        lastTransfo._path,
-        lastTransfo._index,
+        nodeId,
         updatedTransformation
       );
+
+      if (!success) {
+        console.error('Erreur lors de la mise à jour de la tech');
+        return;
+      }
     } else {
-      console.error('updateTransformation non disponible');
+      console.error('updateTransformationByNodeId non disponible');
     }
   }
 
@@ -732,39 +730,45 @@ class TechPopup {
       return;
     }
 
-    // Utiliser la transformation du ref
-    const lastTransfo = this.currentRef?.transformation || null;
+    // Utiliser le nodeId du ref
+    const nodeId = this.currentRef?.nodeId;
 
-    if (!lastTransfo) {
-      console.error('Pas de transformation disponible');
+    if (!nodeId) {
+      console.error('NodeId manquant pour la suppression de la tech');
       return;
     }
 
-    // Vérifier que la transformation a les métadonnées nécessaires
-    if (!lastTransfo._path || typeof lastTransfo._index !== 'number') {
-      console.error(
-        'Transformation sans métadonnées _path/_index:',
-        lastTransfo
-      );
+    // Trouver la transformation par son _nodeId
+    const nodeInfo = findTransformationByNodeId(scenario, nodeId);
+
+    if (!nodeInfo) {
+      console.error('Transformation non trouvée pour nodeId:', nodeId);
       return;
     }
 
     // Créer la nouvelle transformation sans la tech
     const updatedTransformation = {
-      ...lastTransfo,
+      ...nodeInfo.transformation,
       tech: undefined, // Supprimer la tech
     };
 
-    // Utiliser updateTransformation pour mettre à jour
-    if (typeof window.updateTransformation === 'function') {
-      window.updateTransformation(
+    // Utiliser updateTransformationByNodeId pour mettre à jour
+    if (typeof window.updateTransformationByNodeId === 'function') {
+      const success = window.updateTransformationByNodeId(
         scenario,
-        lastTransfo._path,
-        lastTransfo._index,
+        nodeId,
         updatedTransformation
       );
+
+      if (!success) {
+        console.error('Erreur lors de la suppression de la tech');
+        return;
+      }
+
+      // Publier le scénario après suppression d'outil
+      window.publishScenario(scenario, 'SUPPRESSION OUTIL');
     } else {
-      console.error('updateTransformation non disponible');
+      console.error('updateTransformationByNodeId non disponible');
     }
 
     // Relancer le Sankey
