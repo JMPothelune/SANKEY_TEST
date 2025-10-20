@@ -5,6 +5,20 @@ let width = window.innerWidth - margin.left - margin.right;
 const FIRST_NODE_MIN_HEIGHT_PX = 600;
 let height = FIRST_NODE_MIN_HEIGHT_PX;
 
+// type Transformation = {
+//   _nodeId: string;
+//   _index: number;
+//   type: string;
+//   keys: string[];
+//   _displayNames: string[][];
+//   scenario?: Scenario;
+// };
+
+// type Scenario = {
+//   transformations: Transformation[];
+//   coproduct_scenario?: Scenario;
+// };
+
 // Attendre qu'i18next soit prêt
 function waitForI18next() {
   if (window.i18nextReady && window.i18next) {
@@ -137,11 +151,7 @@ function calculatePathForNewTransformation(parentNodeId, actionType, scenario) {
 
   if (actionType === 'add_to_coproduct') {
     // Ajouter au coproduit du nœud parent
-    return [
-      ...parentNodeInfo.path.slice(0, -2),
-      'coproduct_scenario',
-      'transformations',
-    ];
+    return [...parentNodeInfo.path, 'coproduct_scenario', 'transformations'];
   } else {
     // Ajouter dans le sous-scénario de la transformation sur laquelle on a cliqué
     return [...parentNodeInfo.path, 'scenario', 'transformations'];
@@ -655,12 +665,8 @@ function handleAddTransformationClick(node) {
 // Gestionnaire pour le clic sur le bouton "+" du coproduit (ajouter au coproduit)
 function handleAddCoproductTransformationClick(parentNode) {
   const parentNodeId = parentNode._nodeId || parentNode.id;
-  const scenario = window.scenarios[window.currentScenarioIdx]?.scenario;
-  const path = calculatePathForNewTransformation(
-    parentNodeId,
-    'add_to_coproduct',
-    scenario
-  );
+  console.log('handleAddCoproductTransformationClick', parentNode);
+  const path = [...parentNode._path];
 
   const popup = new TransformationPopup();
   popup.show(
