@@ -150,6 +150,10 @@ function calculatePathForNewTransformation(parentNodeId, actionType, scenario) {
 
 // Fonction pour ajouter une transformation à un path donné
 function addTransformationToPath(scenario, parentPath, transformation) {
+  console.log('➕ addTransformationToPath called:', {
+    parentPath,
+    transformation,
+  });
   // Générer un _nodeId UNE SEULE FOIS lors de la création
   if (!transformation._nodeId) {
     transformation._nodeId = generateStableNodeId();
@@ -173,77 +177,23 @@ function addTransformationToPath(scenario, parentPath, transformation) {
 
   console.log('🔍 addTransformationToPath debug:', { parentPath });
 
-  // Gestion simple des paths
-  if (parentPath.length === 1 && parentPath[0] === 'transformations') {
-    // Ajouter à la racine
-    if (!scenario.transformations) scenario.transformations = [];
-    transformation._index = scenario.transformations.length;
-    scenario.transformations.push(transformation);
-    return true;
-  }
+  let target = scenario;
 
-  if (
-    parentPath.length === 2 &&
-    parentPath[0] === 'coproduct_scenario' &&
-    parentPath[1] === 'transformations'
-  ) {
-    // Ajouter au coproduit
-    if (!scenario.coproduct_scenario)
-      scenario.coproduct_scenario = { transformations: [] };
-    if (!scenario.coproduct_scenario.transformations)
-      scenario.coproduct_scenario.transformations = [];
-    transformation._index = scenario.coproduct_scenario.transformations.length;
-    scenario.coproduct_scenario.transformations.push(transformation);
-    return true;
+  for (let i = 0; i < parentPath.length; i++) {
+    const key = parentPath[i];
+    if (target[key] === undefined) {
+      switch (key) {
+        case 'transformations':
+          target[key] = [];
+          break;
+        default:
+          target[key] = {};
+      }
+    }
+    target = target[key];
   }
-
-  if (
-    parentPath.length === 4 &&
-    parentPath[0] === 'transformations' &&
-    typeof parentPath[1] === 'number' &&
-    parentPath[2] === 'scenario' &&
-    parentPath[3] === 'transformations'
-  ) {
-    // Ajouter dans le sous-scénario d'une transformation
-    const index = parentPath[1];
-    if (!scenario.transformations[index]) return false;
-    if (!scenario.transformations[index].scenario) {
-      scenario.transformations[index].scenario = { transformations: [] };
-    }
-    if (!scenario.transformations[index].scenario.transformations) {
-      scenario.transformations[index].scenario.transformations = [];
-    }
-    transformation._index =
-      scenario.transformations[index].scenario.transformations.length;
-    scenario.transformations[index].scenario.transformations.push(
-      transformation
-    );
-    return true;
-  }
-
-  if (
-    parentPath.length === 4 &&
-    parentPath[0] === 'transformations' &&
-    typeof parentPath[1] === 'number' &&
-    parentPath[2] === 'coproduct_scenario' &&
-    parentPath[3] === 'transformations'
-  ) {
-    // Ajouter dans le coproduit d'une transformation
-    const index = parentPath[1];
-    if (!scenario.transformations[index]) return false;
-    if (!scenario.transformations[index].coproduct_scenario) {
-      scenario.transformations[index].coproduct_scenario = {
-        transformations: [],
-      };
-    }
-    if (!scenario.transformations[index].coproduct_scenario.transformations) {
-      scenario.transformations[index].coproduct_scenario.transformations = [];
-    }
-    transformation._index =
-      scenario.transformations[index].coproduct_scenario.transformations.length;
-    scenario.transformations[index].coproduct_scenario.transformations.push(
-      transformation
-    );
+  if (Array.isArray(target)) {
+    target.push(transformation);
     return true;
   }
 
