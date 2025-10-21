@@ -80,6 +80,7 @@ function generateStableNodeId() {
 
 // Fonction pour trouver une transformation par son _nodeId et retourner son path
 function findTransformationByNodeId(scenario, nodeId) {
+  console.log('🔍 findTransformationByNodeId called:', { nodeId, scenario });
   function searchRecursive(obj, currentPath = []) {
     if (obj && typeof obj === 'object') {
       if (Array.isArray(obj)) {
@@ -132,13 +133,12 @@ function getPathFromNodeId(scenario, nodeId) {
 }
 
 // Fonction pour calculer le path d'une nouvelle transformation
-function calculatePathForNewTransformation(parentNodeId, actionType, scenario) {
-  // Cas spécial : nœud racine (pas de nodeId ou id "0")
-  if (!parentNodeId || parentNodeId === 'root' || parentNodeId === '0') {
-    return ['transformations'];
-  }
-
-  const parentNodeInfo = findTransformationByNodeId(scenario, parentNodeId);
+function calculatePathForNewTransformation(parentNode, actionType, scenario) {
+  const parentNodeInfo = parentNode;
+  console.log('🔍 calculatePathForNewTransformation called:', {
+    parentNodeInfo,
+    actionType,
+  });
   if (!parentNodeInfo) {
     // Cas spécial : coproduit qui n'a pas de _nodeId correspondant
     if (actionType === 'add_to_coproduct') {
@@ -151,10 +151,10 @@ function calculatePathForNewTransformation(parentNodeId, actionType, scenario) {
 
   if (actionType === 'add_to_coproduct') {
     // Ajouter au coproduit du nœud parent
-    return [...parentNodeInfo.path, 'coproduct_scenario', 'transformations'];
+    return [...parentNodeInfo._path, 'coproduct_scenario', 'transformations'];
   } else {
     // Ajouter dans le sous-scénario de la transformation sur laquelle on a cliqué
-    return [...parentNodeInfo.path, 'scenario', 'transformations'];
+    return [...parentNodeInfo._path, 'scenario', 'transformations'];
   }
 }
 
@@ -638,11 +638,7 @@ function handleAddTransformationClick(node) {
     scenarios: window.scenarios,
   });
 
-  const path = calculatePathForNewTransformation(
-    parentNodeId,
-    'add_to_node',
-    scenario
-  );
+  const path = calculatePathForNewTransformation(node, 'add_to_node', scenario);
 
   console.log('🔍 Calculated path:', path);
 
